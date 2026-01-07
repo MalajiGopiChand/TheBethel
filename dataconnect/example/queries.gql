@@ -1,0 +1,28 @@
+mutation CreateNewUser($displayName: String!, $email: String!, $role: String!) @auth(level: USER) {
+  user_insert(data: {displayName: $displayName, email: $email, role: $role, createdAt_expr: "request.time"})
+}
+
+query GetCurrentUser @auth(level: USER) {
+  user(key: {id_expr: "auth.uid"}) {
+    id
+    displayName
+    email
+    role
+  }
+}
+
+mutation UpdateEvent($id: UUID!, $name: String, $description: String) @auth(level: USER) {
+  event_update(id: $id, data: {name: $name, description: $description})
+}
+
+query ListEvents @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  events {
+    id
+    name
+    description
+    eventDate
+    startTime
+    endTime
+    location
+  }
+}

@@ -1,0 +1,33 @@
+type User @table {
+  displayName: String!
+  email: String!
+  role: String!
+  createdAt: Timestamp!
+  photoUrl: String
+}
+
+type Event @table {
+  creator: User
+  name: String!
+  eventDate: Date!
+  startTime: Timestamp!
+  createdAt: Timestamp!
+  description: String
+  endTime: Timestamp
+  location: String
+}
+
+type AttendanceRecord @table {
+  attendee: User!
+  event: Event!
+  status: String!
+  createdAt: Timestamp!
+  notes: String
+}
+
+type Organization @table {
+  name: String!
+  createdAt: Timestamp!
+  description: String
+  website: String
+}

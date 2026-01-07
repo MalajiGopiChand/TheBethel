@@ -1,0 +1,72 @@
+mutation CreateSeedData @transaction @auth(level: USER, insecureReason: "Seed data mutation, safe for logged in users.") {
+  organization_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      name: "Bethel Church",
+      description: "A charismatic church in Redding, CA",
+      createdAt: "2024-04-01T00:00:00Z",
+      website: "https://www.bethel.com/"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      name: "Simpson University",
+      description: "A Christian university in Redding, CA",
+      createdAt: "2024-04-01T00:00:00Z",
+      website: "https://simpsonu.edu/"
+    }
+  ])
+  user_insertMany(data: [
+    {
+      id: "650e8400-e29b-41d4-a716-446655440000",
+      displayName: "John Doe",
+      email: "john.doe@example.com",
+      createdAt: "2024-04-01T00:00:00Z",
+      role: "admin"
+    },
+    {
+      id: "650e8400-e29b-41d4-a716-446655440001",
+      displayName: "Jane Smith",
+      email: "jane.smith@example.com",
+      createdAt: "2024-04-01T00:00:00Z",
+      role: "member"
+    }
+  ])
+  event_insertMany(data: [
+    {
+      id: "750e8400-e29b-41d4-a716-446655440000",
+      name: "Sunday Service",
+      description: "A weekly worship service",
+      createdAt: "2024-04-07T10:00:00Z",
+      eventDate: "2024-04-07",
+      startTime: "2024-04-07T10:00:00Z",
+      endTime: "2024-04-07T12:00:00Z",
+      location: "Bethel Church Auditorium",
+      creatorId: "650e8400-e29b-41d4-a716-446655440000"
+    },
+    {
+      id: "750e8400-e29b-41d4-a716-446655440001",
+      name: "Community Outreach",
+      description: "A monthly community service event",
+      createdAt: "2024-04-15T09:00:00Z",
+      eventDate: "2024-04-15",
+      startTime: "2024-04-15T09:00:00Z",
+      endTime: "2024-04-15T17:00:00Z",
+      location: "Downtown Redding",
+      creatorId: "650e8400-e29b-41d4-a716-446655440001"
+    }
+  ])
+  attendanceRecord_insertMany(data: [
+    {
+      attendeeId: "650e8400-e29b-41d4-a716-446655440000",
+      eventId: "750e8400-e29b-41d4-a716-446655440000",
+      createdAt: "2024-04-07T10:00:00Z",
+      status: "present"
+    },
+    {
+      attendeeId: "650e8400-e29b-41d4-a716-446655440001",
+      eventId: "750e8400-e29b-41d4-a716-446655440001",
+      createdAt: "2024-04-15T09:00:00Z",
+      status: "present"
+    }
+  ])
+}
