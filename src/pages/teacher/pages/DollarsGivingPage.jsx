@@ -93,10 +93,10 @@ const RewardCard = ({ student, currentUser, dateToday, index }) => {
     <Zoom in={true} style={{ transitionDelay: `${index * 50}ms` }}>
       <Card 
         sx={{ 
-          height: 280,
+          height: 280, 
           borderRadius: 3,
           position: 'relative',
-          overflow: 'hidden',
+          overflow: 'hidden', 
           boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
           transition: 'all 0.2s ease',
           '&:hover': {
@@ -107,18 +107,18 @@ const RewardCard = ({ student, currentUser, dateToday, index }) => {
         {/* Main Card Content */}
         <Box 
           sx={{ 
-            height: '100%',
+            height: '100%', 
             p: 2.5,
-            display: 'flex',
-            flexDirection: 'column',
+            display: 'flex', 
+            flexDirection: 'column', 
             bgcolor: 'white'
           }}
         >
           {/* Class Chip */}
           <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-            <Chip 
+             <Chip 
               label={student.classType || 'Unassigned'} 
-              size="small"
+               size="small" 
               sx={{ 
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
                 color: 'primary.main',
@@ -126,22 +126,22 @@ const RewardCard = ({ student, currentUser, dateToday, index }) => {
                 fontSize: '0.7rem',
                 height: 20
               }} 
-            />
+             />
           </Box>
 
           {/* Avatar and Name */}
           <Box display="flex" alignItems="center" gap={1.5} mb={2}>
-            <Avatar 
-              sx={{ 
+          <Avatar 
+            sx={{ 
                 width: 48,
                 height: 48,
                 bgcolor: 'primary.main',
                 fontSize: '1rem',
                 fontWeight: 600
-              }}
-            >
+            }}
+          >
               {getInitials(student.name)}
-            </Avatar>
+          </Avatar>
             <Box>
               <Typography variant="subtitle1" fontWeight={600} lineHeight={1.2}>
                 {student.name || 'Unknown Student'}
@@ -150,7 +150,7 @@ const RewardCard = ({ student, currentUser, dateToday, index }) => {
                 <PlaceIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                 <Typography variant="caption" color="text.secondary">
                   {student.location || 'Unknown'}
-                </Typography>
+          </Typography>
               </Box>
             </Box>
           </Box>
@@ -169,8 +169,8 @@ const RewardCard = ({ student, currentUser, dateToday, index }) => {
               Total Points
             </Typography>
             <Typography variant="h4" fontWeight={700} color="primary.main">
-              ${student.dollarPoints || 0}
-            </Typography>
+                ${student.dollarPoints || 0}
+             </Typography>
           </Box>
 
           {/* Reward Button */}
@@ -179,7 +179,7 @@ const RewardCard = ({ student, currentUser, dateToday, index }) => {
             startIcon={<AddIcon />}
             onClick={() => setShowInput(true)}
             fullWidth
-            sx={{
+            sx={{ 
               bgcolor: 'primary.main',
               color: 'white',
               textTransform: 'none',
@@ -214,75 +214,75 @@ const RewardCard = ({ student, currentUser, dateToday, index }) => {
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="subtitle1" fontWeight={600}>
               Add Points for {student.name}
-            </Typography>
+                </Typography>
             <IconButton size="small" onClick={() => setShowInput(false)}>
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Box>
+                    <CloseIcon fontSize="small" />
+                </IconButton>
+            </Box>
 
-          {/* Quick Amounts */}
+            {/* Quick Amounts */}
           <Box display="flex" gap={1} mb={2}>
-            {quickAmounts.map(amt => (
-              <Button
-                key={amt}
-                variant={dollarsText === amt.toString() ? 'contained' : 'outlined'}
+                {quickAmounts.map(amt => (
+                    <Button
+                        key={amt}
+                        variant={dollarsText === amt.toString() ? 'contained' : 'outlined'}
                 color="primary"
                 size="small"
-                onClick={() => setDollarsText(amt.toString())}
-                sx={{ 
+                        onClick={() => setDollarsText(amt.toString())}
+                        sx={{ 
                   flex: 1,
-                  minWidth: 0,
+                            minWidth: 0, 
                   fontWeight: 600
-                }}
-              >
-                +{amt}
-              </Button>
-            ))}
-          </Box>
+                        }}
+                    >
+                        +{amt}
+                    </Button>
+                ))}
+            </Box>
 
-          <TextField
+            <TextField
             placeholder="Custom amount"
-            type="number"
-            size="small"
-            fullWidth
-            value={dollarsText}
-            onChange={(e) => setDollarsText(e.target.value)}
-            InputProps={{
+                type="number"
+                size="small"
+                fullWidth
+                value={dollarsText}
+                onChange={(e) => setDollarsText(e.target.value)}
+                InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
                   <CoinIcon fontSize="small" color="primary" />
                 </InputAdornment>
               )
-            }}
+                }}
             sx={{ mb: 2 }}
-          />
+            />
 
-          <TextField
+            <TextField
             placeholder="Reason (e.g., Homework, Participation)"
-            size="small"
-            fullWidth
-            multiline
-            rows={2}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
+                size="small"
+                fullWidth
+                multiline
+                rows={2}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
             sx={{ mb: 2 }}
-          />
+            />
 
-          <Button
-            variant="contained"
+            <Button
+                variant="contained"
             color="primary"
-            fullWidth
-            onClick={handleSave}
-            disabled={saving || !dollarsText || !reason}
-            endIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-            sx={{
+                fullWidth
+                onClick={handleSave}
+                disabled={saving || !dollarsText || !reason}
+                endIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                sx={{ 
               textTransform: 'none',
               fontWeight: 600,
               mt: 'auto'
-            }}
-          >
+                }}
+            >
             {saving ? 'Saving...' : 'Save Reward'}
-          </Button>
+            </Button>
         </Box>
       </Card>
     </Zoom>
@@ -351,42 +351,42 @@ const DollarsGivingPage = () => {
           <Box sx={{ py: 2 }}>
             <Box display="flex" alignItems="center" gap={1} mb={2}>
               <IconButton onClick={() => navigate(-1)} edge="start">
-                <BackIcon />
-              </IconButton>
+                    <BackIcon />
+                </IconButton>
               <Typography variant="h5" fontWeight={600}>
-                Student Rewards
-              </Typography>
+                    Student Rewards
+                </Typography>
             </Box>
 
             {/* Filters */}
             <Box display="flex" gap={2} flexWrap="wrap">
-              <TextField
-                select
+                <TextField
+                    select
                 label="Class"
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                size="small"
+                    value={selectedClass}
+                    onChange={(e) => setSelectedClass(e.target.value)}
+                    size="small"
                 sx={{ minWidth: 150 }}
-              >
+                >
                 {classOptions.map(opt => (
                   <MenuItem key={opt} value={opt}>{opt}</MenuItem>
                 ))}
-              </TextField>
+                </TextField>
 
-              <TextField
-                select
+                <TextField
+                    select
                 label="Location"
-                value={selectedPlace}
-                onChange={(e) => setSelectedPlace(e.target.value)}
-                size="small"
+                    value={selectedPlace}
+                    onChange={(e) => setSelectedPlace(e.target.value)}
+                    size="small"
                 sx={{ minWidth: 150 }}
-              >
+                >
                 {placeOptions.map(opt => (
                   <MenuItem key={opt} value={opt}>{opt}</MenuItem>
                 ))}
-              </TextField>
+                </TextField>
             </Box>
-          </Box>
+            </Box>
         </Container>
       </Paper>
 
@@ -398,7 +398,7 @@ const DollarsGivingPage = () => {
           </Box>
         ) : filteredStudents.length === 0 ? (
           <Alert severity="info" sx={{ borderRadius: 2 }}>
-            No students found. Try adjusting the filters.
+              No students found. Try adjusting the filters.
           </Alert>
         ) : (
           <Grid container spacing={2}>

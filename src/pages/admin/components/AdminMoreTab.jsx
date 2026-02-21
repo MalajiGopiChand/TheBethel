@@ -6,13 +6,37 @@ import {
   Settings as SettingsIcon,
   CloudDownload as DownloadIcon,
   Assessment as ReportsIcon,
+  InstallMobile as InstallIcon,
+  Leaderboard as LeaderboardIcon,
 } from '@mui/icons-material';
 
 const AdminMoreTab = () => {
   const navigate = useNavigate();
 
+  const handleInstallClick = () => {
+    window.showPWAInstall = true;
+    window.dispatchEvent(new Event('pwa-install-request'));
+  };
+
   const actions = [
-    
+    {
+      title: 'Install App',
+      subtitle: 'Download to device',
+      icon: <InstallIcon />,
+      colorStart: '#667eea',
+      colorEnd: '#764ba2',
+      isEnabled: true,
+      onClick: handleInstallClick,
+    },
+    {
+      title: 'Teacher Reports',
+      subtitle: 'Performance & leaderboard',
+      icon: <LeaderboardIcon />,
+      colorStart: '#FFE53B',
+      colorEnd: '#FF2525',
+      isEnabled: true,
+      onClick: () => navigate('/admin/teacher-reports')
+    },
     {
       title: 'App Settings',
       subtitle: 'Config',

@@ -125,7 +125,8 @@ const OfferingsPage = () => {
         createdBy: currentUser?.name || 'Teacher',
         createdByUid: currentUser?.uid || null,
         items: [],
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
       
       setFormData({ amount: '', reason: '' });
@@ -259,6 +260,7 @@ const OfferingsPage = () => {
                   <TableCell><strong>Amount</strong></TableCell>
                   <TableCell><strong>Reason</strong></TableCell>
                   <TableCell><strong>Recorded By</strong></TableCell>
+                  <TableCell><strong>Updated</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -288,6 +290,19 @@ const OfferingsPage = () => {
                     </TableCell>
                     <TableCell>{offering.reason || '-'}</TableCell>
                     <TableCell>{offering.createdBy || '-'}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const updateTime = offering.updatedAt || offering.timestamp;
+                        if (!updateTime) return 'N/A';
+                        let date;
+                        if (typeof updateTime.toDate === 'function') {
+                          date = updateTime.toDate();
+                        } else if (updateTime instanceof Date) {
+                          date = updateTime;
+                        }
+                        return date ? format(date, 'MMM dd, yyyy HH:mm') : 'N/A';
+                      })()}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

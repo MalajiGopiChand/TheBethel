@@ -26,8 +26,10 @@ import {
   LocalFireDepartment as StreakIcon,
   CalendarMonth as AttendanceIcon,
   Phone as PhoneIcon,
-  Email as EmailIcon
+  Email as EmailIcon,
+  InstallMobile as InstallIcon
 } from '@mui/icons-material';
+import { Button } from '@mui/material';
 
 const ProfileTab = ({ student, parentUser }) => {
   const theme = useTheme();
@@ -295,6 +297,52 @@ const ProfileTab = ({ student, parentUser }) => {
             </Grow>
         </Grid>
       </Grid>
+
+      {/* Install App Card */}
+      <Grow in={true} timeout={2000}>
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            mt: 3,
+            p: 2.5, 
+            borderRadius: 4,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            transition: 'all 0.3s',
+            '&:hover': {
+              transform: 'translateY(-4px)',
+              boxShadow: 6
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <InstallIcon sx={{ fontSize: 40 }} />
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Install App
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                Add to home screen for quick access
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              onClick={() => {
+                window.showPWAInstall = true;
+                window.dispatchEvent(new Event('pwa-install-request'));
+              }}
+              sx={{
+                bgcolor: 'rgba(255, 255, 255, 0.25)',
+                color: 'white',
+                fontWeight: 'bold',
+                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.35)' }
+              }}
+            >
+              Install
+            </Button>
+          </Box>
+        </Paper>
+      </Grow>
     </Box>
   );
 };

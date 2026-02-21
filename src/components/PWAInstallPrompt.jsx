@@ -40,32 +40,48 @@ const PWAInstallPrompt = () => {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      // Show after delay if not already installed
-      if (!standalone) {
-        setTimeout(() => setShowPrompt(true), 3000);
+      window.deferredPrompt = e;
+      // Show after delay if not already installed and not dismissed
+      if (!standalone && !sessionStorage.getItem('pwa-prompt-dismissed')) {
+        setTimeout(() => setShowPrompt(true), 2000);
       }
     };
 
     // For iOS - show instructions after delay
-    if (iOS && !standalone) {
-      setTimeout(() => setShowPrompt(true), 3000);
+    if (iOS && !standalone && !sessionStorage.getItem('pwa-prompt-dismissed')) {
+      setTimeout(() => setShowPrompt(true), 2000);
     }
+
+    // Listen for manual install request
+    const handleInstallRequest = () => {
+      setShowPrompt(true);
+    };
+    window.addEventListener('pwa-install-request', handleInstallRequest);
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('pwa-install-request', handleInstallRequest);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
+    const prompt = deferredPrompt || window.deferredPrompt;
+    if (prompt) {
       // Android/Chrome
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+      prompt.prompt();
+      const { outcome } = await prompt.userChoice;
       console.log(`User ${outcome} the install prompt`);
       setDeferredPrompt(null);
+      window.deferredPrompt = null;
       setShowPrompt(false);
+      if (outcome === 'accepted') {
+        sessionStorage.setItem('pwa-installed', 'true');
+      }
+    } else {
+      // Fallback: Show instructions
+      alert('Install option will appear in your browser menu. Look for "Install" or "Add to Home Screen" option.');
     }
   };
 
@@ -75,16 +91,29 @@ const PWAInstallPrompt = () => {
     sessionStorage.setItem('pwa-prompt-dismissed', 'true');
   };
 
+  // Listen for manual show requests
+  useEffect(() => {
+    const handleManualShow = () => {
+      setShowPrompt(true);
+    };
+    window.addEventListener('pwa-install-request', handleManualShow);
+    return () => window.removeEventListener('pwa-install-request', handleManualShow);
+  }, []);
+
   // Don't show if already dismissed this session or already installed
-  if (isStandalone || !showPrompt || sessionStorage.getItem('pwa-prompt-dismissed')) {
+  if (isStandalone || (!showPrompt && !window.showPWAInstall) || (sessionStorage.getItem('pwa-prompt-dismissed') && !window.showPWAInstall)) {
     return null;
   }
 
   return (
     <Snackbar
-      open={showPrompt}
+      open={showPrompt || window.showPWAInstall}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       sx={{ bottom: { xs: 90, sm: 24 }, zIndex: 1400 }}
+      onClose={() => {
+        setShowPrompt(false);
+        window.showPWAInstall = false;
+      }}
     >
       <Paper
         elevation={8}

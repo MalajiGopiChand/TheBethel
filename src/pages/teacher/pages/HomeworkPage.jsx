@@ -286,9 +286,9 @@ const HomeworkPage = () => {
                         {/* Title & Actions */}
                         <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
                             <Box>
-                                <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3 }}>
-                                    {homework.title}
-                                </Typography>
+                            <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3 }}>
+                                {homework.title}
+                            </Typography>
                                 {homework.teacherName && (
                                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                                         Assigned by: {homework.teacherName}
@@ -299,12 +299,12 @@ const HomeworkPage = () => {
                                 {/* Only show edit/delete if current user is the one who posted it */}
                                 {homework.teacherId === currentUser?.uid && (
                                     <>
-                                        <IconButton size="small" onClick={() => handleOpenDialog(homework)}>
-                                            <EditIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton size="small" color="error" onClick={() => handleDelete(homework)}>
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
+                                <IconButton size="small" onClick={() => handleOpenDialog(homework)}>
+                                    <EditIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton size="small" color="error" onClick={() => handleDelete(homework)}>
+                                    <DeleteIcon fontSize="small" />
+                                </IconButton>
                                     </>
                                 )}
                             </Box>

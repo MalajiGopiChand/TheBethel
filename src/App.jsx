@@ -37,6 +37,7 @@ import AdminTeacherReportsPage from './pages/admin/pages/AdminTeacherReportsPage
 import TeacherProgressPage from './pages/teacher/pages/TeacherProgressPage';
 import TeacherLeaderboardPage from './pages/teacher/pages/TeacherLeaderboardPage';
 import TeacherAttendancePage from './pages/teacher/pages/TeacherAttendancePage';
+import TeacherProfilePage from './pages/teacher/pages/TeacherProfilePage';
 import { Box, CircularProgress } from '@mui/material';
 
 function App() {
@@ -386,6 +387,16 @@ function App() {
         element={
           currentUser && (currentUser.role === UserRole.TEACHER || currentUser.role === UserRole.ADMIN) ? (
             <TeacherAttendancePage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/teacher/profile"
+        element={
+          currentUser && (currentUser.role === UserRole.TEACHER || currentUser.role === UserRole.ADMIN) ? (
+            <TeacherProfilePage />
           ) : (
             <Navigate to="/" replace />
           )

@@ -23,7 +23,8 @@ import {
   IconButton,
   Container,
   useTheme,
-  Avatar
+  Avatar,
+  Tooltip
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -31,7 +32,8 @@ import {
   Cancel as AbsentIcon,
   Save as SaveIcon,
   FilterList as FilterIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  LogoutRounded as LogoutIcon
 } from '@mui/icons-material';
 import {
   collection,
@@ -46,8 +48,9 @@ import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 
 const AttendancePage = () => {
-  const { currentUser } = useAuth(); // Kept for future use if needed
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const [loadingLogout, setLoadingLogout] = useState(false);
   const theme = useTheme();
   
   const [students, setStudents] = useState([]);
@@ -208,16 +211,37 @@ const AttendancePage = () => {
             <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
               Daily Attendance
             </Typography>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-              onClick={handleSave} 
-              disabled={saving}
-              sx={{ borderRadius: 2 }}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                onClick={handleSave} 
+                disabled={saving}
+                sx={{ borderRadius: 2 }}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+              <Tooltip title="Logout">
+                <IconButton
+                  onClick={async () => {
+                    setLoadingLogout(true);
+                    try {
+                      await logout();
+                      navigate('/');
+                    } catch (error) {
+                      console.error('Logout error:', error);
+                    } finally {
+                      setLoadingLogout(false);
+                    }
+                  }}
+                  disabled={loadingLogout}
+                  sx={{ color: 'error.main' }}
+                >
+                  {loadingLogout ? <CircularProgress size={20} /> : <LogoutIcon />}
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
 
           {/* Quick Stats Bar */}

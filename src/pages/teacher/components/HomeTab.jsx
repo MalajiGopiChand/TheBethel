@@ -17,7 +17,8 @@ import {
   EventNote as AttendanceIcon,
   Assignment as HomeworkIcon,
   AttachMoney as DollarIcon,
-  TrendingUp as ProgressIcon
+  TrendingUp as ProgressIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 import {
   collection,
@@ -230,6 +231,14 @@ const HomeTab = () => {
       colorEnd: '#764ba2',
       isEnabled: true,
       onClick: () => navigate('/teacher/report-submission')
+    },
+    {
+      title: 'My Profile',
+      icon: <PersonIcon />,
+      colorStart: '#8E2DE2',
+      colorEnd: '#4A00E0',
+      isEnabled: true,
+      onClick: () => navigate('/teacher/profile')
     }
   ];
 

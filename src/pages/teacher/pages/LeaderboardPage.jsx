@@ -77,10 +77,23 @@ const LeaderboardPage = () => {
   };
 
   const getRankColor = (rank) => {
-    if (rank === 1) return '#FFD700';
-    if (rank === 2) return '#C0C0C0';
-    if (rank === 3) return '#CD7F32';
-    return '#9E9E9E';
+    if (rank === 1) return '#FFD700'; // Gold
+    if (rank === 2) return '#C0C0C0'; // Silver
+    if (rank === 3) return '#CD7F32'; // Bronze
+    // Different colors for other ranks
+    const colors = [
+      '#4CAF50', // Green
+      '#2196F3', // Blue
+      '#9C27B0', // Purple
+      '#FF9800', // Orange
+      '#E91E63', // Pink
+      '#00BCD4', // Cyan
+      '#795548', // Brown
+      '#607D8B', // Blue Grey
+      '#FF5722', // Deep Orange
+      '#3F51B5'  // Indigo
+    ];
+    return colors[(rank - 4) % colors.length];
   };
 
   return (

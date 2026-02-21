@@ -201,6 +201,22 @@ const TeacherLeaderboardPage = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {leaders.slice(3).map((teacher, index) => {
                 const rank = index + 4;
+                const getRankColor = (rank) => {
+                  const colors = [
+                    '#4CAF50', // Green
+                    '#2196F3', // Blue
+                    '#9C27B0', // Purple
+                    '#FF9800', // Orange
+                    '#E91E63', // Pink
+                    '#00BCD4', // Cyan
+                    '#795548', // Brown
+                    '#607D8B', // Blue Grey
+                    '#FF5722', // Deep Orange
+                    '#3F51B5'  // Indigo
+                  ];
+                  return colors[(rank - 4) % colors.length];
+                };
+                const rankColor = getRankColor(rank);
                 return (
                   <Card 
                     key={rank} 
@@ -208,6 +224,7 @@ const TeacherLeaderboardPage = () => {
                     sx={{ 
                       borderRadius: 3,
                       transition: 'transform 0.1s',
+                      borderLeft: `4px solid ${rankColor}`,
                       '&:hover': { transform: 'scale(1.02)' }
                     }}
                   >
@@ -222,8 +239,8 @@ const TeacherLeaderboardPage = () => {
                           sx={{ 
                             width: 32, 
                             height: 32, 
-                            bgcolor: theme.palette.grey[200],
-                            color: theme.palette.text.primary,
+                            bgcolor: rankColor,
+                            color: '#fff',
                             fontSize: 14,
                             fontWeight: 'bold',
                             mr: 2
@@ -237,8 +254,8 @@ const TeacherLeaderboardPage = () => {
                       </Box>
                       
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                         <StarIcon sx={{ color: theme.palette.warning.light, fontSize: 18, mr: 0.5 }} />
-                         <Typography variant="h6" fontWeight="bold" color="primary">
+                         <StarIcon sx={{ color: rankColor, fontSize: 18, mr: 0.5 }} />
+                         <Typography variant="h6" fontWeight="bold" sx={{ color: rankColor }}>
                            {teacher.totalPoints}
                          </Typography>
                          <Typography variant="caption" color="textSecondary" sx={{ ml: 0.5, mt: 0.5 }}>

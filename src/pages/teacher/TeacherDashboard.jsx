@@ -29,6 +29,7 @@ import {
   PeopleOutline as PeopleOutlineIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
+import PWAInstallPrompt from '../../components/PWAInstallPrompt';
 
 // Components
 import HomeTab from './components/HomeTab';
@@ -278,6 +279,9 @@ const TeacherDashboard = () => {
           </Paper>
         </Box>
       </Slide>
+      
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
     </Box>
   );
 };

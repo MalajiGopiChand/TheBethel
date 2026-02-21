@@ -81,6 +81,26 @@ const LeaderboardTab = () => {
     return `${rank}`;
   };
 
+  const getRankColor = (rank) => {
+    if (rank === 1) return '#FFD700'; // Gold
+    if (rank === 2) return '#C0C0C0'; // Silver
+    if (rank === 3) return '#CD7F32'; // Bronze
+    // Different colors for other ranks
+    const colors = [
+      '#4CAF50', // Green
+      '#2196F3', // Blue
+      '#9C27B0', // Purple
+      '#FF9800', // Orange
+      '#E91E63', // Pink
+      '#00BCD4', // Cyan
+      '#795548', // Brown
+      '#607D8B', // Blue Grey
+      '#FF5722', // Deep Orange
+      '#3F51B5'  // Indigo
+    ];
+    return colors[(rank - 4) % colors.length];
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" py={4}>
@@ -103,12 +123,12 @@ const LeaderboardTab = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Box sx={{ minWidth: 50, textAlign: 'center' }}>
-                    <Typography variant="h5" fontWeight="bold">
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: getRankColor(rank) }}>
                       {getRankIcon(rank)}
                     </Typography>
                     <Typography variant="caption">#{rank}</Typography>
                   </Box>
-                  <Avatar sx={{ bgcolor: 'primary.main' }}>
+                  <Avatar sx={{ bgcolor: getRankColor(rank), color: rank <= 3 ? (rank === 1 ? '#000' : '#fff') : '#fff' }}>
                     {student.name.charAt(0).toUpperCase()}
                   </Avatar>
                   <Box sx={{ flexGrow: 1 }}>
@@ -120,8 +140,11 @@ const LeaderboardTab = () => {
                   <Chip
                     icon={<TrophyIcon />}
                     label={`$${student.dollarPoints || 0}`}
-                    color="primary"
-                    sx={{ fontWeight: 'bold' }}
+                    sx={{ 
+                      bgcolor: getRankColor(rank), 
+                      color: rank <= 3 ? (rank === 1 ? '#000' : '#fff') : '#fff',
+                      fontWeight: 'bold' 
+                    }}
                   />
                 </Box>
               </CardContent>
