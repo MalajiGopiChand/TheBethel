@@ -215,19 +215,26 @@ const AdminDashboard = () => {
           )}
 
           {isMobile && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               <InstallButton size="small" />
-              <IconButton
-                onClick={handleLogout}
-                disabled={loading}
-                sx={{
-                  bgcolor: 'rgba(15,23,42,0.92)',
-                  color: 'primary.contrastText',
-                  '&:hover': { bgcolor: 'rgba(15,23,42,1)' },
-                }}
-              >
-                {loading ? <CircularProgress size={18} color="inherit" /> : <LogoutIcon />}
-              </IconButton>
+              <Tooltip title={`Logout (${currentUser?.name || 'Admin'})`}>
+                <Button
+                  onClick={handleLogout}
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <LogoutIcon />}
+                  sx={{
+                    bgcolor: 'rgba(15,23,42,0.92)',
+                    color: 'primary.contrastText',
+                    '&:hover': { bgcolor: 'rgba(15,23,42,1)' },
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    px: 1.5,
+                    minWidth: 'auto'
+                  }}
+                >
+                  {loading ? '' : (currentUser?.name?.split(' ')[0] || 'Admin')}
+                </Button>
+              </Tooltip>
             </Box>
           )}
         </Toolbar>
@@ -262,14 +269,14 @@ const AdminDashboard = () => {
             />
             <Chip
               icon={<AttendanceIcon />}
-              label="Mark staff attendance"
+              label="Mark Students Attendance"
               variant="outlined"
               sx={{ borderRadius: 999 }}
               onClick={() => setCurrentTab(1)}
             />
             <Chip
               icon={<ManageIcon />}
-              label="Manage students"
+              label="Manage Students Details"
               variant="outlined"
               sx={{ borderRadius: 999 }}
               onClick={() => setCurrentTab(2)}

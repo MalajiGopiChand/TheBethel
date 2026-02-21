@@ -12,9 +12,15 @@ import {
 } from '@mui/icons-material';
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const LeaderboardPage = () => {
   const navigate = useNavigate();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate);
+  };
+  
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -102,7 +108,7 @@ const LeaderboardPage = () => {
       <Paper elevation={3} sx={{ p: 2, mb: 3, borderRadius: 0, borderBottom: '3px solid #1976d2' }}>
         <Grid container alignItems="center" spacing={2}>
           <Grid item xs={12} md={3}>
-            <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>Back</Button>
+            <Button startIcon={<BackIcon />} onClick={handleBack}>Back</Button>
           </Grid>
           <Grid item xs={12} md={4}>
             <Typography variant="h5" sx={{ textAlign: 'center', fontWeight: 'bold', color: '#1976d2' }}>

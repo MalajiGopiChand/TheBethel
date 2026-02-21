@@ -151,7 +151,13 @@ const StudentDetailsPage = () => {
   if (!studentId) {
       return (
         <Box sx={{ p: 2 }}>
-            <Button startIcon={<BackIcon />} onClick={() => navigate('/teacher/students')}>Back</Button>
+            <Button startIcon={<BackIcon />} onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/teacher/students');
+              }
+            }}>Back</Button>
             {renderSearchBar()}
         </Box>
       );
@@ -177,7 +183,13 @@ const StudentDetailsPage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', p: 2 }}>
       {/* Header */}
       <Paper elevation={2} sx={{ p: 2, mb: 2, display: 'flex', alignItems: 'center' }}>
-        <Button startIcon={<BackIcon />} onClick={() => navigate('/teacher/students')}>
+        <Button startIcon={<BackIcon />} onClick={() => {
+          if (window.history.length > 1) {
+            navigate(-1);
+          } else {
+            navigate('/teacher/students');
+          }
+        }}>
           Back
         </Button>
         <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>

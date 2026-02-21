@@ -20,10 +20,15 @@ import {
 } from '@mui/icons-material';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase'; // Adjust path based on your folder structure
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const TeacherLeaderboardPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate);
+  };
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -161,7 +166,7 @@ const TeacherLeaderboardPage = () => {
       {/* Header */}
       <Paper elevation={1} sx={{ p: 2, mb: 2, borderRadius: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', maxWidth: 800, mx: 'auto' }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
+          <Button startIcon={<BackIcon />} onClick={handleBack}>
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>

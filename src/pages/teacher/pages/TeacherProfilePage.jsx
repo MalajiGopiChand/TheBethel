@@ -26,10 +26,15 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, storage } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const TeacherProfilePage = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate, currentUser);
+  };
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -162,7 +167,7 @@ const TeacherProfilePage = () => {
       {/* Header */}
       <Paper elevation={2} sx={{ p: 2, mb: 2, borderRadius: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
+          <Button startIcon={<BackIcon />} onClick={handleBack}>
             Back
           </Button>
           <Typography variant="h5" sx={{ fontWeight: 'bold' }}>

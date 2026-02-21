@@ -256,29 +256,57 @@ const ParentDashboard = () => {
           
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <InstallButton size="small" />
-            <Tooltip title="Logout" arrow>
-              <IconButton 
-                  onClick={handleLogout} 
+            {isMobile ? (
+              <Tooltip title={`Logout (${currentUser?.name || 'User'})`} arrow>
+                <Button
+                  onClick={handleLogout}
                   disabled={loadingLogout}
+                  startIcon={loadingLogout ? <CircularProgress size={16} color="inherit" /> : <LogoutIcon />}
                   size="small"
                   sx={{ 
-                      bgcolor: 'rgba(102, 126, 234, 0.08)', 
-                      color: '#667eea',
-                      border: '1px solid rgba(102, 126, 234, 0.15)',
-                      width: 40,
-                      height: 40,
-                      '&:hover': { 
-                        bgcolor: 'rgba(244, 67, 54, 0.1)', 
-                        color: '#f44336',
-                        borderColor: 'rgba(244, 67, 54, 0.2)',
-                        transform: 'scale(1.1)'
-                      },
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                    bgcolor: 'rgba(102, 126, 234, 0.08)', 
+                    color: '#667eea',
+                    border: '1px solid rgba(102, 126, 234, 0.15)',
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    px: 1.5,
+                    minWidth: 'auto',
+                    '&:hover': { 
+                      bgcolor: 'rgba(244, 67, 54, 0.1)', 
+                      color: '#f44336',
+                      borderColor: 'rgba(244, 67, 54, 0.2)',
+                    },
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                   }}
-              >
-                  {loadingLogout ? <CircularProgress size={18} color="inherit" /> : <LogoutIcon fontSize="small" />}
-              </IconButton>
-            </Tooltip>
+                >
+                  {loadingLogout ? '' : (currentUser?.name?.split(' ')[0] || 'User')}
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip title="Logout" arrow>
+                <IconButton 
+                    onClick={handleLogout} 
+                    disabled={loadingLogout}
+                    size="small"
+                    sx={{ 
+                        bgcolor: 'rgba(102, 126, 234, 0.08)', 
+                        color: '#667eea',
+                        border: '1px solid rgba(102, 126, 234, 0.15)',
+                        width: 40,
+                        height: 40,
+                        '&:hover': { 
+                          bgcolor: 'rgba(244, 67, 54, 0.1)', 
+                          color: '#f44336',
+                          borderColor: 'rgba(244, 67, 54, 0.2)',
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                >
+                    {loadingLogout ? <CircularProgress size={18} color="inherit" /> : <LogoutIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
         </Toolbar>
       </AppBar>

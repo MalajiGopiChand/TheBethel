@@ -33,7 +33,6 @@ import OfferingsPage from './pages/teacher/pages/OfferingsPage';
 import ParentNotificationPage from './pages/parent/pages/ParentNotificationPage';
 import DollarHistoryPage from './pages/teacher/pages/DollarHistoryPage';
 import ViewStudentsPage from './pages/teacher/pages/ViewStudentsPage';
-import AdminTeacherReportsPage from './pages/admin/pages/AdminTeacherReportsPage';
 import TeacherProgressPage from './pages/teacher/pages/TeacherProgressPage';
 import TeacherLeaderboardPage from './pages/teacher/pages/TeacherLeaderboardPage';
 import TeacherAttendancePage from './pages/teacher/pages/TeacherAttendancePage';
@@ -232,18 +231,6 @@ function App() {
             currentUser.email === 'gop1@gmail.com' || 
             currentUser.email === 'premkumartenali@gmail.com') ? (
             <AdminRegisteredParentsPage />
-          ) : (
-            <Navigate to="/" replace />
-          )
-        }
-      />
-      <Route
-        path="/admin/teacher-reports"
-        element={
-          currentUser && (currentUser.role === UserRole.ADMIN || 
-            currentUser.email === 'gop1@gmail.com' || 
-            currentUser.email === 'premkumartenali@gmail.com') ? (
-            <AdminTeacherReportsPage />
           ) : (
             <Navigate to="/" replace />
           )

@@ -28,12 +28,15 @@ import {
   ArrowBack as BackIcon,
   AttachMoney as MoneyIcon,
   ShoppingCart as ExpenseIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import {
   collection,
   getDocs,
+  getDoc,
   addDoc,
+  deleteDoc,
   doc,
   query,
   where,
@@ -42,9 +45,16 @@ import {
 } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
+import { useAuth } from '../../../contexts/AuthContext';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const FinanceManagementPage = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate, currentUser);
+  };
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedPlace, setSelectedPlace] = useState('Kandrika');
   const [loading, setLoading] = useState(false);
@@ -151,13 +161,20 @@ const FinanceManagementPage = () => {
 
     try {
       setLoading(true);
+      
+      // For admins, use email as name (since admin emails are hardcoded)
+      const creatorName = currentUser?.email || currentUser?.name || 'Admin';
+      
       await addDoc(collection(db, 'financial_records'), {
         type: 'OFFERING',
         place: selectedPlace,
         amount: parseFloat(offeringForm.amount),
         reason: offeringForm.reason,
         items: [],
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        createdBy: creatorName,
+        createdByUid: currentUser?.uid || null,
+        createdAt: serverTimestamp()
       });
       
       setOfferingForm({ amount: '', reason: '' });
@@ -186,13 +203,20 @@ const FinanceManagementPage = () => {
 
     try {
       setLoading(true);
+      
+      // For admins, use email as name (since admin emails are hardcoded)
+      const creatorName = currentUser?.email || currentUser?.name || 'Admin';
+      
       await addDoc(collection(db, 'financial_records'), {
         type: 'EXPENSE',
         place: selectedPlace,
         amount: expenseAmount,
         reason: expenseForm.reason,
         items: [],
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        createdBy: creatorName,
+        createdByUid: currentUser?.uid || null,
+        createdAt: serverTimestamp()
       });
       
       setExpenseForm({ amount: '', reason: '' });
@@ -206,11 +230,29 @@ const FinanceManagementPage = () => {
     }
   };
 
+  const handleDeleteRecord = async (recordId) => {
+    if (!window.confirm('Are you sure you want to delete this record?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await deleteDoc(doc(db, 'financial_records', recordId));
+      fetchBalanceAndRecords();
+      alert('Record deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting record:', error);
+      alert('Failed to delete record: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
+          <Button startIcon={<BackIcon />} onClick={handleBack}>
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
@@ -232,7 +274,7 @@ const FinanceManagementPage = () => {
           </Select>
         </FormControl>
 
-        <Card sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', mb: 2 }}>
+        <Card sx={{ bgcolor: 'Blue', color: 'primary', mb: 2 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>Balance Summary - {selectedPlace}</Typography>
             <Typography variant="body2">Total Offerings: ₹{balance.totalOfferings.toFixed(2)}</Typography>
@@ -243,10 +285,57 @@ const FinanceManagementPage = () => {
           </CardContent>
         </Card>
 
-        <Tabs value={selectedTab} onChange={(e, newValue) => setSelectedTab(newValue)}>
-          <Tab label="Offerings" icon={<MoneyIcon />} />
-          <Tab label="Expenses" icon={<ExpenseIcon />} />
-          <Tab label="History" icon={<HistoryIcon />} />
+        <Tabs 
+          value={selectedTab} 
+          onChange={(e, newValue) => setSelectedTab(newValue)}
+          sx={{
+            '& .MuiTab-root': {
+              color: 'text.secondary',
+              fontWeight: 600,
+              textTransform: 'none',
+              minHeight: 64,
+              fontSize: '0.95rem',
+              '&.Mui-selected': {
+                fontWeight: 700,
+              },
+            },
+            '& .MuiTabs-indicator': {
+              height: 4,
+              borderRadius: '4px 4px 0 0',
+              backgroundColor: selectedTab === 0 ? '#2e7d32' : selectedTab === 1 ? '#d32f2f' : '#1976d2',
+            },
+          }}
+        >
+          <Tab 
+            label="Offerings" 
+            icon={<MoneyIcon />} 
+            iconPosition="start"
+            sx={{
+              '&.Mui-selected': {
+                color: '#2e7d32',
+              },
+            }}
+          />
+          <Tab 
+            label="Expenses" 
+            icon={<ExpenseIcon />} 
+            iconPosition="start"
+            sx={{
+              '&.Mui-selected': {
+                color: '#d32f2f',
+              },
+            }}
+          />
+          <Tab 
+            label="History" 
+            icon={<HistoryIcon />} 
+            iconPosition="start"
+            sx={{
+              '&.Mui-selected': {
+                color: '#1976d2',
+              },
+            }}
+          />
         </Tabs>
       </Paper>
 
@@ -321,12 +410,14 @@ const FinanceManagementPage = () => {
                   <TableCell><strong>Type</strong></TableCell>
                   <TableCell><strong>Amount</strong></TableCell>
                   <TableCell><strong>Reason</strong></TableCell>
+                  <TableCell><strong>Recorded By</strong></TableCell>
+                  <TableCell><strong>Action</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {records.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} align="center">
+                    <TableCell colSpan={6} align="center">
                       No records found
                     </TableCell>
                   </TableRow>
@@ -335,14 +426,48 @@ const FinanceManagementPage = () => {
                     <TableRow key={record.id}>
                       <TableCell>
                         {(() => {
-                          if (!record.timestamp) return 'N/A';
-                          let date;
-                          if (typeof record.timestamp.toDate === 'function') {
-                            date = record.timestamp.toDate();
-                          } else if (record.timestamp instanceof Date) {
-                            date = record.timestamp;
+                          try {
+                            // Handle Firestore timestamp
+                            if (record.timestamp) {
+                              let date;
+                              if (record.timestamp.toDate && typeof record.timestamp.toDate === 'function') {
+                                date = record.timestamp.toDate();
+                              } else if (record.timestamp.seconds) {
+                                date = new Date(record.timestamp.seconds * 1000);
+                              } else if (record.timestamp instanceof Date) {
+                                date = record.timestamp;
+                              } else if (typeof record.timestamp === 'number') {
+                                date = new Date(record.timestamp);
+                              } else if (record.timestamp._seconds) {
+                                date = new Date(record.timestamp._seconds * 1000);
+                              }
+                              
+                              if (date && !isNaN(date.getTime())) {
+                                return format(date, 'yyyy-MM-dd HH:mm');
+                              }
+                            }
+                            // Fallback to createdAt
+                            if (record.createdAt) {
+                              let date;
+                              if (record.createdAt.toDate && typeof record.createdAt.toDate === 'function') {
+                                date = record.createdAt.toDate();
+                              } else if (record.createdAt.seconds) {
+                                date = new Date(record.createdAt.seconds * 1000);
+                              } else if (record.createdAt instanceof Date) {
+                                date = record.createdAt;
+                              } else if (typeof record.createdAt === 'number') {
+                                date = new Date(record.createdAt);
+                              }
+                              
+                              if (date && !isNaN(date.getTime())) {
+                                return format(date, 'yyyy-MM-dd HH:mm');
+                              }
+                            }
+                            return 'N/A';
+                          } catch (error) {
+                            console.error('Error formatting date:', error, record);
+                            return 'N/A';
                           }
-                          return date ? format(date, 'yyyy-MM-dd HH:mm') : 'N/A';
                         })()}
                       </TableCell>
                       <TableCell>
@@ -354,6 +479,31 @@ const FinanceManagementPage = () => {
                       </TableCell>
                       <TableCell>₹{record.amount?.toFixed(2) || '0.00'}</TableCell>
                       <TableCell>{record.reason || '-'}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {(() => {
+                            // Try multiple possible field names for creator
+                            const creator = record.createdBy || 
+                                          record.createdByName || 
+                                          record.recordedBy || 
+                                          record.uploadedBy ||
+                                          record.userName ||
+                                          record.name ||
+                                          (record.createdByUid ? `User ${record.createdByUid.substring(0, 8)}` : null);
+                            return creator || 'Unknown';
+                          })()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => handleDeleteRecord(record.id)}
+                        >
+                          Delete
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

@@ -28,6 +28,10 @@ const InstallBanner = () => {
   const handleDismiss = () => {
     setShow(false);
     localStorage.setItem('install-banner-dismissed', 'true');
+    // Also dismiss the prompt
+    localStorage.setItem('pwa-prompt-dismissed', 'true');
+    sessionStorage.setItem('pwa-prompt-dismissed', 'true');
+    window.showPWAInstall = false;
   };
 
   if (isStandalone || !show) {

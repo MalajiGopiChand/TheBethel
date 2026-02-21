@@ -40,6 +40,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { format } from 'date-fns';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const TeacherProgressPage = () => {
   const navigate = useNavigate();
@@ -86,7 +87,7 @@ const TeacherProgressPage = () => {
   };
 
   const handleBack = () => {
-    navigate(-1);
+    handleBackNavigation(navigate);
   };
 
   // Helper function to format date consistently

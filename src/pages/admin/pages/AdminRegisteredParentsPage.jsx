@@ -30,9 +30,14 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const AdminRegisteredParentsPage = () => {
   const navigate = useNavigate();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate);
+  };
   const [parents, setParents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,7 +118,7 @@ const AdminRegisteredParentsPage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
+          <Button startIcon={<BackIcon />} onClick={handleBack}>
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>

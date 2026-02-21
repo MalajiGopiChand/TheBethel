@@ -46,6 +46,7 @@ import {
 import { format, addWeeks, subWeeks, isSameDay } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 // Helper function to get this Sunday
 const getThisSunday = () => {
@@ -67,6 +68,8 @@ const isSameDayTimestamp = (timestamp1, timestamp2) => {
 const TimetablePage = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  
+  // State declarations
   const [timetables, setTimetables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -80,9 +83,15 @@ const TimetablePage = () => {
     date: getThisSunday().getTime()
   });
 
+  // Computed values
   const isAdmin = currentUser?.role === 'ADMIN' || 
     currentUser?.email === 'gop1@gmail.com' || 
     currentUser?.email === 'premkumartenali@gmail.com';
+  
+  // Handlers
+  const handleBack = () => {
+    handleBackNavigation(navigate, currentUser);
+  };
 
   useEffect(() => {
     // Real-time listener for timetables
@@ -224,7 +233,7 @@ const TimetablePage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: { xs: 1, sm: 2 }, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)} size="small">
+          <Button startIcon={<BackIcon />} onClick={handleBack} size="small">
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: { xs: 'center', sm: 'left' }, fontWeight: 'bold' }}>

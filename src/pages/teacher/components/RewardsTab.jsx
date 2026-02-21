@@ -28,14 +28,7 @@ const RewardsTab = () => {
       isEnabled: true,
       onClick: () => navigate('/teacher/dollar-history')
     },
-    {
-      title: 'Offerings',
-      icon: <OfferingsIcon />,
-      colorStart: '#B2FEFA',
-      colorEnd: '#0ED2F7',
-      isEnabled: true,
-      onClick: () => navigate('/teacher/offerings')
-    }
+    
   ];
 
   return (

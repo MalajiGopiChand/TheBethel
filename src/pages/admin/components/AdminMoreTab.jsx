@@ -7,7 +7,6 @@ import {
   CloudDownload as DownloadIcon,
   Assessment as ReportsIcon,
   InstallMobile as InstallIcon,
-  Leaderboard as LeaderboardIcon,
 } from '@mui/icons-material';
 
 const AdminMoreTab = () => {
@@ -27,15 +26,6 @@ const AdminMoreTab = () => {
       colorEnd: '#764ba2',
       isEnabled: true,
       onClick: handleInstallClick,
-    },
-    {
-      title: 'Teacher Reports',
-      subtitle: 'Performance & leaderboard',
-      icon: <LeaderboardIcon />,
-      colorStart: '#FFE53B',
-      colorEnd: '#FF2525',
-      isEnabled: true,
-      onClick: () => navigate('/admin/teacher-reports')
     },
     {
       title: 'App Settings',

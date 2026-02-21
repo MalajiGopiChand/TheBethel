@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -12,21 +12,14 @@ import {
   MenuItem,
   AppBar,
   Toolbar,
-  Fade,
-  Tooltip
+  Fade
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
   Send as SendIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  MoreVert as MoreIcon,
-  Close as CloseIcon,
-  Image as ImageIcon,
-  Mic as MicIcon,
-  Stop as StopIcon,
-  PlayArrow,
-  Pause
+  MoreVert as MoreIcon
 } from '@mui/icons-material';
 import {
   collection,
@@ -37,170 +30,206 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  limit
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../../config/firebase';
+import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
+import { handleBackNavigation } from '../../../utils/navigation';
+import { sendNotificationToTeachers, requestNotificationPermission } from '../../../services/notificationService';
 
 const GLOBAL_CHAT_ID = 'chat_global_room';
 
-// Voice Message Player Component
-const VoiceMessagePlayer = ({ audioUrl, messageId, isOwnMessage, playingAudioId, setPlayingAudioId, audioRefs }) => {
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef(null);
-
-  useEffect(() => {
-    if (!audioRefs.current[messageId]) {
-      audioRefs.current[messageId] = audioRef.current;
-    }
-    
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
-    const handleEnd = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-      setPlayingAudioId(null);
-    };
-    const handlePlay = () => {
-      setIsPlaying(true);
-      setPlayingAudioId(messageId);
-      // Pause other audio players
-      Object.keys(audioRefs.current).forEach(id => {
-        if (id !== messageId && audioRefs.current[id]) {
-          audioRefs.current[id].pause();
-        }
-      });
-    };
-    const handlePause = () => {
-      setIsPlaying(false);
-      if (playingAudioId === messageId) {
-        setPlayingAudioId(null);
-      }
-    };
-
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', updateDuration);
-    audio.addEventListener('ended', handleEnd);
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('pause', handlePause);
-
-    return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', updateDuration);
-      audio.removeEventListener('ended', handleEnd);
-      audio.removeEventListener('play', handlePlay);
-      audio.removeEventListener('pause', handlePause);
-    };
-  }, [messageId, playingAudioId, setPlayingAudioId, audioRefs]);
-
-  useEffect(() => {
-    if (playingAudioId !== messageId && isPlaying) {
-      setIsPlaying(false);
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    }
-  }, [playingAudioId, messageId, isPlaying]);
-
-  const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-    }
-  };
-
-  const formatTime = (seconds) => {
-    if (isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-
+// Memoized Message Component for better performance
+const MessageItem = React.memo(({ message, isOwnMessage, formatMessageDate, renderDateSeparator, prevMsg, handleMenuOpen }) => {
   return (
-    <Box sx={{ 
-      mb: 1, 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: 1,
-      minWidth: 200,
-      maxWidth: 300
-    }}>
-      <audio ref={audioRef} src={audioUrl} preload="metadata" />
-      <IconButton
-        onClick={togglePlay}
-        size="small"
+    <React.Fragment>
+      {renderDateSeparator(message, prevMsg)}
+      
+      <Box
         sx={{
-          bgcolor: isOwnMessage ? '#075E54' : '#25D366',
-          color: 'white',
-          width: 36,
-          height: 36,
-          '&:hover': { bgcolor: isOwnMessage ? '#128C7E' : '#20BA5A' }
+          display: 'flex',
+          justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
+          mb: 1
         }}
       >
-        {isPlaying ? <Pause fontSize="small" /> : <PlayArrow fontSize="small" />}
-      </IconButton>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ 
-          height: 4, 
-          bgcolor: 'rgba(0,0,0,0.1)', 
-          borderRadius: 2, 
-          overflow: 'hidden',
-          mb: 0.5
-        }}>
-          <Box sx={{ 
-            height: '100%', 
-            bgcolor: isOwnMessage ? '#075E54' : '#25D366',
-            width: `${progress}%`,
-            transition: 'width 0.1s linear'
-          }} />
-        </Box>
-        <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
-          {formatTime(currentTime)} / {formatTime(duration)}
-        </Typography>
+        {!isOwnMessage && (
+          <Avatar sx={{ width: 30, height: 30, mr: 1, mt: 0.5, fontSize: '0.8rem', bgcolor: 'secondary.main' }}>
+            {message.senderName?.[0]?.toUpperCase() || '?'}
+          </Avatar>
+        )}
+
+        <Paper
+          elevation={1}
+          sx={{
+            p: 1,
+            px: 2,
+            maxWidth: '75%',
+            borderRadius: 2,
+            borderTopRightRadius: isOwnMessage ? 0 : 2,
+            borderTopLeftRadius: !isOwnMessage ? 0 : 2,
+            bgcolor: isOwnMessage ? '#dcf8c6' : '#ffffff',
+            position: 'relative',
+            '&:hover .menu-btn': { opacity: 1 }
+          }}
+        >
+          {!isOwnMessage && (
+            <Typography variant="caption" sx={{ color: '#075E54', fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+              {message.senderName || 'Anonymous'}
+            </Typography>
+          )}
+          
+          {message.content && (
+            <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
+              {message.content}
+            </Typography>
+          )}
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+            {message.isEdited && (
+              <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', fontStyle: 'italic' }}>
+                Edited
+              </Typography>
+            )}
+            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
+              {formatMessageDate(message.timestamp)}
+            </Typography>
+          </Box>
+
+          {isOwnMessage && (
+            <IconButton
+              className="menu-btn"
+              size="small"
+              onClick={(e) => handleMenuOpen(e, message)}
+              sx={{
+                position: 'absolute',
+                top: 2,
+                right: 2,
+                opacity: 0,
+                transition: 'opacity 0.2s',
+                padding: 0.5,
+                bgcolor: 'rgba(255,255,255,0.5)'
+              }}
+            >
+              <MoreIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Paper>
       </Box>
-    </Box>
+    </React.Fragment>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison for better performance
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.isEdited === nextProps.message.isEdited &&
+    prevProps.isOwnMessage === nextProps.isOwnMessage
+  );
+});
+
+MessageItem.displayName = 'MessageItem';
 
 const MessagingPage = () => {
   const { currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate, currentUser);
+  };
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
   const [editingMessage, setEditingMessage] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedMessage, setSelectedMessage] = useState(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [audioChunks, setAudioChunks] = useState([]);
-  const [uploadingAudio, setUploadingAudio] = useState(false);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [playingAudioId, setPlayingAudioId] = useState(null);
   const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const recordingTimerRef = useRef(null);
-  const audioRefs = useRef({});
+  const seenMessageIdsRef = useRef(new Set());
+  const isPageFocusedRef = useRef(true);
+  
+  // Track page focus state
+  useEffect(() => {
+    const handleFocus = () => {
+      isPageFocusedRef.current = true;
+    };
+    const handleBlur = () => {
+      isPageFocusedRef.current = false;
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+  
+  // Request notification permission on mount
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
+  // Listen for new messages and show notifications (if not from current user)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubscribe = onSnapshot(
+      query(
+        collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'),
+        orderBy('timestamp', 'desc'),
+        limit(1)
+      ),
+      (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const message = change.doc.data();
+            const messageId = change.doc.id;
+            
+            // Avoid duplicate notifications
+            if (seenMessageIdsRef.current.has(messageId)) return;
+            seenMessageIdsRef.current.add(messageId);
+            
+            // Only show notification if message is from someone else and page is not focused
+            if (message.senderId !== currentUser.uid && message.content && !isPageFocusedRef.current) {
+              // Show notification (works even when page is in background)
+              if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification(`New message from ${message.senderName || 'Someone'}`, {
+                  body: message.content.length > 100 ? message.content.substring(0, 100) + '...' : message.content,
+                  icon: '/icon-192x192.png',
+                  badge: '/icon-192x192.png',
+                  tag: `chat-${messageId}`,
+                  requireInteraction: false,
+                  silent: false
+                });
+                
+                notification.onclick = () => {
+                  window.focus();
+                  notification.close();
+                };
+                
+                // Auto close after 5 seconds
+                setTimeout(() => {
+                  notification.close();
+                }, 5000);
+              }
+            }
+          }
+        });
+      }
+    );
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // Optimized: Limit to last 100 messages and order by timestamp desc for better performance
   useEffect(() => {
     const messagesQuery = query(
       collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'),
-      orderBy('timestamp', 'asc')
+      orderBy('timestamp', 'desc'),
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
@@ -211,222 +240,42 @@ const MessagingPage = () => {
           ...doc.data()
         });
       });
-      setMessages(msgs);
+      // Reverse to show oldest first
+      setMessages(msgs.reverse());
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching messages:', error);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
+  // Memoize scroll to bottom to avoid unnecessary re-renders
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
-  // Compress image before upload
-  const compressImage = (file, maxWidth = 1200, quality = 0.8) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(resolve, 'image/jpeg', quality);
-        };
-      };
-    });
-  };
-
-  const handleImageSelect = async (file) => {
-    if (!file || !file.type.startsWith('image/')) return;
-    
-    // Show preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImagePreview({
-        file: file,
-        preview: e.target.result
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleImageUpload = async () => {
-    if (!imagePreview || !currentUser) return;
-    
-    setUploadingImage(true);
-    try {
-      // Compress image
-      const compressedFile = await compressImage(imagePreview.file);
-      
-      const imageRef = ref(storage, `chat_images/${Date.now()}_${imagePreview.file.name}`);
-      await uploadBytes(imageRef, compressedFile);
-      const imageUrl = await getDownloadURL(imageRef);
-      
-      await addDoc(collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'), {
-        senderId: currentUser.uid,
-        senderName: currentUser.name || 'Anonymous',
-        content: '',
-        imageUrl: imageUrl,
-        type: 'image',
-        timestamp: serverTimestamp(),
-        isEdited: false
-      });
-      
-      setImagePreview(null);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const cancelImagePreview = () => {
-    setImagePreview(null);
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Use mimeType that's widely supported
-      const options = { mimeType: 'audio/webm' };
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = 'audio/mp4';
-      }
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = 'audio/ogg';
-      }
-      
-      const recorder = new MediaRecorder(stream, options);
-      const chunks = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunks.push(e.data);
-        }
-      };
-
-      recorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-        if (audioBlob.size > 0) {
-          await uploadAudioMessage(audioBlob);
-        }
-        stream.getTracks().forEach(track => track.stop());
-        setRecordingTime(0);
-        if (recordingTimerRef.current) {
-          clearInterval(recordingTimerRef.current);
-          recordingTimerRef.current = null;
-        }
-      };
-
-      recorder.onerror = (e) => {
-        console.error('Recording error:', e);
-        alert('Error recording audio. Please try again.');
-        stopRecording();
-      };
-
-      recorder.start(100); // Collect data every 100ms
-      setMediaRecorder(recorder);
-      setRecording(true);
-      setAudioChunks(chunks);
-      setRecordingTime(0);
-      
-      // Start timer
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      alert('Microphone access denied. Please enable microphone permissions.');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder && recording) {
-      mediaRecorder.stop();
-      setRecording(false);
-      setMediaRecorder(null);
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-      }
-    }
-  };
-
-  const cancelRecording = () => {
-    if (mediaRecorder && recording) {
-      mediaRecorder.stop();
-      setRecording(false);
-      setMediaRecorder(null);
-      setRecordingTime(0);
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-      }
-    }
-  };
-
-  const formatRecordingTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const uploadAudioMessage = async (audioBlob) => {
-    if (!audioBlob || !currentUser) return;
-    
-    setUploadingAudio(true);
-    try {
-      const audioRef = ref(storage, `chat_audio/${Date.now()}_${currentUser.uid}.webm`);
-      await uploadBytes(audioRef, audioBlob);
-      const audioUrl = await getDownloadURL(audioRef);
-      
-      await addDoc(collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'), {
-        senderId: currentUser.uid,
-        senderName: currentUser.name || 'Anonymous',
-        content: '',
-        audioUrl: audioUrl,
-        type: 'audio',
-        timestamp: serverTimestamp(),
-        isEdited: false
-      });
-    } catch (error) {
-      console.error('Error uploading audio:', error);
-      alert('Failed to upload voice message. Please try again.');
-    } finally {
-      setUploadingAudio(false);
-    }
-  };
 
   const handleSend = async () => {
     if ((!messageText.trim() && !editingMessage) || !currentUser) return;
+
+    const messageContent = messageText.trim();
+    const senderName = currentUser.name || 'Anonymous';
 
     try {
       if (editingMessage) {
         await updateDoc(
           doc(db, 'chats', GLOBAL_CHAT_ID, 'messages', editingMessage.id),
           {
-            content: messageText.trim(),
+            content: messageContent,
             isEdited: true
           }
         );
@@ -434,16 +283,22 @@ const MessagingPage = () => {
       } else {
         await addDoc(collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'), {
           senderId: currentUser.uid,
-          senderName: currentUser.name || 'Anonymous',
-          content: messageText.trim(),
+          senderName: senderName,
+          content: messageContent,
           type: 'text',
           timestamp: serverTimestamp(),
           isEdited: false
+        });
+        
+        // Send notifications to all teachers (async, don't wait)
+        sendNotificationToTeachers(senderName, messageContent).catch(err => {
+          console.error('Error sending notification:', err);
         });
       }
       setMessageText('');
     } catch (error) {
       console.error('Error sending message:', error);
+      alert('Failed to send message. Please try again.');
     }
   };
 
@@ -478,16 +333,17 @@ const MessagingPage = () => {
     setSelectedMessage(null);
   };
 
-  const formatMessageDate = (timestamp) => {
+  // Memoized date formatter
+  const formatMessageDate = useCallback((timestamp) => {
     if (!timestamp) return '';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     if (isToday(date)) return format(date, 'h:mm a');
     if (isYesterday(date)) return 'Yesterday ' + format(date, 'h:mm a');
     return format(date, 'MMM d, h:mm a');
-  };
+  }, []);
 
-  // Helper to render date separators
-  const renderDateSeparator = (currentMsg, prevMsg) => {
+  // Memoized date separator renderer
+  const renderDateSeparator = useCallback((currentMsg, prevMsg) => {
     if (!currentMsg.timestamp) return null;
     const currDate = currentMsg.timestamp.toDate ? currentMsg.timestamp.toDate() : new Date(currentMsg.timestamp);
     const prevDate = prevMsg?.timestamp ? (prevMsg.timestamp.toDate ? prevMsg.timestamp.toDate() : new Date(prevMsg.timestamp)) : null;
@@ -506,7 +362,7 @@ const MessagingPage = () => {
       );
     }
     return null;
-  };
+  }, []);
 
 
   // Redirect if not teacher or admin
@@ -549,7 +405,7 @@ const MessagingPage = () => {
       {/* 1. Header */}
       <AppBar position="static" sx={{ bgcolor: '#075E54' }}>
         <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate(-1)} sx={{ mr: 1 }}>
+          <IconButton edge="start" color="inherit" onClick={handleBack} sx={{ mr: 1 }}>
             <BackIcon />
           </IconButton>
           <Avatar sx={{ mr: 2, bgcolor: '#25D366' }}>B</Avatar>
@@ -580,117 +436,15 @@ const MessagingPage = () => {
           const prevMsg = index > 0 ? messages[index - 1] : null;
 
           return (
-            <React.Fragment key={message.id}>
-              {renderDateSeparator(message, prevMsg)}
-              
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
-                  mb: 1
-                }}
-              >
-                {!isOwnMessage && (
-                  <Avatar sx={{ width: 30, height: 30, mr: 1, mt: 0.5, fontSize: '0.8rem', bgcolor: 'secondary.main' }}>
-                    {message.senderName[0]}
-                  </Avatar>
-                )}
-
-                <Paper
-                  elevation={1}
-                  sx={{
-                    p: 1,
-                    px: 2,
-                    maxWidth: '75%',
-                    borderRadius: 2,
-                    borderTopRightRadius: isOwnMessage ? 0 : 2,
-                    borderTopLeftRadius: !isOwnMessage ? 0 : 2,
-                    bgcolor: isOwnMessage ? '#dcf8c6' : '#ffffff',
-                    position: 'relative',
-                    '&:hover .menu-btn': { opacity: 1 } // Show menu button on hover
-                  }}
-                >
-                  {!isOwnMessage && (
-                    <Typography variant="caption" sx={{ color: '#075E54', fontWeight: 'bold', display: 'block', mb: 0.5 }}>
-                      {message.senderName}
-                    </Typography>
-                  )}
-                  
-                  {message.type === 'image' && message.imageUrl && (
-                    <Box 
-                      sx={{ 
-                        mb: 1, 
-                        borderRadius: 2, 
-                        overflow: 'hidden', 
-                        maxWidth: '100%',
-                        cursor: 'pointer',
-                        '&:hover': { opacity: 0.9 }
-                      }}
-                      onClick={() => window.open(message.imageUrl, '_blank')}
-                    >
-                      <img 
-                        src={message.imageUrl} 
-                        alt="Shared image" 
-                        style={{ 
-                          maxWidth: '100%', 
-                          height: 'auto', 
-                          display: 'block',
-                          borderRadius: '8px'
-                        }} 
-                      />
-                    </Box>
-                  )}
-                  
-                  {message.type === 'audio' && message.audioUrl && (
-                    <VoiceMessagePlayer 
-                      audioUrl={message.audioUrl}
-                      messageId={message.id}
-                      isOwnMessage={isOwnMessage}
-                      playingAudioId={playingAudioId}
-                      setPlayingAudioId={setPlayingAudioId}
-                      audioRefs={audioRefs}
-                    />
-                  )}
-                  
-                  {message.content && (
-                    <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
-                      {message.content}
-                    </Typography>
-                  )}
-
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                    {message.isEdited && (
-                      <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', fontStyle: 'italic' }}>
-                        Edited
-                      </Typography>
-                    )}
-                    <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
-                      {formatMessageDate(message.timestamp)}
-                    </Typography>
-                  </Box>
-
-                  {/* Context Menu Button (Hidden by default) */}
-                  {isOwnMessage && (
-                    <IconButton
-                      className="menu-btn"
-                      size="small"
-                      onClick={(e) => handleMenuOpen(e, message)}
-                      sx={{
-                        position: 'absolute',
-                        top: 2,
-                        right: 2,
-                        opacity: 0, // Hidden until hover
-                        transition: 'opacity 0.2s',
-                        padding: 0.5,
-                        bgcolor: 'rgba(255,255,255,0.5)'
-                      }}
-                    >
-                      <MoreIcon fontSize="small" />
-                    </IconButton>
-                  )}
-                </Paper>
-              </Box>
-            </React.Fragment>
+            <MessageItem
+              key={message.id}
+              message={message}
+              isOwnMessage={isOwnMessage}
+              formatMessageDate={formatMessageDate}
+              renderDateSeparator={renderDateSeparator}
+              prevMsg={prevMsg}
+              handleMenuOpen={handleMenuOpen}
+            />
           );
         })}
         <div ref={messagesEndRef} />
@@ -733,207 +487,49 @@ const MessagingPage = () => {
                     <Typography variant="body2" noWrap>{editingMessage.content}</Typography>
                 </Box>
                 <IconButton size="small" onClick={handleCancelEdit}>
-                    <CloseIcon />
+                    <BackIcon />
                 </IconButton>
             </Box>
           </Fade>
         )}
 
-        {/* Image Upload Button */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const file = e.target.files[0];
-            if (file) {
-              handleImageSelect(file);
+        <TextField
+          fullWidth
+          placeholder="Type a message..."
+          variant="outlined"
+          size="small"
+          multiline
+          maxRows={4}
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
             }
-            e.target.value = ''; // Reset input
+          }}
+          sx={{
+            bgcolor: 'white',
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 3
+            }
           }}
         />
-        
-        <Tooltip title="Upload Image">
-          <IconButton
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingImage || recording || uploadingAudio}
-            sx={{
-              bgcolor: 'white',
-              color: '#075E54',
-              '&:hover': { bgcolor: '#e0e0e0' }
-            }}
-          >
-            {uploadingImage ? <CircularProgress size={20} /> : <ImageIcon />}
-          </IconButton>
-        </Tooltip>
 
-        {/* Recording Indicator */}
-        {recording && (
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1, 
-            bgcolor: '#f44336', 
-            color: 'white', 
-            px: 2, 
-            py: 1, 
-            borderRadius: 3,
-            animation: 'pulse 1.5s infinite'
-          }}>
-            <Box sx={{ 
-              width: 12, 
-              height: 12, 
-              borderRadius: '50%', 
-              bgcolor: 'white',
-              animation: 'pulse 1s infinite'
-            }} />
-            <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 40 }}>
-              {formatRecordingTime(recordingTime)}
-            </Typography>
-            <IconButton
-              size="small"
-              onClick={stopRecording}
-              sx={{ color: 'white', ml: 1 }}
-            >
-              <SendIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={cancelRecording}
-              sx={{ color: 'white' }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        )}
-
-        {/* Voice Recording Button */}
-        {!recording && (
-          <Tooltip title="Record Voice Message">
-            <IconButton
-              onClick={startRecording}
-              disabled={uploadingImage || uploadingAudio || !!imagePreview}
-              sx={{
-                bgcolor: 'white',
-                color: '#075E54',
-                '&:hover': { bgcolor: '#e0e0e0' }
-              }}
-            >
-              {uploadingAudio ? <CircularProgress size={20} /> : <MicIcon />}
-            </IconButton>
-          </Tooltip>
-        )}
-
-        {!imagePreview && (
-          <TextField
-            fullWidth
-            placeholder="Type a message..."
-            variant="outlined"
-            size="small"
-            multiline
-            maxRows={4}
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            disabled={recording || uploadingImage || uploadingAudio}
-            sx={{
-              bgcolor: 'white',
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 3
-              }
-            }}
-          />
-        )}
-
-        {/* Image Preview */}
-        {imagePreview && (
-          <Box sx={{ 
-            position: 'relative', 
-            maxWidth: 200, 
-            borderRadius: 2, 
-            overflow: 'hidden',
-            border: '2px solid #075E54'
-          }}>
-            <img 
-              src={imagePreview.preview} 
-              alt="Preview" 
-              style={{ 
-                width: '100%', 
-                height: 'auto', 
-                display: 'block' 
-              }} 
-            />
-            <IconButton
-              size="small"
-              onClick={cancelImagePreview}
-              sx={{
-                position: 'absolute',
-                top: 4,
-                right: 4,
-                bgcolor: 'rgba(0,0,0,0.5)',
-                color: 'white',
-                '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
-              }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-            {uploadingImage && (
-              <Box sx={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                bgcolor: 'rgba(0,0,0,0.7)',
-                color: 'white',
-                p: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}>
-                <CircularProgress size={16} sx={{ color: 'white' }} />
-                <Typography variant="caption">Uploading...</Typography>
-              </Box>
-            )}
-          </Box>
-        )}
-
-        {imagePreview && !uploadingImage && (
-          <IconButton
-            onClick={handleImageUpload}
-            sx={{
-              bgcolor: '#075E54',
-              color: 'white',
-              width: 45,
-              height: 45,
-              '&:hover': { bgcolor: '#128C7E' }
-            }}
-          >
-            <SendIcon fontSize="small" />
-          </IconButton>
-        )}
-
-        {!imagePreview && (
-          <IconButton
-            onClick={handleSend}
-            disabled={!messageText.trim() || recording || uploadingImage || uploadingAudio}
-            sx={{
-              bgcolor: messageText.trim() && !recording && !uploadingImage && !uploadingAudio ? '#075E54' : 'grey.300',
-              color: 'white',
-              width: 45,
-              height: 45,
-              '&:hover': { bgcolor: messageText.trim() ? '#128C7E' : undefined },
-              transition: 'all 0.2s'
-            }}
-          >
-            {editingMessage ? <EditIcon fontSize="small" /> : <SendIcon fontSize="small" />}
-          </IconButton>
-        )}
+        <IconButton
+          onClick={handleSend}
+          disabled={!messageText.trim() && !editingMessage}
+          sx={{
+            bgcolor: messageText.trim() || editingMessage ? '#075E54' : 'grey.300',
+            color: 'white',
+            width: 45,
+            height: 45,
+            '&:hover': { bgcolor: (messageText.trim() || editingMessage) ? '#128C7E' : undefined },
+            transition: 'all 0.2s'
+          }}
+        >
+          {editingMessage ? <EditIcon fontSize="small" /> : <SendIcon fontSize="small" />}
+        </IconButton>
       </Paper>
 
       {/* Context Menu */}

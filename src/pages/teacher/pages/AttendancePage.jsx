@@ -24,7 +24,8 @@ import {
   Container,
   useTheme,
   Avatar,
-  Tooltip
+  Tooltip,
+  useMediaQuery
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -46,12 +47,18 @@ import {
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const AttendancePage = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const [loadingLogout, setLoadingLogout] = useState(false);
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate, currentUser);
+  };
   
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +133,7 @@ const AttendancePage = () => {
     return streak;
   };
 
-  // Save Handler
+  // Save Handler (internal, called by handleSaveWithCheck)
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -188,6 +195,18 @@ const AttendancePage = () => {
   const currentPresentCount = filteredStudents.length - Object.values(attendance).filter(v => v === false).length;
   const currentAbsentCount = Object.values(attendance).filter(v => v === false).length;
 
+  // Check if selected date is Sunday (0 = Sunday)
+  const isSelectedDateSunday = new Date(attendanceDate).getDay() === 0;
+
+  // Save Handler - Add Sunday check
+  const handleSaveWithCheck = async () => {
+    if (!isSelectedDateSunday) {
+      alert('Attendance can only be updated for Sundays. Please select a Sunday date.');
+      return;
+    }
+    await handleSave();
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
       
@@ -205,7 +224,7 @@ const AttendancePage = () => {
       >
         <Container maxWidth="lg" disableGutters>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <IconButton onClick={() => navigate(-1)} sx={{ mr: 1 }}>
+          <IconButton onClick={handleBack} sx={{ mr: 1 }}>
               <BackIcon />
             </IconButton>
             <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
@@ -216,31 +235,61 @@ const AttendancePage = () => {
                 variant="contained" 
                 color="primary" 
                 startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                onClick={handleSave} 
-                disabled={saving}
+                onClick={handleSaveWithCheck} 
+                disabled={saving || !isSelectedDateSunday}
                 sx={{ borderRadius: 2 }}
               >
                 {saving ? 'Saving...' : 'Save'}
               </Button>
-              <Tooltip title="Logout">
-                <IconButton
-                  onClick={async () => {
-                    setLoadingLogout(true);
-                    try {
-                      await logout();
-                      navigate('/');
-                    } catch (error) {
-                      console.error('Logout error:', error);
-                    } finally {
-                      setLoadingLogout(false);
-                    }
-                  }}
-                  disabled={loadingLogout}
-                  sx={{ color: 'error.main' }}
-                >
-                  {loadingLogout ? <CircularProgress size={20} /> : <LogoutIcon />}
-                </IconButton>
-              </Tooltip>
+              {isMobile ? (
+                <Tooltip title={`Logout (${currentUser?.name || 'Teacher'})`}>
+                  <Button
+                    onClick={async () => {
+                      setLoadingLogout(true);
+                      try {
+                        await logout();
+                        navigate('/');
+                      } catch (error) {
+                        console.error('Logout error:', error);
+                      } finally {
+                        setLoadingLogout(false);
+                      }
+                    }}
+                    disabled={loadingLogout}
+                    startIcon={loadingLogout ? <CircularProgress size={16} color="inherit" /> : <LogoutIcon />}
+                    size="small"
+                    sx={{ 
+                      color: 'error.main',
+                      textTransform: 'none',
+                      fontSize: '0.75rem',
+                      px: 1.5,
+                      minWidth: 'auto'
+                    }}
+                  >
+                    {loadingLogout ? '' : (currentUser?.name?.split(' ')[0] || 'Teacher')}
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Tooltip title="Logout">
+                  <IconButton
+                    onClick={async () => {
+                      setLoadingLogout(true);
+                      try {
+                        await logout();
+                        navigate('/');
+                      } catch (error) {
+                        console.error('Logout error:', error);
+                      } finally {
+                        setLoadingLogout(false);
+                      }
+                    }}
+                    disabled={loadingLogout}
+                    sx={{ color: 'error.main' }}
+                  >
+                    {loadingLogout ? <CircularProgress size={20} /> : <LogoutIcon />}
+                  </IconButton>
+                </Tooltip>
+              )}
             </Box>
           </Box>
 
@@ -294,7 +343,14 @@ const AttendancePage = () => {
         </Container>
       </Paper>
 
-      {/* 2. Success Alert */}
+      {/* 2. Warning Alert for Non-Sunday */}
+      {!isSelectedDateSunday && (
+        <Alert severity="warning" sx={{ mx: 2, mt: 2, mb: 0 }}>
+          Attendance can only be updated for Sundays. The selected date is {format(new Date(attendanceDate), 'EEEE, MMM dd, yyyy')}.
+        </Alert>
+      )}
+
+      {/* 3. Success Alert */}
       <Fade in={showSuccess}>
         <Alert severity="success" sx={{ mx: 2, mt: 2, mb: 0 }}>Attendance saved successfully!</Alert>
       </Fade>
@@ -348,6 +404,7 @@ const AttendancePage = () => {
                             checked={isPresent}
                             onChange={() => toggleAttendance(student.id)}
                             color="success"
+                            disabled={!isSelectedDateSunday}
                           />
                         </Box>
                       </ListItemSecondaryAction>

@@ -38,9 +38,14 @@ import {
 } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const AbsentStudentsPage = () => {
   const navigate = useNavigate();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate);
+  };
   
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,7 +130,7 @@ const AbsentStudentsPage = () => {
         <Container maxWidth="lg" disableGutters>
           {/* Top Bar */}
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <IconButton onClick={() => navigate(-1)} sx={{ mr: 1, bgcolor: 'white', boxShadow: 1 }}>
+            <IconButton onClick={handleBack} sx={{ mr: 1, bgcolor: 'white', boxShadow: 1 }}>
               <BackIcon />
             </IconButton>
             <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: '800', color: '#d32f2f' }}>

@@ -29,9 +29,14 @@ import {
 } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const DownloadRecordsPage = () => {
   const navigate = useNavigate();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate);
+  };
   const [loading, setLoading] = useState(false);
   const [recordType, setRecordType] = useState('attendance');
   const [selectedClass, setSelectedClass] = useState('All');
@@ -221,7 +226,7 @@ const DownloadRecordsPage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
+          <Button startIcon={<BackIcon />} onClick={handleBack}>
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>

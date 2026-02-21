@@ -50,10 +50,15 @@ import {
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { format, isPast, isToday } from 'date-fns';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const HomeworkPage = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate, currentUser);
+  };
   const [homeworks, setHomeworks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -229,7 +234,7 @@ const HomeworkPage = () => {
         <Container maxWidth="lg" disableGutters>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton onClick={() => navigate(-1)} sx={{ mr: 1 }}>
+                <IconButton onClick={handleBack} sx={{ mr: 1 }}>
                     <BackIcon />
                 </IconButton>
                 <Typography variant="h6" fontWeight="bold">Homework</Typography>

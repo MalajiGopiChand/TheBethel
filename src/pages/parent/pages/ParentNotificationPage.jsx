@@ -32,9 +32,14 @@ import {
 } from 'firebase/firestore';
 import { format, formatDistanceToNow } from 'date-fns';
 import { db } from '../../../config/firebase';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const ParentNotificationPage = () => {
   const navigate = useNavigate();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate);
+  };
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -121,7 +126,7 @@ const ParentNotificationPage = () => {
       >
         <Container maxWidth="md">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate(-1)} sx={{ bgcolor: 'grey.100' }}>
+          <IconButton onClick={handleBack} sx={{ bgcolor: 'grey.100' }}>
               <BackIcon />
             </IconButton>
             <Box>

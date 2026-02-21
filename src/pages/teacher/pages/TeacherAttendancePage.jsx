@@ -39,12 +39,17 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const ADMIN_EMAILS = ['gop1@gmail.com', 'premkumartenali@gmail.com', 'admin@gmail.com'];
 
 const TeacherAttendancePage = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate, currentUser);
+  };
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -243,7 +248,7 @@ const TeacherAttendancePage = () => {
       <Container maxWidth="md">
         <Paper sx={{ p: 2, mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
+            <Button startIcon={<BackIcon />} onClick={handleBack}>
               Back
             </Button>
             <Typography variant="h5" fontWeight="bold">

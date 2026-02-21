@@ -59,22 +59,26 @@ const PWAInstallPrompt = () => {
       setCanInstall(true);
       
       // Show after delay if not already installed and not dismissed
-      if (!standalone && !sessionStorage.getItem('pwa-prompt-dismissed')) {
+      if (!standalone && !localStorage.getItem('pwa-prompt-dismissed') && !sessionStorage.getItem('pwa-prompt-dismissed')) {
         setTimeout(() => setShowPrompt(true), 2000);
       }
     };
 
-    // For iOS - show instructions after delay
-    if (iOS && !standalone && !sessionStorage.getItem('pwa-prompt-dismissed')) {
+    // For iOS - show instructions after delay (only if not dismissed)
+    if (iOS && !standalone && !localStorage.getItem('pwa-prompt-dismissed') && !sessionStorage.getItem('pwa-prompt-dismissed')) {
       setTimeout(() => setShowPrompt(true), 2000);
     }
 
     // Listen for manual install request
     const handleInstallRequest = () => {
-      if (iOS) {
-        setShowIOSDialog(true);
-      } else {
-        setShowPrompt(true);
+      // Only show if not dismissed
+      const isDismissed = localStorage.getItem('pwa-prompt-dismissed') || sessionStorage.getItem('pwa-prompt-dismissed');
+      if (!isDismissed) {
+        if (iOS) {
+          setShowIOSDialog(true);
+        } else {
+          setShowPrompt(true);
+        }
       }
     };
     window.addEventListener('pwa-install-request', handleInstallRequest);
@@ -151,17 +155,23 @@ const PWAInstallPrompt = () => {
   const handleClose = () => {
     setShowPrompt(false);
     setShowIOSDialog(false);
-    // Don't show again for this session
+    window.showPWAInstall = false;
+    // Don't show again - use localStorage so it persists across sessions
+    localStorage.setItem('pwa-prompt-dismissed', 'true');
     sessionStorage.setItem('pwa-prompt-dismissed', 'true');
   };
 
   // Listen for manual show requests
   useEffect(() => {
     const handleManualShow = () => {
-      if (isIOS) {
-        setShowIOSDialog(true);
-      } else {
-        setShowPrompt(true);
+      // Only show if not dismissed
+      const isDismissed = localStorage.getItem('pwa-prompt-dismissed') || sessionStorage.getItem('pwa-prompt-dismissed');
+      if (!isDismissed) {
+        if (isIOS) {
+          setShowIOSDialog(true);
+        } else {
+          setShowPrompt(true);
+        }
       }
     };
     window.addEventListener('pwa-install-request', handleManualShow);
@@ -173,7 +183,9 @@ const PWAInstallPrompt = () => {
     return null;
   }
 
-  if (!showPrompt && !window.showPWAInstall && !showIOSDialog && (sessionStorage.getItem('pwa-prompt-dismissed') && !window.showPWAInstall)) {
+  // Don't show if dismissed (check both localStorage and sessionStorage)
+  const isDismissed = localStorage.getItem('pwa-prompt-dismissed') || sessionStorage.getItem('pwa-prompt-dismissed');
+  if (!showPrompt && !window.showPWAInstall && !showIOSDialog && isDismissed && !window.showPWAInstall) {
     return null;
   }
 
@@ -244,7 +256,7 @@ const PWAInstallPrompt = () => {
 
       {/* iOS Install Instructions Dialog */}
       <Dialog
-        open={showIOSDialog || (isIOS && (showPrompt || window.showPWAInstall))}
+        open={showIOSDialog}
         onClose={handleClose}
         maxWidth="sm"
         fullWidth
@@ -329,7 +341,7 @@ const PWAInstallPrompt = () => {
       </Dialog>
 
       {/* iOS Quick Prompt (Alternative) */}
-      {isIOS && !showIOSDialog && (showPrompt || window.showPWAInstall) && (
+      {isIOS && !showIOSDialog && (showPrompt || window.showPWAInstall) && !localStorage.getItem('pwa-prompt-dismissed') && (
         <Snackbar
           open={true}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}

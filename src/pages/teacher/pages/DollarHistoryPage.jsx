@@ -33,12 +33,17 @@ import {
   getDoc 
 } from 'firebase/firestore';
 import { db, auth } from '../../../config/firebase'; // Ensure path is correct
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const adminEmails = ["gop1@gmail.com", "premkumartenali@gmail.com", "admin@gmail.com"];
 
 const DollarHistoryPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate);
+  };
   
   // Data States
   const [students, setStudents] = useState([]);
@@ -231,7 +236,7 @@ const DollarHistoryPage = () => {
       >
         <Box sx={{ maxWidth: 1200, mx: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton onClick={() => navigate(-1)} sx={{ mr: 2, bgcolor: 'grey.100' }}><BackIcon /></IconButton>
+            <IconButton onClick={handleBack} sx={{ mr: 2, bgcolor: 'grey.100' }}><BackIcon /></IconButton>
             <Typography variant="h5" fontWeight="900" sx={{ background: 'linear-gradient(45deg, #2E7D32, #4CAF50)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               Transaction History
             </Typography>

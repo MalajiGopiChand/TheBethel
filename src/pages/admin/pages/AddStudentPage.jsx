@@ -24,9 +24,14 @@ import {
   getDocs
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const AddStudentPage = () => {
   const navigate = useNavigate();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate);
+  };
   const [formData, setFormData] = useState({
     studentId: '',
     name: '',
@@ -90,7 +95,7 @@ const AddStudentPage = () => {
       });
 
       alert('Student added successfully!');
-      navigate(-1);
+      handleBack();
     } catch (error) {
       console.error('Error adding student:', error);
       setError('Failed to add student: ' + error.message);
@@ -103,7 +108,7 @@ const AddStudentPage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
+          <Button startIcon={<BackIcon />} onClick={handleBack}>
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
@@ -215,7 +220,7 @@ const AddStudentPage = () => {
             )}
 
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-              <Button variant="outlined" onClick={() => navigate(-1)}>
+              <Button variant="outlined" onClick={handleBack}>
                 Cancel
               </Button>
               <Button

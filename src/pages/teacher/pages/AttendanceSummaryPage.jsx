@@ -46,9 +46,14 @@ import {
 } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const AttendanceSummaryPage = () => {
   const navigate = useNavigate();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate);
+  };
   const theme = useTheme();
   
   const [students, setStudents] = useState([]);
@@ -176,7 +181,7 @@ const AttendanceSummaryPage = () => {
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton onClick={() => navigate(-1)} sx={{ mr: 1, bgcolor: 'grey.100' }}>
+                <IconButton onClick={handleBack} sx={{ mr: 1, bgcolor: 'grey.100' }}>
                 <BackIcon />
                 </IconButton>
                 <Typography variant="h6" fontWeight="800" color="text.primary">

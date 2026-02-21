@@ -37,9 +37,16 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
+import { useAuth } from '../../../contexts/AuthContext';
+import { handleBackNavigation } from '../../../utils/navigation';
 
 const ViewStudentsPage = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  
+  const handleBack = () => {
+    handleBackNavigation(navigate, currentUser);
+  };
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -117,7 +124,7 @@ const ViewStudentsPage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
+          <Button startIcon={<BackIcon />} onClick={handleBack}>
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
