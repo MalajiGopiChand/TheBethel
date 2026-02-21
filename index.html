@@ -47,15 +47,41 @@
       // Register Service Worker for PWA
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
             .then((registration) => {
-              console.log('SW registered: ', registration);
+              console.log('SW registered successfully: ', registration.scope);
+              
+              // Check for updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('New service worker available');
+                  }
+                });
+              });
             })
             .catch((registrationError) => {
               console.log('SW registration failed: ', registrationError);
             });
         });
       }
+
+      // Store deferred prompt globally for install
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        window.deferredPrompt = e;
+        console.log('Install prompt available');
+      });
+
+      // Track app installation
+      window.addEventListener('appinstalled', (evt) => {
+        console.log('App installed successfully');
+        deferredPrompt = null;
+        window.deferredPrompt = null;
+      });
     </script>
   </body>
 </html>

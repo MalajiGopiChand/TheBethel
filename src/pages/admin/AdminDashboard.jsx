@@ -46,6 +46,7 @@ import AdminManageTab from './components/AdminManageTab';
 import AdminTeachersTab from './components/AdminTeachersTab';
 import AdminMoreTab from './components/AdminMoreTab';
 import PWAInstallPrompt from '../../components/PWAInstallPrompt';
+import InstallButton from '../../components/InstallButton';
 
 // Define allowed admin emails here for easier maintenance
 const ADMIN_EMAILS = [
@@ -186,7 +187,7 @@ const AdminDashboard = () => {
                 size="small"
                 color="success"
                 variant="outlined"
-                label="Live • Today’s overview"
+                label="Live • Today's overview"
                 sx={{ borderRadius: 999 }}
               />
               <Tooltip title="Notifications">
@@ -200,6 +201,7 @@ const AdminDashboard = () => {
                   <NotificationsIcon />
                 </IconButton>
               </Tooltip>
+              <InstallButton size="small" />
               <Button
                 color="inherit"
                 onClick={handleLogout}
@@ -213,18 +215,20 @@ const AdminDashboard = () => {
           )}
 
           {isMobile && (
-            <IconButton
-              onClick={handleLogout}
-              disabled={loading}
-              sx={{
-                ml: 1,
-                bgcolor: 'rgba(15,23,42,0.92)',
-                color: 'primary.contrastText',
-                '&:hover': { bgcolor: 'rgba(15,23,42,1)' },
-              }}
-            >
-              {loading ? <CircularProgress size={18} color="inherit" /> : <LogoutIcon />}
-            </IconButton>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <InstallButton size="small" />
+              <IconButton
+                onClick={handleLogout}
+                disabled={loading}
+                sx={{
+                  bgcolor: 'rgba(15,23,42,0.92)',
+                  color: 'primary.contrastText',
+                  '&:hover': { bgcolor: 'rgba(15,23,42,1)' },
+                }}
+              >
+                {loading ? <CircularProgress size={18} color="inherit" /> : <LogoutIcon />}
+              </IconButton>
+            </Box>
           )}
         </Toolbar>
       </AppBar>

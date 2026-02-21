@@ -33,6 +33,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import PWAInstallPrompt from '../../components/PWAInstallPrompt';
+import InstallButton from '../../components/InstallButton';
 
 // Ensure these components exist in your project structure
 import HomeTab from './components/HomeTab';
@@ -253,29 +254,32 @@ const ParentDashboard = () => {
             </Box>
           </Box>
           
-          <Tooltip title="Logout" arrow>
-            <IconButton 
-                onClick={handleLogout} 
-                disabled={loadingLogout}
-                size="small"
-                sx={{ 
-                    bgcolor: 'rgba(102, 126, 234, 0.08)', 
-                    color: '#667eea',
-                    border: '1px solid rgba(102, 126, 234, 0.15)',
-                    width: 40,
-                    height: 40,
-                    '&:hover': { 
-                      bgcolor: 'rgba(244, 67, 54, 0.1)', 
-                      color: '#f44336',
-                      borderColor: 'rgba(244, 67, 54, 0.2)',
-                      transform: 'scale(1.1)'
-                    },
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-            >
-                {loadingLogout ? <CircularProgress size={18} color="inherit" /> : <LogoutIcon fontSize="small" />}
-            </IconButton>
-          </Tooltip>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <InstallButton size="small" />
+            <Tooltip title="Logout" arrow>
+              <IconButton 
+                  onClick={handleLogout} 
+                  disabled={loadingLogout}
+                  size="small"
+                  sx={{ 
+                      bgcolor: 'rgba(102, 126, 234, 0.08)', 
+                      color: '#667eea',
+                      border: '1px solid rgba(102, 126, 234, 0.15)',
+                      width: 40,
+                      height: 40,
+                      '&:hover': { 
+                        bgcolor: 'rgba(244, 67, 54, 0.1)', 
+                        color: '#f44336',
+                        borderColor: 'rgba(244, 67, 54, 0.2)',
+                        transform: 'scale(1.1)'
+                      },
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+              >
+                  {loadingLogout ? <CircularProgress size={18} color="inherit" /> : <LogoutIcon fontSize="small" />}
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Toolbar>
       </AppBar>
 

@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import PWAInstallPrompt from '../../components/PWAInstallPrompt';
+import InstallButton from '../../components/InstallButton';
 
 // Components
 import HomeTab from './components/HomeTab';
@@ -162,6 +163,7 @@ const TeacherDashboard = () => {
                 sx={{ borderRadius: 999 }}
               />
             )}
+            <InstallButton size="small" />
             <Tooltip title="Logout">
               <IconButton
                 onClick={handleLogout}

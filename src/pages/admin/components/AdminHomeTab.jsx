@@ -29,6 +29,7 @@ import { db } from '../../../config/firebase';
 import AttendanceCard from '../../../components/AttendanceCard';
 import PodiumSection from '../../../components/PodiumSection';
 import ActionGrid from '../../../components/ActionGrid';
+import InstallBanner from '../../../components/InstallBanner';
 // -------------------------------------
 
 const AdminHomeTab = () => {
@@ -193,6 +194,9 @@ const AdminHomeTab = () => {
 
   return (
     <Box>
+      {/* Install Banner */}
+      <InstallBanner />
+      
       {/* Attendance Progress Card */}
       {overview && (
         <AttendanceCard data={overview} canEdit={true} />

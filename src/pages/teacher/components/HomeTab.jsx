@@ -32,6 +32,7 @@ import AttendanceCard from '../../../components/AttendanceCard';
 import PodiumSection from '../../../components/PodiumSection';
 import ActionGrid from '../../../components/ActionGrid';
 import AnnouncementsSection from '../../../components/AnnouncementsSection';
+import InstallBanner from '../../../components/InstallBanner';
 
 const HomeTab = () => {
   const navigate = useNavigate();
@@ -271,6 +272,9 @@ const HomeTab = () => {
       }}
     >
       <Container maxWidth="lg" sx={{ px: isMobile ? 1.5 : 2, py: 2 }}>
+        {/* Install Banner */}
+        <InstallBanner />
+        
         {/* Attendance Card */}
         <Box sx={{ mb: 2.5 }}>
           <AttendanceCard data={overview} canEdit={true} />

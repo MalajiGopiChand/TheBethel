@@ -30,6 +30,7 @@ import {
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import AnnouncementsSection from '../../../components/AnnouncementsSection';
+import InstallBanner from '../../../components/InstallBanner';
 
 const HomeTab = ({ student }) => {
   const navigate = useNavigate();
@@ -147,6 +148,8 @@ const HomeTab = ({ student }) => {
 
   return (
     <Box sx={{ pb: 10 }}> 
+      {/* Install Banner */}
+      <InstallBanner />
       
       {/* 1. Welcome Banner */}
       <Paper 
