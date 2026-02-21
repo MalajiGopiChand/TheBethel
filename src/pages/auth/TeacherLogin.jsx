@@ -34,33 +34,50 @@ const TeacherLogin = () => {
 
   useEffect(() => {
     clearError();
-    // Redirect if already logged in
-    if (!authLoading && currentUser) {
+    // Redirect if already logged in - ensure user has role before redirecting
+    if (!authLoading && currentUser && currentUser.role) {
       const isAdmin = currentUser.role === UserRole.ADMIN || 
         currentUser.email === 'gop1@gmail.com' || 
         currentUser.email === 'premkumartenali@gmail.com';
       
       if (isAdmin) {
-        navigate('/admin/dashboard', { replace: true });
+        // Use window.location for PWA compatibility
+        if (window.location.pathname !== '/admin/dashboard') {
+          navigate('/admin/dashboard', { replace: true });
+        }
       } else if (currentUser.role === UserRole.TEACHER) {
-        navigate('/teacher/dashboard', { replace: true });
+        // Use window.location for PWA compatibility
+        if (window.location.pathname !== '/teacher/dashboard') {
+          navigate('/teacher/dashboard', { replace: true });
+        }
       }
     }
   }, [currentUser, authLoading, navigate]);
 
-  // Navigate when user is loaded after login
+  // Navigate when user is loaded after login - improved for PWA
   useEffect(() => {
-    if (loading && !authLoading && currentUser) {
+    // Only navigate if we're in loading state (just logged in) and user is loaded
+    if (loading && !authLoading && currentUser && currentUser.role) {
       const isAdmin = currentUser.role === UserRole.ADMIN || 
         currentUser.email === 'gop1@gmail.com' || 
         currentUser.email === 'premkumartenali@gmail.com';
       
       if (isAdmin) {
-        navigate('/admin/dashboard', { replace: true });
         setLoading(false);
+        // Use setTimeout to ensure navigation happens after state update
+        setTimeout(() => {
+          if (window.location.pathname !== '/admin/dashboard') {
+            navigate('/admin/dashboard', { replace: true });
+          }
+        }, 50);
       } else if (currentUser.role === UserRole.TEACHER) {
-        navigate('/teacher/dashboard', { replace: true });
         setLoading(false);
+        // Use setTimeout to ensure navigation happens after state update
+        setTimeout(() => {
+          if (window.location.pathname !== '/teacher/dashboard') {
+            navigate('/teacher/dashboard', { replace: true });
+          }
+        }, 50);
       }
     }
   }, [currentUser, authLoading, loading, navigate]);
@@ -72,8 +89,8 @@ const TeacherLogin = () => {
 
     try {
       await login(email, password, UserRole.TEACHER);
-      // Don't navigate here - let useEffect handle it when currentUser is set
-      // Keep loading true until user data is loaded
+      // Wait for auth state to update and user data to load
+      // The useEffect will handle navigation once currentUser is set
     } catch (err) {
       // Error is handled by context
       setLoading(false);

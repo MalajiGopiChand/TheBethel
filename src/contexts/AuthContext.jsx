@@ -51,11 +51,14 @@ export const AuthProvider = ({ children }) => {
           const teacherDoc = await getDoc(doc(db, 'teachers', user.uid));
           if (teacherDoc.exists()) {
             const teacherData = teacherDoc.data();
-            setCurrentUser({ 
+            const userData = { 
               ...teacherData, 
               uid: user.uid,
-              role: teacherData.role || UserRole.TEACHER
-            });
+              role: teacherData.role || UserRole.TEACHER,
+              email: teacherData.email || user.email || '',
+              name: teacherData.name || user.displayName || 'Teacher'
+            };
+            setCurrentUser(userData);
             setLoading(false);
             return;
           }
@@ -64,19 +67,22 @@ export const AuthProvider = ({ children }) => {
           const parentDoc = await getDoc(doc(db, 'parents', user.uid));
           if (parentDoc.exists()) {
             const parentData = parentDoc.data();
-            setCurrentUser({ 
+            const userData = { 
               ...parentData, 
               uid: user.uid,
-              role: parentData.role || UserRole.PARENT
-            });
+              role: parentData.role || UserRole.PARENT,
+              email: parentData.email || user.email || '',
+              name: parentData.name || user.displayName || 'Parent'
+            };
+            setCurrentUser(userData);
             setLoading(false);
             return;
           }
 
-          // User not found in Firestore - sign them out
-          console.warn('User not found in Firestore, signing out');
-          await firebaseSignOut(auth);
+          // User not found in Firestore - don't sign out immediately, allow retry
+          console.warn('User not found in Firestore, will retry...');
           setCurrentUser(null);
+          setLoading(false);
         } catch (err) {
           console.error('Error fetching user:', err);
           // On network error, retry after a delay

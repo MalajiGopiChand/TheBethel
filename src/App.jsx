@@ -125,6 +125,16 @@ function App() {
             ) : (
               <TeacherDashboard />
             )
+          ) : loading ? (
+            <Box
+              className="page-shell page-glow-background"
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              minHeight="100vh"
+            >
+              <CircularProgress />
+            </Box>
           ) : (
             <Navigate to="/" replace />
           )
