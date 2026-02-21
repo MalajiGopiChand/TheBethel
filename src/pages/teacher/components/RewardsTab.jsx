@@ -4,7 +4,8 @@ import { Box, Typography } from '@mui/material';
 import ActionGrid from '../../../components/ActionGrid';
 import {
   AttachMoney as GiveDollarsIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  AccountBalanceWallet as OfferingsIcon,
 } from '@mui/icons-material';
 
 const RewardsTab = () => {
@@ -26,6 +27,14 @@ const RewardsTab = () => {
       colorEnd: '#FCB69F',
       isEnabled: true,
       onClick: () => navigate('/teacher/dollar-history')
+    },
+    {
+      title: 'Offerings',
+      icon: <OfferingsIcon />,
+      colorStart: '#B2FEFA',
+      colorEnd: '#0ED2F7',
+      isEnabled: true,
+      onClick: () => navigate('/teacher/offerings')
     }
   ];
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Container,
@@ -11,7 +11,8 @@ import {
   Link as MuiLink,
   InputAdornment,
   Avatar,
-  Fade
+  Fade,
+  CircularProgress
 } from '@mui/material';
 import {
   Email as EmailIcon,
@@ -26,12 +27,24 @@ const ParentLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, error, clearError } = useAuth();
+  const { login, error, clearError, currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  React.useEffect(() => {
+  useEffect(() => {
     clearError();
-  }, []);
+    // Redirect if already logged in
+    if (!authLoading && currentUser && currentUser.role === UserRole.PARENT) {
+      navigate('/parent/dashboard', { replace: true });
+    }
+  }, [currentUser, authLoading, navigate]);
+
+  // Navigate when user is loaded after login
+  useEffect(() => {
+    if (loading && !authLoading && currentUser && currentUser.role === UserRole.PARENT) {
+      navigate('/parent/dashboard', { replace: true });
+      setLoading(false);
+    }
+  }, [currentUser, authLoading, loading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,10 +53,10 @@ const ParentLogin = () => {
 
     try {
       await login(email, password, UserRole.PARENT);
-      navigate('/parent/dashboard');
+      // Don't navigate here - let useEffect handle it when currentUser is set
+      // Keep loading true until user data is loaded
     } catch (err) {
       // Error is handled by context
-    } finally {
       setLoading(false);
     }
   };

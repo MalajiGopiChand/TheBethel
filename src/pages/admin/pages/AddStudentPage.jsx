@@ -90,7 +90,7 @@ const AddStudentPage = () => {
       });
 
       alert('Student added successfully!');
-      navigate('/admin/dashboard');
+      navigate(-1);
     } catch (error) {
       console.error('Error adding student:', error);
       setError('Failed to add student: ' + error.message);
@@ -103,7 +103,7 @@ const AddStudentPage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate('/admin/dashboard')}>
+          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
@@ -215,7 +215,7 @@ const AddStudentPage = () => {
             )}
 
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-              <Button variant="outlined" onClick={() => navigate('/admin/dashboard')}>
+              <Button variant="outlined" onClick={() => navigate(-1)}>
                 Cancel
               </Button>
               <Button

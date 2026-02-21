@@ -121,7 +121,7 @@ const ParentNotificationPage = () => {
       >
         <Container maxWidth="md">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => navigate('/parent/dashboard')} sx={{ bgcolor: 'grey.100' }}>
+          <IconButton onClick={() => navigate(-1)} sx={{ bgcolor: 'grey.100' }}>
               <BackIcon />
             </IconButton>
             <Box>

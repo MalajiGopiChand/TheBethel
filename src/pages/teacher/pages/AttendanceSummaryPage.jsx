@@ -176,7 +176,7 @@ const AttendanceSummaryPage = () => {
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton onClick={() => navigate('/teacher/dashboard')} sx={{ mr: 1, bgcolor: 'grey.100' }}>
+                <IconButton onClick={() => navigate(-1)} sx={{ mr: 1, bgcolor: 'grey.100' }}>
                 <BackIcon />
                 </IconButton>
                 <Typography variant="h6" fontWeight="800" color="text.primary">

@@ -125,7 +125,7 @@ const AbsentStudentsPage = () => {
         <Container maxWidth="lg" disableGutters>
           {/* Top Bar */}
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <IconButton onClick={() => navigate('/teacher/dashboard')} sx={{ mr: 1, bgcolor: 'white', boxShadow: 1 }}>
+            <IconButton onClick={() => navigate(-1)} sx={{ mr: 1, bgcolor: 'white', boxShadow: 1 }}>
               <BackIcon />
             </IconButton>
             <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: '800', color: '#d32f2f' }}>

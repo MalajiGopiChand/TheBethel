@@ -168,7 +168,7 @@ const AdminSendNotificationPage = () => {
       {/* --- Top Bar --- */}
       <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', maxWidth: 1000, mx: 'auto' }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate('/admin/dashboard')}>
+          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
             Dashboard
           </Button>
           <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>

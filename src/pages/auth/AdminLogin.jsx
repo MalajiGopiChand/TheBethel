@@ -40,6 +40,7 @@ const AdminLogin = () => {
     if (currentUser) {
       const isAdmin = currentUser.role === UserRole.ADMIN || 
         currentUser.email === 'gop1@gmail.com' || 
+        currentUser.email === 'admin@gmail.com' || 
         currentUser.email === 'premkumartenali@gmail.com';
       if (isAdmin) {
         navigate('/admin/dashboard');
@@ -54,7 +55,7 @@ const AdminLogin = () => {
 
     try {
       // Check if email is admin before attempting login
-      const isAdminEmail = email === 'gop1@gmail.com' || email === 'premkumartenali@gmail.com';
+      const isAdminEmail = email === 'gop1@gmail.com' || email === 'admin@gmail.com' || email === 'premkumartenali@gmail.com';
       
       if (!isAdminEmail) {
         setLoading(false);

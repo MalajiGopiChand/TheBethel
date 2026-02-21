@@ -30,11 +30,9 @@ import {
 } from '@mui/icons-material';
 import {
   collection,
-  getDocs,
   addDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
   onSnapshot
 } from 'firebase/firestore';
@@ -47,7 +45,7 @@ const OfferingsPage = () => {
   const { currentUser } = useAuth();
   const [offerings, setOfferings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPlace, setSelectedPlace] = useState('Kandrika');
+  const [selectedPlace, setSelectedPlace] = useState('All');
   const [formData, setFormData] = useState({
     amount: '',
     reason: ''
@@ -55,84 +53,63 @@ const OfferingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [balance, setBalance] = useState({ totalOfferings: 0, totalExpenses: 0, balance: 0 });
 
-  const places = ['Kandrika', 'Krishna Lanka', 'Gandhiji Conly', 'Other'];
+  const places = ['All', 'Kandrika', 'Krishna Lanka', 'Gandhiji Conly', 'Other'];
 
   useEffect(() => {
-    // Real-time listener for offerings
-    const offeringsQuery = query(
-      collection(db, 'offerings'),
-      where('place', '==', selectedPlace),
-      orderBy('createdAt', 'desc')
-    );
-    const unsubscribeOfferings = onSnapshot(offeringsQuery, (snapshot) => {
-      const offeringsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setOfferings(offeringsData);
+    // Keep teacher offerings page in sync with admin finance by reading financial_records.
+    setLoading(true);
+    const recordsQuery = selectedPlace === 'All'
+      ? query(collection(db, 'financial_records'))
+      : query(
+          collection(db, 'financial_records'),
+          where('place', '==', selectedPlace)
+        );
+
+    const unsubscribeRecords = onSnapshot(recordsQuery, (snapshot) => {
+      const allRecords = snapshot.docs
+        .map((docRef) => ({
+          id: docRef.id,
+          ...docRef.data()
+        }))
+        .sort((a, b) => {
+          const aTime = a.timestamp?.toDate?.() || a.timestamp || 0;
+          const bTime = b.timestamp?.toDate?.() || b.timestamp || 0;
+          return bTime - aTime;
+        });
+
+      const offeringRecords = allRecords.filter((record) => record.type === 'OFFERING');
+      const expenseRecords = allRecords.filter((record) => record.type === 'EXPENSE');
+
+      const totalOfferings = offeringRecords.reduce(
+        (sum, record) => sum + (parseFloat(record.amount) || 0),
+        0
+      );
+      const totalExpenses = expenseRecords.reduce(
+        (sum, record) => sum + (parseFloat(record.amount) || 0),
+        0
+      );
+
+      setOfferings(offeringRecords);
+      setBalance({
+        totalOfferings,
+        totalExpenses,
+        balance: totalOfferings - totalExpenses
+      });
       setLoading(false);
     }, (error) => {
       console.error('Error fetching offerings:', error);
       setLoading(false);
     });
 
-    // Real-time listener for balance
-    const balanceOfferingsQuery = query(
-      collection(db, 'offerings'),
-      where('place', '==', selectedPlace)
-    );
-    const balanceExpensesQuery = query(
-      collection(db, 'expenses'),
-      where('place', '==', selectedPlace)
-    );
-
-    const unsubscribeBalanceOfferings = onSnapshot(balanceOfferingsQuery, (snapshot) => {
-      const totalOfferings = snapshot.docs.reduce((sum, doc) => {
-        return sum + (parseFloat(doc.data().amount) || 0);
-      }, 0);
-      
-      // Get expenses
-      getDocs(balanceExpensesQuery).then(expensesSnapshot => {
-        const totalExpenses = expensesSnapshot.docs.reduce((sum, doc) => {
-          return sum + (parseFloat(doc.data().amount) || 0);
-        }, 0);
-        
-        setBalance({
-          totalOfferings,
-          totalExpenses,
-          balance: totalOfferings - totalExpenses
-        });
-      });
-    });
-
-    const unsubscribeBalanceExpenses = onSnapshot(balanceExpensesQuery, (snapshot) => {
-      const totalExpenses = snapshot.docs.reduce((sum, doc) => {
-        return sum + (parseFloat(doc.data().amount) || 0);
-      }, 0);
-      
-      // Get offerings
-      getDocs(balanceOfferingsQuery).then(offeringsSnapshot => {
-        const totalOfferings = offeringsSnapshot.docs.reduce((sum, doc) => {
-          return sum + (parseFloat(doc.data().amount) || 0);
-        }, 0);
-        
-        setBalance({
-          totalOfferings,
-          totalExpenses,
-          balance: totalOfferings - totalExpenses
-        });
-      });
-    });
-
-    return () => {
-      unsubscribeOfferings();
-      unsubscribeBalanceOfferings();
-      unsubscribeBalanceExpenses();
-    };
+    return () => unsubscribeRecords();
   }, [selectedPlace]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (selectedPlace === 'All') {
+      alert('Please choose a specific place before adding offering.');
+      return;
+    }
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
       alert('Please enter a valid amount');
       return;
@@ -140,16 +117,18 @@ const OfferingsPage = () => {
 
     try {
       setSaving(true);
-      await addDoc(collection(db, 'offerings'), {
+      await addDoc(collection(db, 'financial_records'), {
+        type: 'OFFERING',
         amount: parseFloat(formData.amount),
         reason: formData.reason || 'Offering',
         place: selectedPlace,
         createdBy: currentUser?.name || 'Teacher',
-        createdAt: serverTimestamp()
+        createdByUid: currentUser?.uid || null,
+        items: [],
+        timestamp: serverTimestamp()
       });
       
       setFormData({ amount: '', reason: '' });
-      // Data will update automatically via real-time listener
       alert('Offering recorded successfully!');
     } catch (error) {
       console.error('Error saving offering:', error);
@@ -163,7 +142,7 @@ const OfferingsPage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate('/teacher/dashboard')}>
+          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)}>
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
@@ -276,6 +255,7 @@ const OfferingsPage = () => {
               <TableHead>
                 <TableRow>
                   <TableCell><strong>Date</strong></TableCell>
+                  <TableCell><strong>Place</strong></TableCell>
                   <TableCell><strong>Amount</strong></TableCell>
                   <TableCell><strong>Reason</strong></TableCell>
                   <TableCell><strong>Recorded By</strong></TableCell>
@@ -286,15 +266,18 @@ const OfferingsPage = () => {
                   <TableRow key={offering.id}>
                     <TableCell>
                       {(() => {
-                        if (!offering.createdAt) return 'N/A';
+                        if (!offering.timestamp) return 'N/A';
                         let date;
-                        if (typeof offering.createdAt.toDate === 'function') {
-                          date = offering.createdAt.toDate();
-                        } else if (offering.createdAt instanceof Date) {
-                          date = offering.createdAt;
+                        if (typeof offering.timestamp.toDate === 'function') {
+                          date = offering.timestamp.toDate();
+                        } else if (offering.timestamp instanceof Date) {
+                          date = offering.timestamp;
                         }
                         return date ? format(date, 'MMM dd, yyyy HH:mm') : 'N/A';
                       })()}
+                    </TableCell>
+                    <TableCell>
+                      {offering.place || '-'}
                     </TableCell>
                     <TableCell>
                       <Chip

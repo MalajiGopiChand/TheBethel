@@ -10,5 +10,6 @@ export default defineConfig({
     allowedHosts: [
       'sandie-unfired-ardith.ngrok-free.dev'
     ]
-  }
+  },
+  publicDir: 'public'
 })

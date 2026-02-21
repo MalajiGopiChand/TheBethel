@@ -202,7 +202,7 @@ const AttendancePage = () => {
       >
         <Container maxWidth="lg" disableGutters>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <IconButton onClick={() => navigate('/teacher/dashboard')} sx={{ mr: 1 }}>
+          <IconButton onClick={() => navigate(-1)} sx={{ mr: 1 }}>
               <BackIcon />
             </IconButton>
             <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 'bold' }}>

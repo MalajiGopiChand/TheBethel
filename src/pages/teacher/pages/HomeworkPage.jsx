@@ -44,7 +44,8 @@ import {
   query,
   orderBy,
   serverTimestamp,
-  onSnapshot
+  onSnapshot,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -66,17 +67,71 @@ const HomeworkPage = () => {
     dueDate: ''
   });
 
+  // Auto-delete expired homework
+  const deleteExpiredHomework = async (homeworksData) => {
+    const now = new Date();
+    const expiredHomework = homeworksData.filter(hw => {
+      if (!hw.dueDate) return false;
+      let dueDateObj = null;
+      if (typeof hw.dueDate.toDate === 'function') {
+        dueDateObj = hw.dueDate.toDate();
+      } else if (hw.dueDate instanceof Date) {
+        dueDateObj = hw.dueDate;
+      }
+      if (!dueDateObj) return false;
+      // Delete if due date has passed (more than 1 day ago to allow viewing on due date)
+      const oneDayAfter = new Date(dueDateObj);
+      oneDayAfter.setDate(oneDayAfter.getDate() + 1);
+      return now > oneDayAfter;
+    });
+
+    if (expiredHomework.length > 0) {
+      try {
+        const batch = writeBatch(db);
+        expiredHomework.forEach(hw => {
+          batch.delete(doc(db, 'homeworks', hw.id));
+        });
+        await batch.commit();
+        console.log(`Deleted ${expiredHomework.length} expired homework assignments`);
+      } catch (error) {
+        console.error('Error deleting expired homework:', error);
+      }
+    }
+  };
+
   useEffect(() => {
+    // Show all homework to everyone (not filtered by teacher)
     const homeworksQuery = query(
       collection(db, 'homeworks'),
       orderBy('createdAt', 'desc')
     );
-    const unsubscribe = onSnapshot(homeworksQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(homeworksQuery, async (snapshot) => {
       const homeworksData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      setHomeworks(homeworksData);
+      
+      // Auto-delete expired homework
+      await deleteExpiredHomework(homeworksData);
+      
+      // Filter out expired homework from display (they will be deleted)
+      const now = new Date();
+      const activeHomeworks = homeworksData.filter(hw => {
+        if (!hw.dueDate) return true; // Keep homework without due date
+        let dueDateObj = null;
+        if (typeof hw.dueDate.toDate === 'function') {
+          dueDateObj = hw.dueDate.toDate();
+        } else if (hw.dueDate instanceof Date) {
+          dueDateObj = hw.dueDate;
+        }
+        if (!dueDateObj) return true;
+        // Show until 1 day after due date
+        const oneDayAfter = new Date(dueDateObj);
+        oneDayAfter.setDate(oneDayAfter.getDate() + 1);
+        return now <= oneDayAfter;
+      });
+      
+      setHomeworks(activeHomeworks);
       setLoading(false);
     }, (error) => {
       console.error('Error fetching homeworks:', error);
@@ -174,7 +229,7 @@ const HomeworkPage = () => {
         <Container maxWidth="lg" disableGutters>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton onClick={() => navigate('/teacher/dashboard')} sx={{ mr: 1 }}>
+                <IconButton onClick={() => navigate(-1)} sx={{ mr: 1 }}>
                     <BackIcon />
                 </IconButton>
                 <Typography variant="h6" fontWeight="bold">Homework</Typography>
@@ -230,16 +285,28 @@ const HomeworkPage = () => {
                         
                         {/* Title & Actions */}
                         <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                            <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3 }}>
-                                {homework.title}
-                            </Typography>
                             <Box>
-                                <IconButton size="small" onClick={() => handleOpenDialog(homework)}>
-                                    <EditIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton size="small" color="error" onClick={() => handleDelete(homework)}>
-                                    <DeleteIcon fontSize="small" />
-                                </IconButton>
+                                <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3 }}>
+                                    {homework.title}
+                                </Typography>
+                                {homework.teacherName && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                        Assigned by: {homework.teacherName}
+                                    </Typography>
+                                )}
+                            </Box>
+                            <Box>
+                                {/* Only show edit/delete if current user is the one who posted it */}
+                                {homework.teacherId === currentUser?.uid && (
+                                    <>
+                                        <IconButton size="small" onClick={() => handleOpenDialog(homework)}>
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton size="small" color="error" onClick={() => handleDelete(homework)}>
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </>
+                                )}
                             </Box>
                         </Box>
 

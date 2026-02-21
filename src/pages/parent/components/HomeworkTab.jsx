@@ -12,7 +12,8 @@ import {
   Stack,
   Divider,
   Avatar,
-  useTheme
+  useTheme,
+  Tooltip
 } from '@mui/material';
 import {
   collection,
@@ -60,29 +61,104 @@ const HomeworkTab = ({ student }) => {
     );
     
     const unsubscribe = onSnapshot(homeworksQuery, (snapshot) => {
-      let homeworksData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      let homeworksData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data
+        };
+      });
 
       if (student?.studentId) {
         homeworksData = homeworksData.filter(hw => {
-          // 1. Specific assignment
-          const isAssignedToStudent = hw.studentRollNumbers?.includes(student.studentId);
-          // 2. General assignment
-          const isGeneralAssignment = !hw.studentRollNumbers || hw.studentRollNumbers.length === 0;
+          // 1. Check if specifically assigned to this student
+          const studentRollNumbers = hw.studentRollNumbers || hw.studentIds || [];
+          const isAssignedToStudent = Array.isArray(studentRollNumbers) && 
+            studentRollNumbers.length > 0 && 
+            studentRollNumbers.includes(student.studentId);
+          
+          if (isAssignedToStudent) {
+            // Check if expired (don't show expired homework)
+            if (hw.dueDate) {
+              let dueDateObj = null;
+              if (typeof hw.dueDate.toDate === 'function') {
+                dueDateObj = hw.dueDate.toDate();
+              } else if (hw.dueDate instanceof Date) {
+                dueDateObj = hw.dueDate;
+              }
+              if (dueDateObj) {
+                const now = new Date();
+                const oneDayAfter = new Date(dueDateObj);
+                oneDayAfter.setDate(oneDayAfter.getDate() + 1);
+                // Don't show if more than 1 day past due date
+                if (now > oneDayAfter) return false;
+              }
+            }
+            return true;
+          }
 
-          if (isAssignedToStudent) return true;
+          // 2. Check general assignments (no specific student assignment)
+          const isGeneralAssignment = !hw.studentRollNumbers && 
+            (!hw.studentIds || hw.studentIds.length === 0);
 
           if (isGeneralAssignment) {
-            // Strict AND check for Class + Location
-            const matchesClass = !hw.classType || hw.classType === student.classType;
-            const studentPlace = student.location || student.place;
+            // Match by class and place
+            const studentClass = student.classType || student.class || student.className;
+            const studentPlace = student.location || student.place || student.branch;
+            
+            // If homework has no class/place specified, show it to everyone
+            if (!hw.classType && !hw.place) {
+              // Check if expired
+              if (hw.dueDate) {
+                let dueDateObj = null;
+                if (typeof hw.dueDate.toDate === 'function') {
+                  dueDateObj = hw.dueDate.toDate();
+                } else if (hw.dueDate instanceof Date) {
+                  dueDateObj = hw.dueDate;
+                }
+                if (dueDateObj) {
+                  const now = new Date();
+                  const oneDayAfter = new Date(dueDateObj);
+                  oneDayAfter.setDate(oneDayAfter.getDate() + 1);
+                  if (now > oneDayAfter) return false;
+                }
+              }
+              return true;
+            }
+            
+            // Match class (if specified in homework)
+            const matchesClass = !hw.classType || hw.classType === studentClass;
+            
+            // Match place (if specified in homework)
             const matchesPlace = !hw.place || hw.place === studentPlace;
-            return matchesClass && matchesPlace;
+            
+            // Show if both match, or if neither is specified
+            if (matchesClass && matchesPlace) {
+              // Check if expired
+              if (hw.dueDate) {
+                let dueDateObj = null;
+                if (typeof hw.dueDate.toDate === 'function') {
+                  dueDateObj = hw.dueDate.toDate();
+                } else if (hw.dueDate instanceof Date) {
+                  dueDateObj = hw.dueDate;
+                }
+                if (dueDateObj) {
+                  const now = new Date();
+                  const oneDayAfter = new Date(dueDateObj);
+                  oneDayAfter.setDate(oneDayAfter.getDate() + 1);
+                  // Don't show if more than 1 day past due date
+                  if (now > oneDayAfter) return false;
+                }
+              }
+              return true;
+            }
           }
+          
           return false;
         });
+      } else {
+        // If no studentId, show all homeworks (fallback)
+        homeworksData = [];
       }
 
       setHomeworks(homeworksData);

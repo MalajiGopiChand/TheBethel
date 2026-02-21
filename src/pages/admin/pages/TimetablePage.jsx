@@ -224,7 +224,7 @@ const TimetablePage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: { xs: 1, sm: 2 }, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
-          <Button startIcon={<BackIcon />} onClick={() => navigate('/admin/dashboard')} size="small">
+          <Button startIcon={<BackIcon />} onClick={() => navigate(-1)} size="small">
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: { xs: 'center', sm: 'left' }, fontWeight: 'bold' }}>

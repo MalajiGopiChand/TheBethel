@@ -6,17 +6,21 @@ import {
   Grid,
   Card,
   CardContent,
-  CircularProgress
+  CircularProgress,
+  Container,
+  useTheme,
+  useMediaQuery,
+  Paper
 } from '@mui/material';
 import {
   Chat as ChatIcon,
   EventNote as AttendanceIcon,
   Assignment as HomeworkIcon,
-  AttachMoney as DollarIcon
+  AttachMoney as DollarIcon,
+  TrendingUp as ProgressIcon
 } from '@mui/icons-material';
 import {
   collection,
-  getDocs,
   query,
   orderBy,
   onSnapshot
@@ -30,6 +34,10 @@ import AnnouncementsSection from '../../../components/AnnouncementsSection';
 
 const HomeTab = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  
   const [overview, setOverview] = useState({
     totalStudents: 0,
     attendancePercentage: 0,
@@ -42,7 +50,7 @@ const HomeTab = () => {
   const [loading, setLoading] = useState(true);
   const [announcements, setAnnouncements] = useState([]);
 
-
+  // Fetch announcements
   useEffect(() => {
     const notificationsQuery = query(
       collection(db, 'notifications'),
@@ -54,11 +62,11 @@ const HomeTab = () => {
       snapshot.forEach((doc) => {
         const data = doc.data();
         const audience = data.audience || 'All';
+        
         // Show announcements for Teachers or All
         if (audience === 'Teachers' || audience === 'All') {
           let createdAt;
           if (data.createdAt) {
-            // Handle Firestore Timestamp
             if (typeof data.createdAt.toDate === 'function') {
               createdAt = data.createdAt.toDate();
             } else if (data.createdAt instanceof Date) {
@@ -69,8 +77,10 @@ const HomeTab = () => {
           } else {
             createdAt = new Date();
           }
+          
           announcementsData.push({
-            title: data.title || '',
+            id: doc.id,
+            title: data.title || 'Announcement',
             message: data.message || '',
             date: format(createdAt, 'MMM dd, yyyy'),
             audience: audience,
@@ -78,16 +88,17 @@ const HomeTab = () => {
           });
         }
       });
-      setAnnouncements(announcementsData.slice(0, 5)); // Show last 5
+      setAnnouncements(announcementsData.slice(0, 5));
     });
 
     return () => unsubscribe();
   }, []);
 
-  // Helper function to calculate dollar points from rewards array
+  // Helper function to calculate dollar points
   const calculateDollarPoints = (studentData) => {
     const rewardsList = studentData.rewards || [];
     let calculatedPoints = 0;
+    
     for (const reward of rewardsList) {
       const points = reward.dollars;
       if (typeof points === 'number') {
@@ -96,28 +107,39 @@ const HomeTab = () => {
         calculatedPoints += parseInt(points) || 0;
       }
     }
+    
     return calculatedPoints > 0 ? calculatedPoints : (studentData.dollarPoints || 0);
   };
 
+  // Fetch students data
   useEffect(() => {
-    // Real-time listener for students overview
     setLoading(true);
+    
     const unsubscribe = onSnapshot(collection(db, 'students'), (snapshot) => {
       const students = snapshot.docs.map(doc => {
         const data = doc.data();
         const calculatedPoints = calculateDollarPoints(data);
+        
         return {
           id: doc.id,
           ...data,
-          dollarPoints: calculatedPoints
+          dollarPoints: calculatedPoints,
+          name: data.name || 'Unknown Student',
+          attendance: data.attendance || []
         };
       });
 
       const totalStudents = students.length;
       const today = format(new Date(), 'yyyy-MM-dd');
       
+      // Calculate today's attendance
       const todayPresentCount = students.filter(student => 
-        (student.attendance || []).some((date) => date.startsWith(today))
+        (student.attendance || []).some(date => {
+          if (typeof date === 'string') {
+            return date.startsWith(today);
+          }
+          return false;
+        })
       ).length;
       
       const todayAbsentCount = totalStudents - todayPresentCount;
@@ -125,14 +147,23 @@ const HomeTab = () => {
         ? Math.round((todayPresentCount / totalStudents) * 100)
         : 0;
 
+      // Calculate total dollars
       const totalDollarsGiven = students.reduce((sum, student) => 
         sum + (student.dollarPoints || 0), 0
       );
 
+      // Calculate total rewards
+      const totalRewards = students.reduce((sum, student) => 
+        sum + (student.rewards?.length || 0), 0
+      );
+
+      // Calculate top students (unique names with total points)
       const studentDollarMap = new Map();
       students.forEach(student => {
-        const current = studentDollarMap.get(student.name) || 0;
-        studentDollarMap.set(student.name, current + (student.dollarPoints || 0));
+        if (student.name && student.name !== 'Unknown Student') {
+          const current = studentDollarMap.get(student.name) || 0;
+          studentDollarMap.set(student.name, current + (student.dollarPoints || 0));
+        }
       });
 
       const topStudents = Array.from(studentDollarMap.entries())
@@ -144,11 +175,12 @@ const HomeTab = () => {
         totalStudents,
         attendancePercentage,
         totalDollarsGiven,
-        totalRewards: 0,
+        totalRewards,
         todayPresentCount,
         todayAbsentCount,
         topStudents
       });
+      
       setLoading(false);
     }, (error) => {
       console.error('Error fetching overview:', error);
@@ -168,7 +200,7 @@ const HomeTab = () => {
       onClick: () => navigate('/teacher/messaging')
     },
     {
-      title: 'Mark Attendance',
+      title: 'Attendance',
       icon: <AttendanceIcon />,
       colorStart: '#43E97B',
       colorEnd: '#38F9D7',
@@ -190,79 +222,270 @@ const HomeTab = () => {
       colorEnd: '#F09819',
       isEnabled: true,
       onClick: () => navigate('/teacher/dollars-giving')
+    },
+    {
+      title: 'Report Submission',
+      icon: <ProgressIcon />,
+      colorStart: '#667eea',
+      colorEnd: '#764ba2',
+      isEnabled: true,
+      onClick: () => navigate('/teacher/report-submission')
     }
   ];
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box 
+        display="flex" 
+        justifyContent="center" 
+        alignItems="center" 
+        minHeight="60vh"
+      >
         <CircularProgress />
       </Box>
     );
   }
 
+  // Calculate grid columns based on screen size
+  const getGridColumns = () => {
+    if (isMobile) return 12;
+    if (isTablet) return 6;
+    return 4;
+  };
+
   return (
-    <Box>
-      <AttendanceCard data={overview} canEdit={true} />
-
-      {announcements.length > 0 && (
-        <Box sx={{ mt: 2, px: 2 }}>
-          <AnnouncementsSection announcements={announcements} />
+    <Box 
+      sx={{ 
+        pb: isMobile ? 8 : 4, // Add padding bottom for mobile bottom bar
+        minHeight: '100vh',
+        bgcolor: '#f8f9fa'
+      }}
+    >
+      <Container maxWidth="lg" sx={{ px: isMobile ? 1.5 : 2, py: 2 }}>
+        {/* Attendance Card */}
+        <Box sx={{ mb: 2.5 }}>
+          <AttendanceCard data={overview} canEdit={true} />
         </Box>
-      )}
 
-      {overview.topStudents.length > 0 && (
-        <PodiumSection topStudents={overview.topStudents} />
-      )}
+        {/* Announcements - Horizontal Scroll on Mobile */}
+        {announcements.length > 0 && (
+          <Box sx={{ mb: 3 }}>
+            <Typography 
+              variant="subtitle1" 
+              fontWeight="600" 
+              sx={{ mb: 1.5, px: 0.5 }}
+            >
+              📢 Announcements
+            </Typography>
+            <Box 
+              sx={{ 
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                whiteSpace: 'nowrap',
+                pb: 1,
+                '&::-webkit-scrollbar': {
+                  height: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: 'rgba(0,0,0,0.2)',
+                  borderRadius: '4px',
+                }
+              }}
+            >
+              <Box sx={{ display: 'flex', gap: 1.5, minWidth: 'min-content' }}>
+                <AnnouncementsSection announcements={announcements} />
+              </Box>
+            </Box>
+          </Box>
+        )}
 
-      <Box sx={{ mt: 3 }}>
-        <Typography variant="h6" fontWeight="bold" sx={{ px: 2, mb: 1.5 }}>
-          Quick Actions
-        </Typography>
-        <ActionGrid actions={quickActions} />
-      </Box>
+        {/* Podium Section */}
+        {overview.topStudents.length > 0 && (
+          <Box sx={{ mb: 3 }}>
+            <Typography 
+              variant="subtitle1" 
+              fontWeight="600" 
+              sx={{ mb: 1.5, px: 0.5 }}
+            >
+              🏆 Top Performers
+            </Typography>
+            <PodiumSection topStudents={overview.topStudents} />
+          </Box>
+        )}
 
-      <Grid container spacing={2} sx={{ mt: 2, px: 2 }}>
-        <Grid item xs={6} sm={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                Total Students
-              </Typography>
-              <Typography variant="h5" fontWeight="bold">
-                {overview.totalStudents}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                Attendance
-              </Typography>
-              <Typography variant="h5" fontWeight="bold">
-                {overview.attendancePercentage}%
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                Dollars Given
-              </Typography>
-              <Typography variant="h5" fontWeight="bold">
-                ${overview.totalDollarsGiven}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+        {/* Quick Actions */}
+        <Box sx={{ mb: 3 }}>
+          <Typography 
+            variant="subtitle1" 
+            fontWeight="600" 
+            sx={{ mb: 1.5, px: 0.5 }}
+          >
+            Quick Actions
+          </Typography>
+          <ActionGrid actions={quickActions} />
+        </Box>
+
+        {/* Statistics Section */}
+        <Box>
+          <Typography 
+            variant="subtitle1" 
+            fontWeight="600" 
+            sx={{ mb: 1.5, px: 0.5 }}
+          >
+            Statistics
+          </Typography>
+          
+          <Grid container spacing={isMobile ? 1.5 : 2}>
+            {/* Total Students Card */}
+            <Grid item xs={6} md={3}>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: isMobile ? 1.5 : 2,
+                  borderRadius: 2,
+                  bgcolor: 'white',
+                  border: '1px solid',
+                  borderColor: 'rgba(0,0,0,0.05)',
+                  height: '100%'
+                }}
+              >
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: isMobile ? '0.7rem' : '0.75rem',
+                    display: 'block',
+                    mb: 0.5
+                  }}
+                >
+                  Total Students
+                </Typography>
+                <Typography 
+                  variant={isMobile ? "h5" : "h4"} 
+                  fontWeight="700"
+                  color="primary.main"
+                >
+                  {overview.totalStudents}
+                </Typography>
+              </Paper>
+            </Grid>
+
+            {/* Attendance Card */}
+            <Grid item xs={6} md={3}>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: isMobile ? 1.5 : 2,
+                  borderRadius: 2,
+                  bgcolor: 'white',
+                  border: '1px solid',
+                  borderColor: 'rgba(0,0,0,0.05)',
+                  height: '100%'
+                }}
+              >
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: isMobile ? '0.7rem' : '0.75rem',
+                    display: 'block',
+                    mb: 0.5
+                  }}
+                >
+                  Attendance
+                </Typography>
+                <Typography 
+                  variant={isMobile ? "h5" : "h4"} 
+                  fontWeight="700"
+                  color="success.main"
+                >
+                  {overview.attendancePercentage}%
+                </Typography>
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{ display: 'block', mt: 0.5 }}
+                >
+                  {overview.todayPresentCount} present
+                </Typography>
+              </Paper>
+            </Grid>
+
+            {/* Dollars Given Card */}
+            <Grid item xs={6} md={3}>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: isMobile ? 1.5 : 2,
+                  borderRadius: 2,
+                  bgcolor: 'white',
+                  border: '1px solid',
+                  borderColor: 'rgba(0,0,0,0.05)',
+                  height: '100%'
+                }}
+              >
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: isMobile ? '0.7rem' : '0.75rem',
+                    display: 'block',
+                    mb: 0.5
+                  }}
+                >
+                  Dollars Given
+                </Typography>
+                <Typography 
+                  variant={isMobile ? "h5" : "h4"} 
+                  fontWeight="700"
+                  color="warning.main"
+                >
+                  ${overview.totalDollarsGiven}
+                </Typography>
+              </Paper>
+            </Grid>
+
+            {/* Total Rewards Card */}
+            <Grid item xs={6} md={3}>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: isMobile ? 1.5 : 2,
+                  borderRadius: 2,
+                  bgcolor: 'white',
+                  border: '1px solid',
+                  borderColor: 'rgba(0,0,0,0.05)',
+                  height: '100%'
+                }}
+              >
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: isMobile ? '0.7rem' : '0.75rem',
+                    display: 'block',
+                    mb: 0.5
+                  }}
+                >
+                  Total Rewards
+                </Typography>
+                <Typography 
+                  variant={isMobile ? "h5" : "h4"} 
+                  fontWeight="700"
+                  color="info.main"
+                >
+                  {overview.totalRewards}
+                </Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
+
+        {/* Additional spacing for bottom bar */}
+        {isMobile && <Box sx={{ height: 16 }} />}
+      </Container>
     </Box>
   );
 };
 
 export default HomeTab;
-

@@ -4,13 +4,15 @@ import { Box, Typography } from '@mui/material';
 import ActionGrid from '../../../components/ActionGrid';
 import {
   Settings as SettingsIcon,
-  CloudDownload as DownloadIcon
+  CloudDownload as DownloadIcon,
+  Assessment as ReportsIcon,
 } from '@mui/icons-material';
 
 const AdminMoreTab = () => {
   const navigate = useNavigate();
 
   const actions = [
+    
     {
       title: 'App Settings',
       subtitle: 'Config',
@@ -18,7 +20,7 @@ const AdminMoreTab = () => {
       colorStart: '#CFD9DF',
       colorEnd: '#E2EBF0',
       isEnabled: true,
-      onClick: () => navigate('/admin/settings')
+      onClick: () => navigate('/admin/settings'),
     },
     {
       title: 'Downloads',
@@ -27,12 +29,12 @@ const AdminMoreTab = () => {
       colorStart: '#80CBC4',
       colorEnd: '#B2DFDB',
       isEnabled: true,
-      onClick: () => navigate('/teacher/download-records')
-    }
+      onClick: () => navigate('/teacher/download-records'),
+    },
   ];
 
   return (
-    <Box>
+    <Box className="page-section-enter">
       <Typography variant="h4" gutterBottom fontWeight="bold">
         More Options
       </Typography>

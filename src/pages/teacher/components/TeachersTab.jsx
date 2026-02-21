@@ -1,11 +1,16 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Alert } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Alert,
+} from '@mui/material';
 import ActionGrid from '../../../components/ActionGrid';
 import {
-  CalendarToday as ScheduleIcon,
-  TrendingUp as ProgressIcon,
-  Badge as AttendanceIcon
+  EmojiEvents as LeaderboardIcon,
+  AccountBalanceWallet as OfferingsIcon,
+  CalendarMonth as ScheduleIcon,
+  AssignmentTurnedIn as ReportIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -28,28 +33,36 @@ const TeachersTab = () => {
 
   const actions = [
     {
-      title: 'Schedules',
-      icon: <ScheduleIcon />,
-      colorStart: '#EF9A9A',
-      colorEnd: '#FFCDD2',
-      isEnabled: isAdmin,
-      onClick: () => navigate('/admin/timetable')
+      title: 'Teacher Leaderboard',
+      icon: <LeaderboardIcon />,
+      colorStart: '#FFE53B',
+      colorEnd: '#FF2525',
+      isEnabled: true,
+      onClick: () => navigate('/teacher/teacher-leaderboard')
     },
     {
       title: 'Teacher Schedule',
-      icon: <ProgressIcon />,
-      colorStart: '#A8EDEA',
-      colorEnd: '#FED6E3',
+      icon: <ScheduleIcon />,
+      colorStart: '#FF9A9E',
+      colorEnd: '#FECFEF',
       isEnabled: true,
       onClick: () => navigate('/teacher/schedule')
     },
     {
       title: 'Offerings',
-      icon: <AttendanceIcon />,
+      icon: <OfferingsIcon />,
       colorStart: '#FFAB91',
       colorEnd: '#FFCCBC',
       isEnabled: true,
       onClick: () => navigate('/teacher/offerings')
+    },
+    {
+      title: 'Report Submission',
+      icon: <ReportIcon />,
+      colorStart: '#9BE15D',
+      colorEnd: '#00E3AE',
+      isEnabled: true,
+      onClick: () => navigate('/teacher/report-submission')
     }
   ].filter(action => action.isEnabled);
 
@@ -58,6 +71,7 @@ const TeachersTab = () => {
       <Typography variant="h4" gutterBottom fontWeight="bold">
         Teacher Features
       </Typography>
+
       <ActionGrid actions={actions} />
     </Box>
   );

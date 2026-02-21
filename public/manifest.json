@@ -1,0 +1,51 @@
+{
+  "name": "The Bethel Church - School Management System",
+  "short_name": "Bethel AMS",
+  "description": "Complete school management system for Parents, Teachers, and Administrators",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#667eea",
+  "orientation": "any",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/image.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/image.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity", "business"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Parent Portal",
+      "short_name": "Parent",
+      "description": "Access parent dashboard",
+      "url": "/parent/dashboard",
+      "icons": [{ "src": "/image.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Teacher Portal",
+      "short_name": "Teacher",
+      "description": "Access teacher dashboard",
+      "url": "/teacher/dashboard",
+      "icons": [{ "src": "/image.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Admin Portal",
+      "short_name": "Admin",
+      "description": "Access admin dashboard",
+      "url": "/admin/dashboard",
+      "icons": [{ "src": "/image.png", "sizes": "192x192" }]
+    }
+  ]
+}

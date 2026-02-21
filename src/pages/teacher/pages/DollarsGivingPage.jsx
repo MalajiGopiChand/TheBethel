@@ -18,7 +18,8 @@ import {
   Fab,
   Zoom,
   Chip,
-  useTheme
+  useTheme,
+  alpha
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -43,7 +44,7 @@ import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 
-// --- Sub-Component: Slide-Up Reward Card ---
+// --- Sub-Component: Reward Card ---
 const RewardCard = ({ student, currentUser, dateToday, index }) => {
   const theme = useTheme();
   const [showInput, setShowInput] = useState(false);
@@ -73,7 +74,7 @@ const RewardCard = ({ student, currentUser, dateToday, index }) => {
 
       setDollarsText('');
       setReason('');
-      setShowInput(false); // Slide down after success
+      setShowInput(false);
     } catch (error) {
       console.error('Error:', error);
       alert('Failed: ' + error.message);
@@ -82,94 +83,118 @@ const RewardCard = ({ student, currentUser, dateToday, index }) => {
     }
   };
 
+  // Get initials from name
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
-    <Zoom in={true} style={{ transitionDelay: `${index * 100}ms` }}>
+    <Zoom in={true} style={{ transitionDelay: `${index * 50}ms` }}>
       <Card 
         sx={{ 
-          height: 280, 
-          borderRadius: 4,
+          height: 280,
+          borderRadius: 3,
           position: 'relative',
-          overflow: 'hidden', 
-          boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-          transition: 'transform 0.3s',
+          overflow: 'hidden',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+          transition: 'all 0.2s ease',
           '&:hover': {
-            transform: 'translateY(-5px)',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.15)'
+            boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
           }
         }}
       >
-        {/* --- View 1: Student Stats (Background Layer) --- */}
+        {/* Main Card Content */}
         <Box 
           sx={{ 
-            height: '100%', 
-            p: 3, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            textAlign: 'center',
+            height: '100%',
+            p: 2.5,
+            display: 'flex',
+            flexDirection: 'column',
             bgcolor: 'white'
           }}
         >
-          <Box position="absolute" top={16} right={16}>
-             <Chip 
-               label={student.classType} 
-               size="small" 
-               sx={{ bgcolor: 'grey.100', fontWeight: 'bold', fontSize: '0.65rem' }} 
-             />
+          {/* Class Chip */}
+          <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+            <Chip 
+              label={student.classType || 'Unassigned'} 
+              size="small"
+              sx={{ 
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                color: 'primary.main',
+                fontWeight: 500,
+                fontSize: '0.7rem',
+                height: 20
+              }} 
+            />
           </Box>
 
-          <Avatar 
+          {/* Avatar and Name */}
+          <Box display="flex" alignItems="center" gap={1.5} mb={2}>
+            <Avatar 
+              sx={{ 
+                width: 48,
+                height: 48,
+                bgcolor: 'primary.main',
+                fontSize: '1rem',
+                fontWeight: 600
+              }}
+            >
+              {getInitials(student.name)}
+            </Avatar>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={600} lineHeight={1.2}>
+                {student.name || 'Unknown Student'}
+              </Typography>
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <PlaceIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                <Typography variant="caption" color="text.secondary">
+                  {student.location || 'Unknown'}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Points Display */}
+          <Box 
             sx={{ 
-              width: 70, 
-              height: 70, 
+              bgcolor: alpha(theme.palette.primary.main, 0.04),
+              borderRadius: 2,
+              p: 1.5,
               mb: 2,
-              bgcolor: 'transparent',
-              border: `2px solid ${theme.palette.secondary.main}`,
-              color: theme.palette.secondary.main,
-              fontWeight: 'bold',
-              fontSize: '1.5rem'
+              textAlign: 'center'
             }}
           >
-            {student.name ? student.name.charAt(0) : '?'}
-          </Avatar>
-          
-          <Typography variant="h6" fontWeight="800" noWrap sx={{ maxWidth: '100%', px: 1 }}>
-            {student.name}
-          </Typography>
-          
-          <Box display="flex" alignItems="center" gap={0.5} mt={0.5} color="text.secondary">
-             <PlaceIcon sx={{ fontSize: 14 }} />
-             <Typography variant="caption">{student.location || 'Unknown'}</Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Total Points
+            </Typography>
+            <Typography variant="h4" fontWeight={700} color="primary.main">
+              ${student.dollarPoints || 0}
+            </Typography>
           </Box>
 
-          <Box my={2}>
-             <Typography variant="h3" fontWeight="900" sx={{ 
-                 background: 'linear-gradient(45deg, #9C27B0, #E040FB)',
-                 WebkitBackgroundClip: 'text',
-                 WebkitTextFillColor: 'transparent'
-             }}>
-                ${student.dollarPoints || 0}
-             </Typography>
-          </Box>
-
-          <Fab 
-            color="secondary" 
-            variant="extended" 
-            size="medium"
+          {/* Reward Button */}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
             onClick={() => setShowInput(true)}
-            sx={{ 
-                boxShadow: '0 4px 14px rgba(156, 39, 176, 0.4)',
-                fontWeight: 'bold',
-                px: 3,
-                textTransform: 'none'
+            fullWidth
+            sx={{
+              bgcolor: 'primary.main',
+              color: 'white',
+              textTransform: 'none',
+              fontWeight: 600,
+              py: 1,
+              '&:hover': {
+                bgcolor: 'primary.dark',
+              }
             }}
           >
-            <AddIcon sx={{ mr: 1 }} /> Reward
-          </Fab>
+            Add Reward
+          </Button>
         </Box>
 
-        {/* --- View 2: Action Overlay (Slide Up Layer) --- */}
+        {/* Reward Input Overlay */}
         <Box
           sx={{
             position: 'absolute',
@@ -177,90 +202,87 @@ const RewardCard = ({ student, currentUser, dateToday, index }) => {
             left: 0,
             right: 0,
             bottom: 0,
-            bgcolor: '#FAFAFA',
+            bgcolor: 'white',
             zIndex: 2,
-            p: 2,
-            transform: showInput ? 'translateY(0)' : 'translateY(100%)', // Slide Logic
-            transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)', // Bouncy effect
+            p: 2.5,
+            transform: showInput ? 'translateY(0)' : 'translateY(100%)',
+            transition: 'transform 0.3s ease-out',
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between'
+            flexDirection: 'column'
           }}
         >
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="subtitle2" fontWeight="bold" color="text.secondary">
-                    Add Points
-                </Typography>
-                <IconButton size="small" onClick={() => setShowInput(false)} sx={{ bgcolor: 'grey.200' }}>
-                    <CloseIcon fontSize="small" />
-                </IconButton>
-            </Box>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Add Points for {student.name}
+            </Typography>
+            <IconButton size="small" onClick={() => setShowInput(false)}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
 
-            {/* Quick Amounts */}
-            <Box display="flex" justifyContent="space-between" gap={1} my={1}>
-                {quickAmounts.map(amt => (
-                    <Button
-                        key={amt}
-                        variant={dollarsText === amt.toString() ? 'contained' : 'outlined'}
-                        color="secondary"
-                        onClick={() => setDollarsText(amt.toString())}
-                        sx={{ 
-                            minWidth: 0, 
-                            flex: 1, 
-                            borderRadius: 2, 
-                            p: 0.5, 
-                            fontWeight: 'bold',
-                            boxShadow: 'none'
-                        }}
-                    >
-                        +{amt}
-                    </Button>
-                ))}
-            </Box>
-
-            <TextField
-                placeholder="Custom Amount"
-                type="number"
-                variant="outlined"
+          {/* Quick Amounts */}
+          <Box display="flex" gap={1} mb={2}>
+            {quickAmounts.map(amt => (
+              <Button
+                key={amt}
+                variant={dollarsText === amt.toString() ? 'contained' : 'outlined'}
+                color="primary"
                 size="small"
-                fullWidth
-                value={dollarsText}
-                onChange={(e) => setDollarsText(e.target.value)}
-                InputProps={{
-                    startAdornment: <InputAdornment position="start"><CoinIcon fontSize="small" color="secondary" /></InputAdornment>
-                }}
-                sx={{ mb: 1, bgcolor: 'white' }}
-            />
-
-            <TextField
-                placeholder="Reason (e.g. Homework)"
-                variant="outlined"
-                size="small"
-                fullWidth
-                multiline
-                rows={2}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                sx={{ mb: 2, bgcolor: 'white' }}
-            />
-
-            <Button
-                variant="contained"
-                color="secondary"
-                fullWidth
-                onClick={handleSave}
-                disabled={saving || !dollarsText || !reason}
-                endIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                onClick={() => setDollarsText(amt.toString())}
                 sx={{ 
-                    borderRadius: 3, 
-                    py: 1, 
-                    background: 'linear-gradient(45deg, #7B1FA2, #E040FB)',
-                    fontWeight: 'bold',
-                    boxShadow: '0 4px 12px rgba(123, 31, 162, 0.3)'
+                  flex: 1,
+                  minWidth: 0,
+                  fontWeight: 600
                 }}
-            >
-                {saving ? 'Sending' : 'Send Reward'}
-            </Button>
+              >
+                +{amt}
+              </Button>
+            ))}
+          </Box>
+
+          <TextField
+            placeholder="Custom amount"
+            type="number"
+            size="small"
+            fullWidth
+            value={dollarsText}
+            onChange={(e) => setDollarsText(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <CoinIcon fontSize="small" color="primary" />
+                </InputAdornment>
+              )
+            }}
+            sx={{ mb: 2 }}
+          />
+
+          <TextField
+            placeholder="Reason (e.g., Homework, Participation)"
+            size="small"
+            fullWidth
+            multiline
+            rows={2}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            onClick={handleSave}
+            disabled={saving || !dollarsText || !reason}
+            endIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              mt: 'auto'
+            }}
+          >
+            {saving ? 'Saving...' : 'Save Reward'}
+          </Button>
         </Box>
       </Card>
     </Zoom>
@@ -288,7 +310,10 @@ const DollarsGivingPage = () => {
         return {
           id: doc.id,
           ...data,
-          location: data.place || data.location || 'Unknown' 
+          location: data.place || data.location || 'Unknown',
+          classType: data.classType || 'Unassigned',
+          name: data.name || 'Unknown Student',
+          dollarPoints: data.dollarPoints || 0
         };
       });
       setStudents(studentsData);
@@ -311,95 +336,72 @@ const DollarsGivingPage = () => {
   });
 
   return (
-    <Box 
-        sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            minHeight: '100vh', 
-            background: 'linear-gradient(135deg, #F3F4F6 0%, #E8EAF6 100%)',
-        }}
-    >
-      
-      {/* Sticky Glass Header */}
+    <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+      {/* Header */}
       <Paper 
         elevation={0} 
         sx={{ 
-            p: 2, 
-            position: 'sticky', 
-            top: 0, 
-            zIndex: 100,
-            bgcolor: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(12px)',
-            borderBottom: '1px solid rgba(0,0,0,0.05)'
+          borderRadius: 0,
+          bgcolor: 'white',
+          borderBottom: '1px solid',
+          borderColor: 'divider'
         }}
       >
-        <Container maxWidth="xl" disableGutters>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <IconButton onClick={() => navigate('/teacher/dashboard')} sx={{ mr: 1, bgcolor: 'white', boxShadow: 1 }}>
-                    <BackIcon />
-                </IconButton>
-                <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: '900', letterSpacing: '-0.5px', background: 'linear-gradient(45deg, #7B1FA2, #E040FB)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Student Rewards
-                </Typography>
+        <Container maxWidth="xl">
+          <Box sx={{ py: 2 }}>
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
+              <IconButton onClick={() => navigate(-1)} edge="start">
+                <BackIcon />
+              </IconButton>
+              <Typography variant="h5" fontWeight={600}>
+                Student Rewards
+              </Typography>
             </Box>
 
-            {/* Compact Filters using TextField select for better icon support */}
-            <Box sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 0.5 }}>
-                <TextField
-                    select
-                    value={selectedClass}
-                    onChange={(e) => setSelectedClass(e.target.value)}
-                    variant="outlined"
-                    size="small"
-                    sx={{ minWidth: 150, bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <ClassIcon fontSize="small" color="action" />
-                            </InputAdornment>
-                        ),
-                    }}
-                >
-                    {classOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
-                </TextField>
+            {/* Filters */}
+            <Box display="flex" gap={2} flexWrap="wrap">
+              <TextField
+                select
+                label="Class"
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                size="small"
+                sx={{ minWidth: 150 }}
+              >
+                {classOptions.map(opt => (
+                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                ))}
+              </TextField>
 
-                <TextField
-                    select
-                    value={selectedPlace}
-                    onChange={(e) => setSelectedPlace(e.target.value)}
-                    variant="outlined"
-                    size="small"
-                    sx={{ minWidth: 150, bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <PlaceIcon fontSize="small" color="action" />
-                            </InputAdornment>
-                        ),
-                    }}
-                >
-                    {placeOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
-                </TextField>
+              <TextField
+                select
+                label="Location"
+                value={selectedPlace}
+                onChange={(e) => setSelectedPlace(e.target.value)}
+                size="small"
+                sx={{ minWidth: 150 }}
+              >
+                {placeOptions.map(opt => (
+                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                ))}
+              </TextField>
             </Box>
+          </Box>
         </Container>
       </Paper>
 
-      {/* Main Grid */}
-      <Container maxWidth="xl" sx={{ flex: 1, py: 3 }}>
+      {/* Content */}
+      <Container maxWidth="xl" sx={{ py: 3 }}>
         {loading ? (
           <Box display="flex" justifyContent="center" py={10}>
-            <CircularProgress color="secondary" />
+            <CircularProgress />
           </Box>
         ) : filteredStudents.length === 0 ? (
-          <Alert 
-              severity="info" 
-              variant="outlined" 
-              sx={{ mt: 4, bgcolor: 'white', borderRadius: 3, borderColor: 'secondary.main' }}
-          >
-              No students found. Try adjusting the filters.
+          <Alert severity="info" sx={{ borderRadius: 2 }}>
+            No students found. Try adjusting the filters.
           </Alert>
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {filteredStudents.map((student, index) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={student.id}>
                 <RewardCard 

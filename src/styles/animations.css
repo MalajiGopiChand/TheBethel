@@ -55,9 +55,11 @@
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
+    transform: scale(1);
   }
   50% {
     opacity: 0.7;
+    transform: scale(1.05);
   }
 }
 
@@ -139,4 +141,25 @@
 .stagger-item:nth-child(4) { animation-delay: 0.4s; }
 .stagger-item:nth-child(5) { animation-delay: 0.5s; }
 .stagger-item:nth-child(6) { animation-delay: 0.6s; }
+
+/* Page shell + route transition animations */
+.page-shell {
+  min-height: 100vh;
+  animation: fadeIn 0.45s ease-out;
+}
+
+.page-section-enter {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.page-card-enter {
+  animation: scaleIn 0.35s ease-out;
+}
+
+.page-glow-background {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(76,111,255,0.18), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(255,107,156,0.16), transparent 55%),
+    linear-gradient(135deg, #f3f5fb 0%, #eef2ff 45%, #fef2ff 100%);
+}
 

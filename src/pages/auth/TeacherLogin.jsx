@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Container,
@@ -12,7 +12,8 @@ import {
   InputAdornment,
   Avatar,
   Fade,
-  useTheme
+  useTheme,
+  CircularProgress
 } from '@mui/material';
 import {
   Email as EmailIcon,
@@ -27,13 +28,42 @@ const TeacherLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, error, clearError } = useAuth();
+  const { login, error, clearError, currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
 
-  React.useEffect(() => {
+  useEffect(() => {
     clearError();
-  }, []);
+    // Redirect if already logged in
+    if (!authLoading && currentUser) {
+      const isAdmin = currentUser.role === UserRole.ADMIN || 
+        currentUser.email === 'gop1@gmail.com' || 
+        currentUser.email === 'premkumartenali@gmail.com';
+      
+      if (isAdmin) {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (currentUser.role === UserRole.TEACHER) {
+        navigate('/teacher/dashboard', { replace: true });
+      }
+    }
+  }, [currentUser, authLoading, navigate]);
+
+  // Navigate when user is loaded after login
+  useEffect(() => {
+    if (loading && !authLoading && currentUser) {
+      const isAdmin = currentUser.role === UserRole.ADMIN || 
+        currentUser.email === 'gop1@gmail.com' || 
+        currentUser.email === 'premkumartenali@gmail.com';
+      
+      if (isAdmin) {
+        navigate('/admin/dashboard', { replace: true });
+        setLoading(false);
+      } else if (currentUser.role === UserRole.TEACHER) {
+        navigate('/teacher/dashboard', { replace: true });
+        setLoading(false);
+      }
+    }
+  }, [currentUser, authLoading, loading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,10 +72,10 @@ const TeacherLogin = () => {
 
     try {
       await login(email, password, UserRole.TEACHER);
-      navigate('/teacher/dashboard');
+      // Don't navigate here - let useEffect handle it when currentUser is set
+      // Keep loading true until user data is loaded
     } catch (err) {
       // Error is handled by context
-    } finally {
       setLoading(false);
     }
   };

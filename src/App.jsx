@@ -33,6 +33,10 @@ import OfferingsPage from './pages/teacher/pages/OfferingsPage';
 import ParentNotificationPage from './pages/parent/pages/ParentNotificationPage';
 import DollarHistoryPage from './pages/teacher/pages/DollarHistoryPage';
 import ViewStudentsPage from './pages/teacher/pages/ViewStudentsPage';
+import AdminTeacherReportsPage from './pages/admin/pages/AdminTeacherReportsPage';
+import TeacherProgressPage from './pages/teacher/pages/TeacherProgressPage';
+import TeacherLeaderboardPage from './pages/teacher/pages/TeacherLeaderboardPage';
+import TeacherAttendancePage from './pages/teacher/pages/TeacherAttendancePage';
 import { Box, CircularProgress } from '@mui/material';
 
 function App() {
@@ -41,6 +45,7 @@ function App() {
   if (loading) {
     return (
       <Box
+        className="page-shell page-glow-background"
         display="flex"
         justifyContent="center"
         alignItems="center"
@@ -52,6 +57,7 @@ function App() {
   }
 
   return (
+    <Box className="page-shell page-glow-background">
     <Routes>
       <Route
         path="/"
@@ -146,7 +152,9 @@ function App() {
       <Route
         path="/teacher/messaging"
         element={
-          currentUser ? (
+          currentUser && (currentUser.role === UserRole.TEACHER || currentUser.role === UserRole.ADMIN || 
+            currentUser.email === 'gop1@gmail.com' || 
+            currentUser.email === 'premkumartenali@gmail.com') ? (
             <MessagingPage />
           ) : (
             <Navigate to="/" replace />
@@ -229,6 +237,18 @@ function App() {
         }
       />
       <Route
+        path="/admin/teacher-reports"
+        element={
+          currentUser && (currentUser.role === UserRole.ADMIN || 
+            currentUser.email === 'gop1@gmail.com' || 
+            currentUser.email === 'premkumartenali@gmail.com') ? (
+            <AdminTeacherReportsPage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
         path="/admin/notifications"
         element={
           currentUser && (currentUser.role === UserRole.ADMIN || 
@@ -264,6 +284,7 @@ function App() {
           )
         }
       />
+      
       <Route
         path="/admin/delete-student"
         element={
@@ -344,7 +365,37 @@ function App() {
         path="/teacher/progress"
         element={
           currentUser && (currentUser.role === UserRole.TEACHER || currentUser.role === UserRole.ADMIN) ? (
-            <TeacherSchedulePage />
+            <TeacherProgressPage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/teacher/teacher-progress"
+        element={
+          currentUser && (currentUser.role === UserRole.TEACHER || currentUser.role === UserRole.ADMIN) ? (
+            <TeacherProgressPage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/teacher/report-submission"
+        element={
+          currentUser && (currentUser.role === UserRole.TEACHER || currentUser.role === UserRole.ADMIN) ? (
+            <TeacherAttendancePage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/teacher/teacher-leaderboard"
+        element={
+          currentUser && (currentUser.role === UserRole.TEACHER || currentUser.role === UserRole.ADMIN) ? (
+            <TeacherLeaderboardPage />
           ) : (
             <Navigate to="/" replace />
           )
@@ -412,6 +463,7 @@ function App() {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Box>
   );
 }
 

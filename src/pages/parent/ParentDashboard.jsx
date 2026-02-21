@@ -15,7 +15,11 @@ import {
   useMediaQuery,
   Fade,
   Avatar,
-  Tooltip
+  Tooltip,
+  Slide,
+  Chip,
+  Snackbar,
+  Button
 } from '@mui/material';
 import {
   HomeRounded as HomeIcon,
@@ -23,11 +27,12 @@ import {
   EmojiEventsRounded as LeaderboardIcon,
   PersonRounded as ProfileIcon,
   LogoutRounded as LogoutIcon,
-  Church as ChurchIcon
+  Church as ChurchIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import PWAInstallPrompt from '../../components/PWAInstallPrompt';
 
 // Ensure these components exist in your project structure
 import HomeTab from './components/HomeTab';
@@ -47,6 +52,7 @@ const ParentDashboard = () => {
   // Student Data State
   const [student, setStudent] = useState(null);
   const [loadingStudent, setLoadingStudent] = useState(true);
+
 
   // 1. Fetch Student Data Real-time
   useEffect(() => {
@@ -145,120 +151,210 @@ const ParentDashboard = () => {
         display: 'flex', 
         flexDirection: 'column', 
         minHeight: '100vh', 
-        bgcolor: '#f4f6f8', // Softer background
-        backgroundImage: 'radial-gradient(circle at 50% -20%, #e3f2fd 0%, transparent 40%)' // Subtle top glow
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        backgroundAttachment: 'fixed',
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%)',
+          pointerEvents: 'none',
+          zIndex: 0
+        }
     }}>
       
-      {/* Top App Bar */}
+      {/* Top App Bar - Clean & Modern */}
       <AppBar 
         position="sticky" 
         elevation={0} 
         sx={{ 
-            bgcolor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent
-            backdropFilter: 'blur(12px)', // Glass effect
+            bgcolor: 'rgba(255, 255, 255, 0.98)', 
+            backdropFilter: 'blur(24px) saturate(180%)',
             borderBottom: '1px solid',
-            borderColor: 'divider',
-            color: 'text.primary'
+            borderColor: 'rgba(102, 126, 234, 0.12)',
+            color: 'text.primary',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.04)'
         }}
       >
-        <Toolbar>
-          <Box sx={{ mr: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '12px', bgcolor: theme.palette.primary.main, color: '#fff', boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)' }}>
+        <Toolbar sx={{ py: 1.5, px: { xs: 2, sm: 3 } }}>
+          <Box sx={{ 
+            mr: 2, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            width: 44, 
+            height: 44, 
+            borderRadius: '12px', 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: '#fff', 
+            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': {
+              transform: 'scale(1.08) rotate(5deg)',
+              boxShadow: '0 6px 16px rgba(102, 126, 234, 0.4)'
+            }
+          }}>
              <ChurchIcon fontSize="small" />
           </Box>
 
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" component="div" sx={{ fontWeight: '800', lineHeight: 1.1, letterSpacing: '-0.5px' }}>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography 
+              variant="h6" 
+              component="div" 
+              sx={{ 
+                fontWeight: '800', 
+                lineHeight: 1.2, 
+                letterSpacing: '-0.02em',
+                fontSize: { xs: '1rem', sm: '1.25rem' },
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+                WebkitBackgroundClip: 'text', 
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
               The Bethel Church
             </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.6, fontWeight: 'medium' }}>
-              Parent Portal • {currentUser?.name?.split(' ')[0] || 'Guest'}
-            </Typography>
+            <Box display="flex" alignItems="center" gap={1} mt={0.25}>
+              <Chip 
+                label="Parent Portal" 
+                size="small" 
+                sx={{ 
+                  height: 22, 
+                  fontSize: '0.7rem', 
+                  fontWeight: '700',
+                  bgcolor: 'rgba(102, 126, 234, 0.08)',
+                  color: '#667eea',
+                  border: '1px solid rgba(102, 126, 234, 0.2)',
+                  '& .MuiChip-label': {
+                    px: 1.5
+                  }
+                }} 
+              />
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  opacity: 0.65, 
+                  fontWeight: '600',
+                  fontSize: '0.7rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {student?.name || currentUser?.name?.split(' ')[0] || 'Guest'}
+              </Typography>
+            </Box>
           </Box>
           
-          <Tooltip title="Logout">
+          <Tooltip title="Logout" arrow>
             <IconButton 
                 onClick={handleLogout} 
                 disabled={loadingLogout}
+                size="small"
                 sx={{ 
-                    bgcolor: 'grey.100', 
-                    '&:hover': { bgcolor: 'grey.200', color: 'error.main' },
-                    transition: 'all 0.2s'
+                    bgcolor: 'rgba(102, 126, 234, 0.08)', 
+                    color: '#667eea',
+                    border: '1px solid rgba(102, 126, 234, 0.15)',
+                    width: 40,
+                    height: 40,
+                    '&:hover': { 
+                      bgcolor: 'rgba(244, 67, 54, 0.1)', 
+                      color: '#f44336',
+                      borderColor: 'rgba(244, 67, 54, 0.2)',
+                      transform: 'scale(1.1)'
+                    },
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
             >
-                {loadingLogout ? <CircularProgress size={20} color="inherit" /> : <LogoutIcon fontSize="small" />}
+                {loadingLogout ? <CircularProgress size={18} color="inherit" /> : <LogoutIcon fontSize="small" />}
             </IconButton>
           </Tooltip>
         </Toolbar>
       </AppBar>
 
       {/* Main Content Area */}
-      <Box sx={{ flexGrow: 1, pb: 12 }}> {/* Extra padding for floating nav */}
+      <Box sx={{ flexGrow: 1, pb: 12, position: 'relative', zIndex: 1 }}> {/* Extra padding for floating nav */}
         <Container maxWidth="md" sx={{ py: 3, px: isMobile ? 2 : 3 }}>
           {renderTabContent()}
         </Container>
       </Box>
 
       {/* Bottom Navigation (Glassmorphism Dock) */}
-      <Paper 
-        sx={{ 
-            position: 'fixed', 
-            bottom: 0, 
-            left: 0, 
-            right: 0, 
-            zIndex: 1000,
-            bgcolor: 'rgba(255, 255, 255, 0.85)', // High transparency
-            backdropFilter: 'blur(16px)', // Heavy blur
-            borderTop: '1px solid rgba(0,0,0,0.05)'
-        }} 
-        elevation={0}
-      >
-        <Container maxWidth="md" disableGutters>
-            <BottomNavigation
-            value={currentTab}
-            onChange={(event, newValue) => {
-                setCurrentTab(newValue);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            showLabels
-            sx={{
-                height: 70, // Taller touch target
-                bgcolor: 'transparent',
-                '& .MuiBottomNavigationAction-root': {
-                    minWidth: 'auto',
-                    padding: '8px 0',
-                    color: 'text.secondary',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&.Mui-selected': {
-                        color: theme.palette.primary.main,
-                        transform: 'translateY(-2px)', // Slight lift on active
-                        '& .MuiSvgIcon-root': {
-                            fontSize: '1.7rem',
-                            filter: `drop-shadow(0 4px 6px ${theme.palette.primary.light}40)` // Glow effect
-                        }
-                    },
-                    '& .MuiSvgIcon-root': {
-                        transition: 'all 0.3s',
-                        fontSize: '1.5rem',
-                        mb: 0.5
-                    },
-                    '& .MuiBottomNavigationAction-label': {
-                        fontSize: '0.7rem',
-                        fontWeight: 'bold',
-                        transition: 'all 0.2s',
-                        '&.Mui-selected': {
-                            fontSize: '0.75rem'
-                        }
-                    }
-                }
-            }}
-            >
-            <BottomNavigationAction label="Home" icon={<HomeIcon />} />
-            <BottomNavigationAction label="Homework" icon={<HomeworkIcon />} />
-            <BottomNavigationAction label="Leaderboard" icon={<LeaderboardIcon />} />
-            <BottomNavigationAction label="Profile" icon={<ProfileIcon />} />
-            </BottomNavigation>
-        </Container>
-      </Paper>
+      <Slide direction="up" in={true} mountOnEnter unmountOnExit timeout={500}>
+        <Paper 
+          sx={{ 
+              position: 'fixed', 
+              bottom: 0, 
+              left: 0, 
+              right: 0, 
+              zIndex: 1000,
+              bgcolor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+              borderTop: '1px solid rgba(102, 126, 234, 0.2)',
+              boxShadow: '0 -4px 20px rgba(0,0,0,0.1)'
+          }} 
+          elevation={0}
+        >
+          <Container maxWidth="md" disableGutters>
+              <BottomNavigation
+              value={currentTab}
+              onChange={(event, newValue) => {
+                  setCurrentTab(newValue);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              showLabels
+              sx={{
+                  height: 72,
+                  bgcolor: 'transparent',
+                  '& .MuiBottomNavigationAction-root': {
+                      minWidth: 'auto',
+                      padding: '8px 0',
+                      color: 'text.secondary',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&.Mui-selected': {
+                          color: theme.palette.primary.main,
+                          transform: 'translateY(-4px)',
+                          '& .MuiSvgIcon-root': {
+                              fontSize: '1.8rem',
+                              filter: `drop-shadow(0 4px 8px rgba(102, 126, 234, 0.4))`,
+                              animation: 'pulse 2s infinite'
+                          }
+                      },
+                      '& .MuiSvgIcon-root': {
+                          transition: 'all 0.3s',
+                          fontSize: '1.6rem',
+                          mb: 0.5
+                      },
+                      '& .MuiBottomNavigationAction-label': {
+                          fontSize: '0.7rem',
+                          fontWeight: 'bold',
+                          transition: 'all 0.2s',
+                          '&.Mui-selected': {
+                              fontSize: '0.75rem',
+                              fontWeight: '800'
+                          }
+                      }
+                  }
+              }}
+              >
+              <BottomNavigationAction label="Home" icon={<HomeIcon />} />
+              <BottomNavigationAction label="Homework" icon={<HomeworkIcon />} />
+              <BottomNavigationAction label="Leaderboard" icon={<LeaderboardIcon />} />
+              <BottomNavigationAction label="Profile" icon={<ProfileIcon />} />
+              </BottomNavigation>
+          </Container>
+        </Paper>
+      </Slide>
+
+      {/* PWA Install Prompt - Cross Platform */}
+      <PWAInstallPrompt />
     </Box>
   );
 };

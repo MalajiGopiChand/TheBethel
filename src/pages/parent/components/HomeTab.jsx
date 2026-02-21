@@ -7,8 +7,6 @@ import {
   Typography,
   Box,
   CircularProgress,
-  Fab,
-  Tooltip,
   useTheme,
   Paper,
   Divider,
@@ -18,7 +16,6 @@ import {
 import {
   AttachMoney as DollarIcon,
   LocalFireDepartment as StreakIcon,
-  Chat as ChatIcon,
   CalendarMonth as CalendarIcon,
   School as SchoolIcon,
   WavingHand as WaveIcon
@@ -348,24 +345,6 @@ const HomeTab = ({ student }) => {
             </Paper>
         )}
       </Box>
-
-      {/* Chat Button */}
-      <Tooltip title="Message Teacher" placement="left">
-        <Fab 
-            color="primary" 
-            aria-label="chat" 
-            onClick={() => navigate('/teacher/messaging')}
-            sx={{ 
-                position: 'fixed', 
-                bottom: 90, 
-                right: 24,
-                boxShadow: 4,
-                zIndex: 100
-            }}
-        >
-            <ChatIcon />
-        </Fab>
-      </Tooltip>
 
     </Box>
   );
