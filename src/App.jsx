@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { UserRole } from './types';
@@ -41,6 +41,19 @@ import { Box, CircularProgress } from '@mui/material';
 
 function App() {
   const { currentUser, loading } = useAuth();
+
+  // Add error boundary for routing issues in PWA mode
+  useEffect(() => {
+    // Handle PWA routing issues - only redirect if we're sure user is not authenticated
+    if (!loading && !currentUser) {
+      const path = window.location.pathname;
+      // Only redirect if on a protected route
+      if (path.startsWith('/teacher/') || path.startsWith('/admin/') || path.startsWith('/parent/')) {
+        // Use navigate instead of window.location to avoid full page reload
+        // This will be handled by the route guards below
+      }
+    }
+  }, [currentUser, loading]);
 
   if (loading) {
     return (

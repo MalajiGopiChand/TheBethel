@@ -1,5 +1,5 @@
 // Service Worker for PWA
-const CACHE_NAME = 'bethel-ams-v2';
+const CACHE_NAME = 'bethel-ams-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -60,18 +60,23 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
+      return Promise.all([
+        // Delete old caches
+        Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        ),
+        // Claim all clients immediately
+        self.clients.claim()
+      ]);
     })
   );
 });

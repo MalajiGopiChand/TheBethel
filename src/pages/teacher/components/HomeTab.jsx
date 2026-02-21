@@ -10,7 +10,8 @@ import {
   Container,
   useTheme,
   useMediaQuery,
-  Paper
+  Paper,
+  Button
 } from '@mui/material';
 import {
   Chat as ChatIcon,
@@ -51,49 +52,72 @@ const HomeTab = () => {
   });
   const [loading, setLoading] = useState(true);
   const [announcements, setAnnouncements] = useState([]);
+  const [error, setError] = useState(null);
+
+  // Add error boundary for component errors
+  useEffect(() => {
+    const errorHandler = (event) => {
+      console.error('HomeTab error:', event.error);
+      setError(event.error?.message || 'An error occurred');
+    };
+    window.addEventListener('error', errorHandler);
+    return () => window.removeEventListener('error', errorHandler);
+  }, []);
 
   // Fetch announcements
   useEffect(() => {
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      orderBy('createdAt', 'desc')
-    );
-    
-    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      const announcementsData = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const audience = data.audience || 'All';
-        
-        // Show announcements for Teachers or All
-        if (audience === 'Teachers' || audience === 'All') {
-          let createdAt;
-          if (data.createdAt) {
-            if (typeof data.createdAt.toDate === 'function') {
-              createdAt = data.createdAt.toDate();
-            } else if (data.createdAt instanceof Date) {
-              createdAt = data.createdAt;
-            } else {
-              createdAt = new Date();
+    try {
+      const notificationsQuery = query(
+        collection(db, 'notifications'),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const unsubscribe = onSnapshot(
+        notificationsQuery, 
+        (snapshot) => {
+          const announcementsData = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const audience = data.audience || 'All';
+            
+            // Show announcements for Teachers or All
+            if (audience === 'Teachers' || audience === 'All') {
+              let createdAt;
+              if (data.createdAt) {
+                if (typeof data.createdAt.toDate === 'function') {
+                  createdAt = data.createdAt.toDate();
+                } else if (data.createdAt instanceof Date) {
+                  createdAt = data.createdAt;
+                } else {
+                  createdAt = new Date();
+                }
+              } else {
+                createdAt = new Date();
+              }
+              
+              announcementsData.push({
+                id: doc.id,
+                title: data.title || 'Announcement',
+                message: data.message || '',
+                date: format(createdAt, 'MMM dd, yyyy'),
+                audience: audience,
+                isImportant: data.isImportant || false
+              });
             }
-          } else {
-            createdAt = new Date();
-          }
-          
-          announcementsData.push({
-            id: doc.id,
-            title: data.title || 'Announcement',
-            message: data.message || '',
-            date: format(createdAt, 'MMM dd, yyyy'),
-            audience: audience,
-            isImportant: data.isImportant || false
           });
+          setAnnouncements(announcementsData.slice(0, 5));
+        }, 
+        (err) => {
+          console.error('Error fetching announcements:', err);
+          setError('Failed to load announcements');
         }
-      });
-      setAnnouncements(announcementsData.slice(0, 5));
-    });
+      );
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    } catch (err) {
+      console.error('Error setting up announcements listener:', err);
+      setError('Failed to initialize announcements');
+    }
   }, []);
 
   // Helper function to calculate dollar points
@@ -242,6 +266,26 @@ const HomeTab = () => {
       onClick: () => navigate('/teacher/profile')
     }
   ];
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography color="error" variant="h6" gutterBottom>
+          Error loading data
+        </Typography>
+        <Typography color="text.secondary" variant="body2">
+          {error}
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => window.location.reload()} 
+          sx={{ mt: 2 }}
+        >
+          Reload Page
+        </Button>
+      </Box>
+    );
+  }
 
   if (loading) {
     return (

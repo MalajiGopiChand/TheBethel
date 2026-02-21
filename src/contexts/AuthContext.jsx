@@ -50,7 +50,12 @@ export const AuthProvider = ({ children }) => {
           // Try teachers collection first
           const teacherDoc = await getDoc(doc(db, 'teachers', user.uid));
           if (teacherDoc.exists()) {
-            setCurrentUser({ ...teacherDoc.data(), uid: user.uid });
+            const teacherData = teacherDoc.data();
+            setCurrentUser({ 
+              ...teacherData, 
+              uid: user.uid,
+              role: teacherData.role || UserRole.TEACHER
+            });
             setLoading(false);
             return;
           }
@@ -58,15 +63,59 @@ export const AuthProvider = ({ children }) => {
           // Try parents collection
           const parentDoc = await getDoc(doc(db, 'parents', user.uid));
           if (parentDoc.exists()) {
-            setCurrentUser({ ...parentDoc.data(), uid: user.uid });
+            const parentData = parentDoc.data();
+            setCurrentUser({ 
+              ...parentData, 
+              uid: user.uid,
+              role: parentData.role || UserRole.PARENT
+            });
             setLoading(false);
             return;
           }
 
-          // User not found in Firestore
+          // User not found in Firestore - sign them out
+          console.warn('User not found in Firestore, signing out');
+          await firebaseSignOut(auth);
           setCurrentUser(null);
         } catch (err) {
           console.error('Error fetching user:', err);
+          // On network error, retry after a delay
+          if (err.code === 'unavailable' || err.message?.includes('network')) {
+            console.log('Network error, retrying in 2 seconds...');
+            setTimeout(async () => {
+              try {
+                const teacherDoc = await getDoc(doc(db, 'teachers', user.uid));
+                if (teacherDoc.exists()) {
+                  const teacherData = teacherDoc.data();
+                  setCurrentUser({ 
+                    ...teacherData, 
+                    uid: user.uid,
+                    role: teacherData.role || UserRole.TEACHER
+                  });
+                  setLoading(false);
+                  return;
+                }
+                const parentDoc = await getDoc(doc(db, 'parents', user.uid));
+                if (parentDoc.exists()) {
+                  const parentData = parentDoc.data();
+                  setCurrentUser({ 
+                    ...parentData, 
+                    uid: user.uid,
+                    role: parentData.role || UserRole.PARENT
+                  });
+                  setLoading(false);
+                  return;
+                }
+                setCurrentUser(null);
+                setLoading(false);
+              } catch (retryErr) {
+                console.error('Retry failed:', retryErr);
+                setCurrentUser(null);
+                setLoading(false);
+              }
+            }, 2000);
+            return;
+          }
           setCurrentUser(null);
         }
       } else {

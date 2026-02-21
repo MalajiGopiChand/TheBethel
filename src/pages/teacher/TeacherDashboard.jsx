@@ -29,6 +29,7 @@ import {
   PeopleOutline as PeopleOutlineIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
+import { UserRole } from '../../types';
 import PWAInstallPrompt from '../../components/PWAInstallPrompt';
 import InstallButton from '../../components/InstallButton';
 
@@ -39,13 +40,73 @@ import RewardsTab from './components/RewardsTab';
 import TeachersTab from './components/TeachersTab';
 
 const TeacherDashboard = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [currentTab, setCurrentTab] = useState(0);
   const [loadingLogout, setLoadingLogout] = useState(false);
+
+  // Redirect if not authenticated or not a teacher
+  useEffect(() => {
+    if (!authLoading) {
+      if (!currentUser) {
+        navigate('/', { replace: true });
+        return;
+      }
+      
+      // Check if user is admin (should redirect to admin dashboard)
+      const isAdmin = currentUser.role === UserRole.ADMIN || 
+        currentUser.email === 'gop1@gmail.com' || 
+        currentUser.email === 'premkumartenali@gmail.com';
+      
+      if (isAdmin) {
+        navigate('/admin/dashboard', { replace: true });
+        return;
+      }
+      
+      // Check if user is a teacher
+      if (currentUser.role !== UserRole.TEACHER) {
+        navigate('/', { replace: true });
+        return;
+      }
+    }
+  }, [currentUser, authLoading, navigate]);
+
+  // Show loading state while auth is loading
+  if (authLoading) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'background.default'
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Don't render if user is not authenticated - show loading instead of null
+  if (!currentUser || currentUser.role !== UserRole.TEACHER) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'background.default'
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   const handleLogout = async () => {
     setLoadingLogout(true);
