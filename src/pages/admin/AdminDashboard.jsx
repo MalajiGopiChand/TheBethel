@@ -161,22 +161,27 @@ const AdminDashboard = () => {
                 width: 40,
                 height: 40,
                 borderRadius: 3,
-                background:
-                  'radial-gradient(circle at 0% 0%, rgba(56,189,248,0.7), transparent 55%), radial-gradient(circle at 100% 100%, rgba(244,114,182,0.7), transparent 55%), linear-gradient(135deg,#0f172a,#020617)',
+                overflow: 'hidden',
+                bgcolor: 'rgba(15,23,42,0.95)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 18px 40px rgba(15,23,42,0.65)',
+                boxShadow: '0 14px 30px rgba(15,23,42,0.55)',
               }}
             >
-              <BoltIcon fontSize="small" />
+              <Box
+                component="img"
+                src="/image.png"
+                alt="Bethel AMS"
+                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             </Box>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '-0.04em' }}>
-                Bethel Control Center
+              <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '-0.03em' }}>
+                Admin Dashboard
               </Typography>
               <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                Admin • {currentUser?.name || currentUser?.email}
+                {currentUser?.name || currentUser?.email}
               </Typography>
             </Box>
           </Box>

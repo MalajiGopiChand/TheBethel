@@ -47,8 +47,8 @@ async function sendToTokens({ tokens, title, body, data }) {
       ),
       webpush: {
         notification: {
-          icon: '/image.svg',
-          badge: '/image.svg'
+          icon: '/image.png',
+          badge: '/image.png'
         },
         fcmOptions: data?.url ? { link: data.url } : undefined
       },
@@ -85,7 +85,7 @@ export const pushOnAnnouncementCreated = onDocumentCreated('notifications/{id}',
   logger.info('Announcement push sent', { audienceRole, sent: result.sent });
 });
 
-// Global chat messages -> push to all teachers (except sender)
+// Global chat messages -> push to everyone (except sender)
 export const pushOnChatMessageCreated = onDocumentCreated('chats/{chatId}/messages/{messageId}', async (event) => {
   const msg = event.data?.data();
   if (!msg) return;
@@ -93,16 +93,19 @@ export const pushOnChatMessageCreated = onDocumentCreated('chats/{chatId}/messag
   const senderId = msg.senderId || null;
   const senderName = msg.senderName || 'Someone';
   const content = msg.content || '';
-  if (!content) return;
+  const imageUrl = msg.imageUrl || '';
+  if (!content && !imageUrl) return;
 
   // Only for the global room (same ID used in your UI)
   if (event.params.chatId !== 'chat_global_room') return;
 
-  const tokens = await getTokensForAudience({ audienceRole: 'TEACHER', excludeUid: senderId });
+  const tokens = await getTokensForAudience({ audienceRole: 'ALL', excludeUid: senderId });
   const result = await sendToTokens({
     tokens,
     title: `New message from ${senderName}`,
-    body: content.length > 120 ? content.slice(0, 120) + '…' : content,
+    body: content
+      ? (content.length > 120 ? content.slice(0, 120) + '…' : content)
+      : 'Sent a photo',
     data: {
       tag: 'chat',
       url: '/teacher/messaging'

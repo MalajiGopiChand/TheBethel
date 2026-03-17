@@ -19,7 +19,9 @@ import {
   Send as SendIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  MoreVert as MoreIcon
+  MoreVert as MoreIcon,
+  Image as ImageIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import {
   collection,
@@ -33,7 +35,8 @@ import {
   serverTimestamp,
   limit
 } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { db, storage } from '../../../config/firebase';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
@@ -85,6 +88,22 @@ const MessageItem = React.memo(({ message, isOwnMessage, formatMessageDate, rend
             <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
               {message.content}
             </Typography>
+          )}
+          {message.imageUrl && (
+            <Box sx={{ mt: 1 }}>
+              <Box
+                component="img"
+                src={message.imageUrl}
+                alt="shared"
+                sx={{
+                  maxWidth: 260,
+                  width: '100%',
+                  borderRadius: 2,
+                  cursor: 'pointer'
+                }}
+                onClick={() => window.open(message.imageUrl, '_blank', 'noopener,noreferrer')}
+              />
+            </Box>
           )}
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
@@ -143,9 +162,12 @@ const MessagingPage = () => {
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
   const [editingMessage, setEditingMessage] = useState(null);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
   const seenMessageIdsRef = useRef(new Set());
   const isPageFocusedRef = useRef(true);
   
@@ -249,7 +271,7 @@ const MessagingPage = () => {
 
 
   const handleSend = async () => {
-    if ((!messageText.trim() && !editingMessage) || !currentUser) return;
+    if ((!messageText.trim() && !editingMessage && !selectedImageFile) || !currentUser) return;
 
     const messageContent = messageText.trim();
     const senderName = currentUser.name || 'Anonymous';
@@ -265,10 +287,21 @@ const MessagingPage = () => {
         );
         setEditingMessage(null);
       } else {
+        let imageUrl = '';
+        if (selectedImageFile) {
+          setUploadingImage(true);
+          const ext = selectedImageFile.name?.split('.').pop() || 'jpg';
+          const path = `chat_uploads/${GLOBAL_CHAT_ID}/${Date.now()}_${currentUser.uid}.${ext}`;
+          const storageRef = ref(storage, path);
+          await uploadBytes(storageRef, selectedImageFile, { contentType: selectedImageFile.type || 'image/jpeg' });
+          imageUrl = await getDownloadURL(storageRef);
+        }
+
         await addDoc(collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'), {
           senderId: currentUser.uid,
           senderName: senderName,
           content: messageContent,
+          imageUrl: imageUrl || '',
           type: 'text',
           timestamp: serverTimestamp(),
           isEdited: false
@@ -280,9 +313,13 @@ const MessagingPage = () => {
         });
       }
       setMessageText('');
+      setSelectedImageFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
       console.error('Error sending message:', error);
       notifyError('Send failed', error.message || 'Failed to send message. Please try again.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -477,6 +514,29 @@ const MessagingPage = () => {
           </Fade>
         )}
 
+        {/* hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            setSelectedImageFile(f);
+          }}
+        />
+
+        {/* image picker button */}
+        <IconButton
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadingImage}
+          sx={{ bgcolor: 'white' }}
+          aria-label="Attach image"
+        >
+          <ImageIcon />
+        </IconButton>
+
         <TextField
           fullWidth
           placeholder="Type a message..."
@@ -500,9 +560,38 @@ const MessagingPage = () => {
           }}
         />
 
+        {/* selected image chip-like preview */}
+        {selectedImageFile && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1,
+              py: 0.5,
+              borderRadius: 2,
+              bgcolor: 'white'
+            }}
+          >
+            <Typography variant="caption" sx={{ maxWidth: 110 }} noWrap>
+              {selectedImageFile.name}
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => {
+                setSelectedImageFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+              }}
+              aria-label="Remove image"
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        )}
+
         <IconButton
           onClick={handleSend}
-          disabled={!messageText.trim() && !editingMessage}
+          disabled={(!messageText.trim() && !editingMessage && !selectedImageFile) || uploadingImage}
           sx={{
             bgcolor: messageText.trim() || editingMessage ? '#075E54' : 'grey.300',
             color: 'white',
