@@ -2,14 +2,15 @@
   "name": "The Bethel Church - School Management System",
   "short_name": "Bethel AMS",
   "description": "Complete school management system for Parents, Teachers, and Administrators",
-  "start_url": "/",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#ffffff",
   "theme_color": "#667eea",
   "orientation": "any",
   "prefer_related_applications": false,
-  "id": "/",
   "icons": [
     {
       "src": "/image.png",

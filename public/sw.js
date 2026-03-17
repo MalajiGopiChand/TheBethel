@@ -1,8 +1,9 @@
 // Service Worker for PWA
-const CACHE_NAME = 'bethel-ams-v3';
+const CACHE_NAME = 'bethel-ams-v4';
 const urlsToCache = [
   '/',
   '/index.html',
+  '/manifest.json',
   '/image.png'
 ];
 
