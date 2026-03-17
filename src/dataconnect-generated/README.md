@@ -253,6 +253,7 @@ console.log(data.events);
 executeQuery(ref).then((response) => {
   const data = response.data;
   console.log(data.events);
+  
 });
 ```
 
