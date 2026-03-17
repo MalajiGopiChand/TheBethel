@@ -20,7 +20,14 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Allow client to force activation of a new SW
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Fetch event
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
@@ -32,31 +39,51 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Network-first for scripts/styles to avoid "old code until reload"
+  const isAppCode =
+    req.destination === 'script' ||
+    req.destination === 'style' ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css');
+
+  // Navigation requests: network-first, fallback to cached shell
+  const isNavigation = req.mode === 'navigate';
+
+  if (isNavigation || isAppCode) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          // Update cache for same-origin successful responses
+          if (res && res.status === 200 && url.origin === self.location.origin) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          }
+          return res;
+        })
+        .catch(async () => {
+          const cached = await caches.match(req);
+          if (cached) return cached;
+          if (isNavigation) return caches.match('/index.html');
+          return undefined;
+        })
+    );
+    return;
+  }
+
+  // Cache-first for everything else (images, fonts, etc.)
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        if (response) {
-          return response;
-        }
-        return fetch(event.request).then((response) => {
-          // Don't cache if not a valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-          // Clone the response
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-          return response;
-        }).catch(() => {
-          // If fetch fails and it's a navigation request, return index.html
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-        });
-      })
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((res) => {
+        if (!res || res.status !== 200 || url.origin !== self.location.origin) return res;
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        return res;
+      });
+    })
   );
 });
 

@@ -27,7 +27,8 @@ import {
   Grow,
   Avatar,
   Divider,
-  useTheme
+  useTheme,
+  Stack
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -60,13 +61,35 @@ const AttendanceSummaryPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState('All');
   const [selectedPlace, setSelectedPlace] = useState('All');
-  const [dateRange, setDateRange] = useState({
-    start: format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    end: format(new Date(), 'yyyy-MM-dd')
-  });
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const classOptions = ['All', 'Beginner', 'Primary', 'Secondary'];
   const placeOptions = ['All', 'Kandrika', 'Krishna Lanka', 'Gandhiji Conly', 'Other'];
+
+  const getRecordForDate = (student, dateStr) => {
+    const byDate = student.attendanceByDate || {};
+    const record = byDate?.[dateStr];
+    if (record?.status === 'present' || record?.status === 'absent') {
+      return { status: record.status, teacherName: record.teacherName || '' };
+    }
+    const attendance = student.attendance || [];
+    const absentDates = student.absentDates || [];
+
+    // Legacy format support: "yyyy-MM-dd::Teacher Name"
+    const presentLegacy = attendance.find((v) => typeof v === 'string' && v.startsWith(`${dateStr}::`));
+    if (presentLegacy) {
+      return { status: 'present', teacherName: presentLegacy.split('::').slice(1).join('::') || '' };
+    }
+    const absentLegacy = absentDates.find((v) => typeof v === 'string' && v.startsWith(`${dateStr}::`));
+    if (absentLegacy) {
+      return { status: 'absent', teacherName: absentLegacy.split('::').slice(1).join('::') || '' };
+    }
+
+    // Older legacy: date stored without teacher name
+    if (attendance.includes(dateStr)) return { status: 'present', teacherName: '' };
+    if (absentDates.includes(dateStr)) return { status: 'absent', teacherName: '' };
+    return { status: null, teacherName: '' };
+  };
 
   useEffect(() => {
     const studentsQuery = query(collection(db, 'students'), orderBy('studentId'));
@@ -91,42 +114,27 @@ const AttendanceSummaryPage = () => {
         });
       }
 
-      // Calculate stats
-      studentsData = studentsData.map(student => {
-        const attendance = student.attendance || [];
-        const absentDates = student.absentDates || [];
-        
-        const attendanceInRange = attendance.filter(date => date >= dateRange.start && date <= dateRange.end);
-        const absentInRange = absentDates.filter(date => date >= dateRange.start && date <= dateRange.end);
-
-        const totalDays = attendanceInRange.length + absentInRange.length;
-        const attendancePercentage = totalDays > 0
-          ? Math.round((attendanceInRange.length / totalDays) * 100)
-          : 0;
-
+      studentsData = studentsData.map((student) => {
+        const rec = getRecordForDate(student, selectedDate);
         return {
           ...student,
-          attendanceInRange: attendanceInRange.length,
-          absentInRange: absentInRange.length,
-          totalDays,
-          attendancePercentage
+          dayStatus: rec.status,
+          dayTeacherName: rec.teacherName
         };
-      });
+      }).sort((a, b) => a.name.localeCompare(b.name));
 
       setStudents(studentsData);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [selectedClass, selectedPlace, dateRange]);
+  }, [selectedClass, selectedPlace, selectedDate]);
 
   const overallStats = {
     total: students.length,
-    present: students.reduce((sum, s) => sum + s.attendanceInRange, 0),
-    absent: students.reduce((sum, s) => sum + s.absentInRange, 0),
-    averagePercentage: students.length > 0
-      ? Math.round(students.reduce((sum, s) => sum + s.attendancePercentage, 0) / students.length)
-      : 0
+    present: students.filter((s) => s.dayStatus === 'present').length,
+    absent: students.filter((s) => s.dayStatus === 'absent').length,
+    unmarked: students.filter((s) => !s.dayStatus).length
   };
 
   // Helper for Stats Cards
@@ -185,13 +193,13 @@ const AttendanceSummaryPage = () => {
                 <BackIcon />
                 </IconButton>
                 <Typography variant="h6" fontWeight="800" color="text.primary">
-                Attendance Reports
+                Attendance Summary
                 </Typography>
             </Box>
             
             {/* Quick Actions / Date Display */}
             <Chip 
-                label={`${format(new Date(dateRange.start), 'MMM d')} - ${format(new Date(dateRange.end), 'MMM d')}`} 
+                label={format(new Date(selectedDate), 'EEEE, MMM d, yyyy')} 
                 variant="outlined" 
                 sx={{ fontWeight: 'bold' }}
             />
@@ -224,11 +232,16 @@ const AttendanceSummaryPage = () => {
                         </Select>
                     </FormControl>
                 </Grid>
-                <Grid item xs={6} md={3}>
-                    <TextField fullWidth label="Start Date" type="date" size="small" value={dateRange.start} onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })} InputLabelProps={{ shrink: true }} />
-                </Grid>
-                <Grid item xs={6} md={3}>
-                    <TextField fullWidth label="End Date" type="date" size="small" value={dateRange.end} onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })} InputLabelProps={{ shrink: true }} />
+                <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Date"
+                      type="date"
+                      size="small"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
                 </Grid>
             </Grid>
         </Paper>
@@ -245,13 +258,13 @@ const AttendanceSummaryPage = () => {
                 <StatCard title="Total Students" value={overallStats.total} icon={<TotalIcon />} color={theme.palette.primary.main} delay={200} />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <StatCard title="Total Present" value={overallStats.present} icon={<PresentIcon />} color={theme.palette.success.main} delay={400} />
+                <StatCard title="Present (Selected Day)" value={overallStats.present} icon={<PresentIcon />} color={theme.palette.success.main} delay={400} />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <StatCard title="Total Absent" value={overallStats.absent} icon={<AbsentIcon />} color={theme.palette.error.main} delay={600} />
+                <StatCard title="Absent (Selected Day)" value={overallStats.absent} icon={<AbsentIcon />} color={theme.palette.error.main} delay={600} />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <StatCard title="Avg. Attendance" value={`${overallStats.averagePercentage}%`} icon={<AverageIcon />} color={theme.palette.warning.main} delay={800} />
+                <StatCard title="Unmarked (Selected Day)" value={overallStats.unmarked} icon={<AverageIcon />} color={theme.palette.warning.main} delay={800} />
               </Grid>
             </Grid>
 
@@ -261,7 +274,7 @@ const AttendanceSummaryPage = () => {
                     <Fade in={!loading} timeout={1000}>
                         <Card elevation={0} sx={{ height: '100%', borderRadius: 3, border: '1px solid #e0e0e0', p: 1 }}>
                             <Typography variant="subtitle1" fontWeight="bold" textAlign="center" sx={{ mt: 2, mb: 1 }}>
-                                Attendance Distribution
+                                Distribution (Selected Day)
                             </Typography>
                             {overallStats.total > 0 ? (
                                 <ResponsiveContainer width="100%" height={300}>
@@ -269,14 +282,19 @@ const AttendanceSummaryPage = () => {
                                         <Pie
                                             data={[
                                                 { name: 'Present', value: overallStats.present, color: theme.palette.success.main },
-                                                { name: 'Absent', value: overallStats.absent, color: theme.palette.error.main }
+                                                { name: 'Absent', value: overallStats.absent, color: theme.palette.error.main },
+                                                { name: 'Unmarked', value: overallStats.unmarked, color: theme.palette.grey[500] }
                                             ]}
                                             cx="50%" cy="50%"
                                             innerRadius={60} outerRadius={80}
                                             paddingAngle={5}
                                             dataKey="value"
                                         >
-                                            {[{ color: theme.palette.success.main }, { color: theme.palette.error.main }].map((entry, index) => (
+                                            {[
+                                              { color: theme.palette.success.main },
+                                              { color: theme.palette.error.main },
+                                              { color: theme.palette.grey[500] }
+                                            ].map((entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={entry.color} />
                                             ))}
                                         </Pie>
@@ -302,15 +320,14 @@ const AttendanceSummaryPage = () => {
                                     <TableRow>
                                         <TableCell sx={{ fontWeight: 'bold', bgcolor: 'grey.50' }}>Name</TableCell>
                                         <TableCell sx={{ fontWeight: 'bold', bgcolor: 'grey.50' }}>Class</TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 'bold', bgcolor: 'grey.50' }}>Present</TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 'bold', bgcolor: 'grey.50' }}>Absent</TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 'bold', bgcolor: 'grey.50' }}>Rate</TableCell>
+                                        <TableCell align="center" sx={{ fontWeight: 'bold', bgcolor: 'grey.50' }}>Status</TableCell>
+                                        <TableCell sx={{ fontWeight: 'bold', bgcolor: 'grey.50' }}>Teacher</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {students.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                                            <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
                                                 No records found for this period.
                                             </TableCell>
                                         </TableRow>
@@ -327,18 +344,30 @@ const AttendanceSummaryPage = () => {
                                                     <Chip label={student.classType} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
                                                 </TableCell>
                                                 <TableCell align="center">
-                                                    <Typography variant="body2" color="success.main" fontWeight="bold">{student.attendanceInRange}</Typography>
-                                                </TableCell>
-                                                <TableCell align="center">
-                                                    <Typography variant="body2" color="error.main" fontWeight="bold">{student.absentInRange}</Typography>
-                                                </TableCell>
-                                                <TableCell align="center">
-                                                    <Chip 
-                                                        label={`${student.attendancePercentage}%`} 
-                                                        size="small" 
-                                                        color={student.attendancePercentage >= 75 ? 'success' : student.attendancePercentage >= 50 ? 'warning' : 'error'}
-                                                        sx={{ fontWeight: 'bold', minWidth: 50 }}
+                                                    <Chip
+                                                      label={
+                                                        student.dayStatus === 'present'
+                                                          ? 'PRESENT'
+                                                          : student.dayStatus === 'absent'
+                                                          ? 'ABSENT'
+                                                          : 'UNMARKED'
+                                                      }
+                                                      size="small"
+                                                      color={
+                                                        student.dayStatus === 'present'
+                                                          ? 'success'
+                                                          : student.dayStatus === 'absent'
+                                                          ? 'error'
+                                                          : 'default'
+                                                      }
+                                                      variant={student.dayStatus ? 'filled' : 'outlined'}
+                                                      sx={{ fontWeight: 'bold', minWidth: 90 }}
                                                     />
+                                                </TableCell>
+                                                <TableCell>
+                                                  <Typography variant="body2" color="text.secondary">
+                                                    {student.dayTeacherName || '-'}
+                                                  </Typography>
                                                 </TableCell>
                                             </TableRow>
                                         ))

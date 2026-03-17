@@ -14,8 +14,9 @@ const AttendanceTab = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  const isAdmin = currentUser?.role === 'ADMIN' || 
-    currentUser?.email === 'gop1@gmail.com' || 
+  const isAdmin =
+    currentUser?.role === 'ADMIN' ||
+    currentUser?.email === 'gop1@gmail.com' ||
     currentUser?.email === 'premkumartenali@gmail.com';
 
   const actions = [
@@ -51,17 +52,17 @@ const AttendanceTab = () => {
       isEnabled: true,
       onClick: () => navigate('/teacher/absent-students')
     }
-  ].filter(action => action.isEnabled);
+  ].filter((action) => action.isEnabled);
 
   return (
     <Box>
       <Typography variant="h4" gutterBottom fontWeight="bold">
         Attendance Management
       </Typography>
+
       <ActionGrid actions={actions} />
     </Box>
   );
 };
 
 export default AttendanceTab;
-

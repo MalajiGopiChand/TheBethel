@@ -9,7 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import './styles/animations.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+<React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter future={{ v7_startTransition: true }}>
         <AuthProvider>
@@ -20,6 +20,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
-  </React.StrictMode>
+</React.StrictMode>
+  
 );
 

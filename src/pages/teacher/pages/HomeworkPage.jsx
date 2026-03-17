@@ -51,6 +51,7 @@ import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { format, isPast, isToday } from 'date-fns';
 import { handleBackNavigation } from '../../../utils/navigation';
+import { notifySuccess, notifyError, requestNotificationPermission } from '../../../services/notificationService';
 
 const HomeworkPage = () => {
   const { currentUser } = useAuth();
@@ -105,6 +106,7 @@ const HomeworkPage = () => {
   };
 
   useEffect(() => {
+    requestNotificationPermission();
     // Show all homework to everyone (not filtered by teacher)
     const homeworksQuery = query(
       collection(db, 'homeworks'),
@@ -190,7 +192,7 @@ const HomeworkPage = () => {
       const homeworkData = {
         ...formData,
         teacherId: currentUser?.uid,
-        teacherName: currentUser?.name,
+        teacherName: currentUser?.displayName || currentUser?.name || currentUser?.email || 'Teacher',
         createdAt: editingHomework ? undefined : serverTimestamp(),
         dueDate: formData.dueDate ? new Date(formData.dueDate) : null
       };
@@ -202,8 +204,10 @@ const HomeworkPage = () => {
       }
       
       handleCloseDialog();
+      notifySuccess('Homework saved', `${homeworkData.title || 'Homework'} saved successfully.`);
     } catch (error) {
       console.error('Error saving homework:', error);
+      notifyError('Homework failed', error.message || 'Failed to save homework.');
       alert('Failed to save homework: ' + error.message);
     }
   };

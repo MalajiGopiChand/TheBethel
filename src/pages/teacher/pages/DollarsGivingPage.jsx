@@ -48,6 +48,7 @@ import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';
+import { notifySuccess, notifyError, requestNotificationPermission } from '../../../services/notificationService';
 
 const DollarsGivingPage = () => {
   const { currentUser, logout } = useAuth();
@@ -85,6 +86,7 @@ const DollarsGivingPage = () => {
 
   // Fetch Students
   useEffect(() => {
+    requestNotificationPermission();
     const studentsQuery = query(collection(db, 'students'), orderBy('studentId'));
     const unsubscribe = onSnapshot(studentsQuery, (snapshot) => {
       const studentsData = snapshot.docs.map(doc => ({
@@ -176,6 +178,7 @@ const DollarsGivingPage = () => {
 
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 3000);
+        notifySuccess('Dollars saved', `Saved $${amount} for ${selectedStudent.name}.`);
         
         // Reset form
         setSelectedStudent(null);
@@ -185,6 +188,7 @@ const DollarsGivingPage = () => {
       }
     } catch (error) {
       console.error('Error saving reward:', error);
+      notifyError('Dollars failed', error.message || 'Failed to save dollars.');
       alert('Failed to save reward: ' + error.message);
     } finally {
       setSaving(false);

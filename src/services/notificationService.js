@@ -1,4 +1,4 @@
-import { collection, addDoc, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 // Request notification permission
@@ -19,29 +19,48 @@ export const requestNotificationPermission = async () => {
   return false;
 };
 
-// Show browser notification
-const showBrowserNotification = (title, body, icon = '/icon-192x192.png') => {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    const notification = new Notification(title, {
-      body,
-      icon,
-      badge: icon,
-      tag: 'chat-message',
-      requireInteraction: false,
-      silent: false
-    });
+const DEFAULT_ICON = '/image.png';
 
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
+// Show a notification in the most reliable way for PWA/mobile:
+// Prefer ServiceWorkerRegistration.showNotification (works better in background),
+// fallback to the Notification constructor.
+export const showAppNotification = async (title, body, options = {}) => {
+  const ok = await requestNotificationPermission();
+  if (!ok) return false;
 
-    // Auto close after 5 seconds
-    setTimeout(() => {
-      notification.close();
-    }, 5000);
+  const payload = {
+    body,
+    icon: options.icon || DEFAULT_ICON,
+    badge: options.badge || options.icon || DEFAULT_ICON,
+    tag: options.tag || 'bethel-ams',
+    requireInteraction: false,
+    silent: false,
+    data: options.data || {},
+  };
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg?.showNotification) {
+        await reg.showNotification(title, payload);
+        return true;
+      }
+    }
+  } catch {
+    // ignore fallback
+  }
+
+  try {
+    // eslint-disable-next-line no-new
+    new Notification(title, payload);
+    return true;
+  } catch {
+    return false;
   }
 };
+
+export const notifySuccess = (title, body) => showAppNotification(title, body, { tag: 'success' });
+export const notifyError = (title, body) => showAppNotification(title, body, { tag: 'error' });
 
 // Send notification to all teachers
 export const sendNotificationToTeachers = async (senderName, messageContent) => {
@@ -59,10 +78,7 @@ export const sendNotificationToTeachers = async (senderName, messageContent) => 
 
     // Show immediate browser notification for current user if not the sender
     // (We'll check this in the component)
-    showBrowserNotification(
-      `New message from ${senderName}`,
-      messageContent
-    );
+    showAppNotification(`New message from ${senderName}`, messageContent, { tag: 'chat-message' });
   } catch (error) {
     console.error('Error sending notification:', error);
   }
@@ -81,7 +97,7 @@ export const listenForChatNotifications = (currentUserId, callback) => {
         const data = change.doc.data();
         // Don't show notification if user sent the message themselves
         if (data.senderId !== currentUserId) {
-          showBrowserNotification(data.title, data.body);
+          showAppNotification(data.title, data.body, { tag: 'chat-message' });
           if (callback) callback(data);
         }
       }
