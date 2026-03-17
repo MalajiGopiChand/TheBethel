@@ -1,5 +1,6 @@
-import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { collection, addDoc, query, where, onSnapshot, setDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { getToken, onMessage } from 'firebase/messaging';
+import { db, messagingPromise } from '../config/firebase';
 
 // Request notification permission
 export const requestNotificationPermission = async () => {
@@ -19,7 +20,7 @@ export const requestNotificationPermission = async () => {
   return false;
 };
 
-const DEFAULT_ICON = '/image.png';
+const DEFAULT_ICON = '/image.svg';
 
 // Show a notification in the most reliable way for PWA/mobile:
 // Prefer ServiceWorkerRegistration.showNotification (works better in background),
@@ -51,7 +52,6 @@ export const showAppNotification = async (title, body, options = {}) => {
   }
 
   try {
-    // eslint-disable-next-line no-new
     new Notification(title, payload);
     return true;
   } catch {
@@ -61,6 +61,69 @@ export const showAppNotification = async (title, body, options = {}) => {
 
 export const notifySuccess = (title, body) => showAppNotification(title, body, { tag: 'success' });
 export const notifyError = (title, body) => showAppNotification(title, body, { tag: 'error' });
+
+// --- Push notifications (Firebase Cloud Messaging) ---
+// Requires: HTTPS origin + a VAPID key set as VITE_FIREBASE_VAPID_KEY in .env
+export async function registerPushTokenForUser(currentUser) {
+  if (!currentUser?.uid) return null;
+  const ok = await requestNotificationPermission();
+  if (!ok) return null;
+
+  const messaging = await messagingPromise;
+  if (!messaging) return null;
+
+  const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+  if (!vapidKey) {
+    console.warn('Missing VITE_FIREBASE_VAPID_KEY; web push token not registered.');
+    return null;
+  }
+
+  // Ensure the messaging SW is registered from root.
+  let swReg = null;
+  try {
+    if ('serviceWorker' in navigator) {
+      swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    }
+  } catch (e) {
+    console.warn('Failed to register firebase-messaging-sw.js', e);
+  }
+
+  const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: swReg || undefined });
+  if (!token) return null;
+
+  // Store token per user (single doc per token for easy fanout)
+  await setDoc(
+    doc(db, 'pushTokens', token),
+    {
+      token,
+      uid: currentUser.uid,
+      role: currentUser.role || null,
+      email: currentUser.email || null,
+      name: currentUser.name || null,
+      updatedAt: serverTimestamp(),
+      platform: 'web'
+    },
+    { merge: true }
+  );
+
+  return token;
+}
+
+export async function listenForForegroundPushMessages(handler) {
+  const messaging = await messagingPromise;
+  if (!messaging) return () => {};
+
+  const unsub = onMessage(messaging, (payload) => {
+    const title = payload?.notification?.title || payload?.data?.title || 'Bethel AMS';
+    const body = payload?.notification?.body || payload?.data?.body || '';
+    const url = payload?.data?.url;
+
+    showAppNotification(title, body, { tag: payload?.data?.tag || 'push', data: { url } });
+    if (handler) handler(payload);
+  });
+
+  return unsub;
+}
 
 // Send notification to all teachers
 export const sendNotificationToTeachers = async (senderName, messageContent) => {

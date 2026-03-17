@@ -38,7 +38,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { handleBackNavigation } from '../../../utils/navigation';
-import { sendNotificationToTeachers, requestNotificationPermission } from '../../../services/notificationService';
+import { sendNotificationToTeachers, requestNotificationPermission, showAppNotification, notifyError } from '../../../services/notificationService';
 
 const GLOBAL_CHAT_ID = 'chat_global_room';
 
@@ -194,27 +194,11 @@ const MessagingPage = () => {
             
             // Only show notification if message is from someone else and page is not focused
             if (message.senderId !== currentUser.uid && message.content && !isPageFocusedRef.current) {
-              // Show notification (works even when page is in background)
-              if ('Notification' in window && Notification.permission === 'granted') {
-                const notification = new Notification(`New message from ${message.senderName || 'Someone'}`, {
-                  body: message.content.length > 100 ? message.content.substring(0, 100) + '...' : message.content,
-                  icon: '/icon-192x192.png',
-                  badge: '/icon-192x192.png',
-                  tag: `chat-${messageId}`,
-                  requireInteraction: false,
-                  silent: false
-                });
-                
-                notification.onclick = () => {
-                  window.focus();
-                  notification.close();
-                };
-                
-                // Auto close after 5 seconds
-                setTimeout(() => {
-                  notification.close();
-                }, 5000);
-              }
+              showAppNotification(
+                `New message from ${message.senderName || 'Someone'}`,
+                message.content.length > 100 ? message.content.substring(0, 100) + '...' : message.content,
+                { tag: `chat-${messageId}`, data: { url: '/teacher/messaging' } }
+              );
             }
           }
         });
@@ -298,7 +282,7 @@ const MessagingPage = () => {
       setMessageText('');
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('Failed to send message. Please try again.');
+      notifyError('Send failed', error.message || 'Failed to send message. Please try again.');
     }
   };
 

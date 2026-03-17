@@ -47,6 +47,7 @@ import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';
+import { notifyError, notifySuccess } from '../../../services/notificationService';
 
 const FinanceManagementPage = () => {
   const navigate = useNavigate();
@@ -155,7 +156,7 @@ const FinanceManagementPage = () => {
   const handleSubmitOffering = async (e) => {
     e.preventDefault();
     if (!offeringForm.amount || !offeringForm.reason) {
-      alert('Please fill in all fields');
+      notifyError('Missing fields', 'Please fill in all fields.');
       return;
     }
 
@@ -179,10 +180,10 @@ const FinanceManagementPage = () => {
       
       setOfferingForm({ amount: '', reason: '' });
       fetchBalanceAndRecords();
-      alert('Offering recorded successfully!');
+      notifySuccess('Offering submitted', 'Offering recorded successfully.');
     } catch (error) {
       console.error('Error saving offering:', error);
-      alert('Failed to save offering: ' + error.message);
+      notifyError('Offering failed', error.message || 'Failed to save offering.');
     } finally {
       setLoading(false);
     }
@@ -191,13 +192,13 @@ const FinanceManagementPage = () => {
   const handleSubmitExpense = async (e) => {
     e.preventDefault();
     if (!expenseForm.amount || !expenseForm.reason) {
-      alert('Please fill in all fields');
+      notifyError('Missing fields', 'Please fill in all fields.');
       return;
     }
 
     const expenseAmount = parseFloat(expenseForm.amount);
     if (expenseAmount > balance.balance) {
-      alert(`Insufficient funds! Available: ₹${balance.balance.toFixed(2)}`);
+      notifyError('Insufficient funds', `Available: ₹${balance.balance.toFixed(2)}`);
       return;
     }
 
@@ -221,10 +222,10 @@ const FinanceManagementPage = () => {
       
       setExpenseForm({ amount: '', reason: '' });
       fetchBalanceAndRecords();
-      alert('Expense recorded successfully!');
+      notifySuccess('Expense submitted', 'Expense recorded successfully.');
     } catch (error) {
       console.error('Error saving expense:', error);
-      alert('Failed to save expense: ' + error.message);
+      notifyError('Expense failed', error.message || 'Failed to save expense.');
     } finally {
       setLoading(false);
     }
@@ -239,10 +240,10 @@ const FinanceManagementPage = () => {
       setLoading(true);
       await deleteDoc(doc(db, 'financial_records', recordId));
       fetchBalanceAndRecords();
-      alert('Record deleted successfully!');
+      notifySuccess('Deleted', 'Record deleted successfully.');
     } catch (error) {
       console.error('Error deleting record:', error);
-      alert('Failed to delete record: ' + error.message);
+      notifyError('Delete failed', error.message || 'Failed to delete record.');
     } finally {
       setLoading(false);
     }

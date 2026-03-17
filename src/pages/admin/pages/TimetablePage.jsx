@@ -47,6 +47,7 @@ import { format, addWeeks, subWeeks, isSameDay } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';
+import { notifyError, notifySuccess } from '../../../services/notificationService';
 
 // Helper function to get this Sunday
 const getThisSunday = () => {
@@ -181,7 +182,7 @@ const TimetablePage = () => {
   const handleSave = async () => {
     try {
       if (!formData.className || !formData.assignedPersonName || !formData.place) {
-        alert('Please fill in all required fields');
+        notifyError('Missing fields', 'Please fill in all required fields.');
         return;
       }
 
@@ -197,14 +198,16 @@ const TimetablePage = () => {
 
       if (editingTimetable) {
         await updateDoc(doc(db, 'timetables', editingTimetable.id), timetableData);
+        notifySuccess('Schedule updated', 'Schedule updated successfully.');
       } else {
         await addDoc(collection(db, 'timetables'), timetableData);
+        notifySuccess('Schedule saved', 'Schedule saved successfully.');
       }
 
       handleCloseDialog();
     } catch (error) {
       console.error('Error saving timetable:', error);
-      alert('Failed to save schedule: ' + error.message);
+      notifyError('Save failed', error.message || 'Failed to save schedule.');
     }
   };
 
@@ -215,9 +218,10 @@ const TimetablePage = () => {
 
     try {
       await deleteDoc(doc(db, 'timetables', timetableId));
+      notifySuccess('Schedule deleted', 'Deleted successfully.');
     } catch (error) {
       console.error('Error deleting timetable:', error);
-      alert('Failed to delete schedule: ' + error.message);
+      notifyError('Delete failed', error.message || 'Failed to delete schedule.');
     }
   };
 
