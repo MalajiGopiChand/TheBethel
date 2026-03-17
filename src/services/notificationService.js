@@ -20,7 +20,7 @@ export const requestNotificationPermission = async () => {
   return false;
 };
 
-const DEFAULT_ICON = '/image.svg';
+const DEFAULT_ICON = '/image.png';
 
 // Show a notification in the most reliable way for PWA/mobile:
 // Prefer ServiceWorkerRegistration.showNotification (works better in background),

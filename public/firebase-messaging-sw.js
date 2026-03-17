@@ -24,8 +24,8 @@ messaging.onBackgroundMessage((payload) => {
 
   const notificationOptions = {
     body,
-    icon: '/image.svg',
-    badge: '/image.svg',
+    icon: '/image.png',
+    badge: '/image.png',
     data: {
       url: payload?.data?.url || '/',
       ...payload?.data
