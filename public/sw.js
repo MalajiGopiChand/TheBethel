@@ -3,7 +3,7 @@ const CACHE_NAME = 'bethel-ams-v3';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/image.svg'
+  '/image.png'
 ];
 
 // Install event - cache resources
