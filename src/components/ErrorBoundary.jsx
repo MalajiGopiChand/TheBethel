@@ -60,7 +60,7 @@ class ErrorBoundary extends React.Component {
             >
               Go to Home
             </Button>
-            {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
+            {import.meta.env.DEV && this.state.errorInfo && (
               <Box sx={{ mt: 3, textAlign: 'left' }}>
                 <Typography variant="caption" component="pre" sx={{ fontSize: '0.7rem', overflow: 'auto' }}>
                   {this.state.errorInfo.componentStack}
