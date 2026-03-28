@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  AppBar,
+  Toolbar,
+  IconButton,
+  Grow,
+  Fade,
   Box,
   Paper,
   Typography,
@@ -64,119 +69,122 @@ const TeacherLeaderboardPage = () => {
     fetchLeaderboard();
   }, []);
 
-  // Helper component for the Top 3 Podium
-  const PodiumSpot = ({ teacher, rank }) => {
-    if (!teacher) return <Box sx={{ flex: 1 }} />;
 
-    let bgColor, height, iconColor, scale;
 
-    switch (rank) {
-      case 1:
-        bgColor = '#FFD700'; // Gold
-        height = 180;
-        iconColor = '#B8860B';
-        scale = 1.1;
-        break;
-      case 2:
-        bgColor = '#C0C0C0'; // Silver
-        height = 150;
-        iconColor = '#757575';
-        scale = 1.0;
-        break;
-      case 3:
-        bgColor = '#CD7F32'; // Bronze
-        height = 120;
-        iconColor = '#8B4513';
-        scale = 0.95;
-        break;
-      default:
-        bgColor = '#fff';
-        height = 100;
-    }
+  // Duolingo-style Floating Avatar Podium Helper
+  const FloatingPodium = ({ topTeachers }) => {
+    if (!topTeachers || topTeachers.length === 0) return null;
+    
+    // Order needs to be 2, 1, 3 for rendering visually.
+    const podiumOrder = [
+        { rank: 2, teacher: topTeachers[1] },
+        { rank: 1, teacher: topTeachers[0] },
+        { rank: 3, teacher: topTeachers[2] }
+    ];
 
     return (
-      <Box
-        sx={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          zIndex: rank === 1 ? 2 : 1,
-          transform: `scale(${scale})`,
-          mx: 0.5
-        }}
-      >
-        <Typography 
-          variant="h6" 
-          fontWeight="bold" 
-          sx={{ mb: 1, color: rank === 1 ? theme.palette.warning.main : 'text.secondary' }}
-        >
-          #{rank}
-        </Typography>
-        
-        <Paper
-          elevation={rank === 1 ? 8 : 3}
-          sx={{
-            width: '100%',
-            height: `${height}px`,
-            bgcolor: bgColor,
-            borderRadius: '16px 16px 0 0',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 1,
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-           {/* Decorative shine effect */}
-           <Box sx={{
-              position: 'absolute',
-              top: '-50%',
-              left: '-50%',
-              width: '200%',
-              height: '200%',
-              background: 'linear-gradient(45deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 60%)',
-              pointerEvents: 'none'
-           }} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: {xs: 2, sm: 4}, mt: 6, mb: 4 }}>
+            {podiumOrder.map((item) => {
+                if (!item.teacher) return <Box key={`empty-${item.rank}`} sx={{ width: 80 }} />;
+                
+                const isFirst = item.rank === 1;
+                const size = isFirst ? 110 : 80;
+                const colors = {
+                    1: 'linear-gradient(135deg, #FFD700 0%, #F59E0B 100%)', // Gold
+                    2: 'linear-gradient(135deg, #E5E7EB 0%, #9CA3AF 100%)', // Silver
+                    3: 'linear-gradient(135deg, #FDBA74 0%, #C2410C 100%)'  // Bronze
+                };
+                const shadowColors = { 1: '#F59E0B', 2: '#9CA3AF', 3: '#C2410C' };
+                const bgGradient = colors[item.rank];
+                const shadowCol = shadowColors[item.rank];
 
-          <TrophyIcon sx={{ fontSize: 30, color: '#fff', mb: 1, filter: 'drop-shadow(0px 2px 2px rgba(0,0,0,0.2))' }} />
-          
-          <Typography 
-            variant="body2" 
-            align="center" 
-            sx={{ fontWeight: 'bold', color: '#333', lineHeight: 1.2, mb: 0.5 }}
-          >
-            {teacher.teacherName}
-          </Typography>
-          
-          <Typography variant="h6" fontWeight="900" sx={{ color: '#000' }}>
-            {teacher.totalPoints}
-          </Typography>
-          <Typography variant="caption" sx={{ color: '#444' }}>pts</Typography>
-        </Paper>
-      </Box>
+                return (
+                    <Fade in={true} timeout={item.rank * 400} key={item.rank}>
+                        <Box sx={{ 
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', 
+                            position: 'relative',
+                            transform: isFirst ? 'translateY(-30px)' : 'none',
+                            zIndex: isFirst ? 10 : 1
+                        }}>
+                            {/* Crown for 1st */}
+                            {isFirst && (
+                                <Box sx={{ 
+                                    position: 'absolute', top: -38, zIndex: 12,
+                                    animation: 'float 3s ease-in-out infinite',
+                                    '@keyframes float': {
+                                        '0%, 100%': { transform: 'translateY(0)' },
+                                        '50%': { transform: 'translateY(-6px)' }
+                                    }
+                                }}>
+                                    <TrophyIcon sx={{ fontSize: 45, color: '#FFB300', filter: 'drop-shadow(0 4px 6px rgba(255,179,0,0.5))' }} />
+                                </Box>
+                            )}
+                            
+                            <Box sx={{ position: 'relative' }}>
+                                <Avatar sx={{ 
+                                    width: size, height: size, 
+                                    background: bgGradient, color: isFirst ? '#000' : '#fff', 
+                                    fontWeight: '900', fontSize: isFirst ? '2.5rem' : '1.8rem',
+                                    border: `4px solid white`,
+                                    boxShadow: `0 12px 24px ${shadowCol}60`
+                                }}>
+                                    {item.teacher.teacherName?.charAt(0)?.toUpperCase()}
+                                </Avatar>
+                                {/* Rank Badge */}
+                                <Box sx={{
+                                    position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)',
+                                    width: 32, height: 32, borderRadius: '50%',
+                                    background: bgGradient, border: '3px solid white',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontWeight: '900', fontSize: '1rem', color: isFirst ? '#000' : '#fff',
+                                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                                }}>
+                                    {item.rank}
+                                </Box>
+                            </Box>
+                            
+                            <Typography variant="subtitle1" fontWeight="900" sx={{ mt: 2.5, textAlign: 'center', width: {xs: 90, sm: 110}, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                {item.teacher.teacherName}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, opacity: 0.8 }}>
+                               <StarIcon sx={{ fontSize: 14, color: '#F59E0B' }} />
+                               <Typography variant="caption" fontWeight="bold">
+                                   {item.teacher.totalPoints} pts
+                               </Typography>
+                            </Box>
+                        </Box>
+                    </Fade>
+                )
+            })}
+        </Box>
     );
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', pb: 4 }}>
-      {/* Header */}
-      <Paper elevation={1} sx={{ p: 2, mb: 2, borderRadius: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', maxWidth: 800, mx: 'auto' }}>
-          <Button startIcon={<BackIcon />} onClick={handleBack}>
-            Back
-          </Button>
-          <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
-            Teacher Leaderboard
-          </Typography>
-          <Box sx={{ width: 80 }} /> {/* Spacer to center title */}
-        </Box>
-      </Paper>
+    <Box sx={{ minHeight: '100vh', pb: 4, background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)' }}>
+      {/* Glass Header (Sticky) */}
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: 'rgba(255, 255, 255, 0.92)',
+          backgroundImage: 'none',
+          borderBottom: `1px solid rgba(0,0,0,0.08)`,
+          backdropFilter: 'blur(22px)',
+          zIndex: 1000
+        }}
+      >
+        <Toolbar sx={{ py: 1, px: { xs: 1, sm: 2 } }}>
+           <IconButton onClick={handleBack} sx={{ mr: 1, color: '#000', bgcolor: 'rgba(0,0,0,0.04)' }}>
+              <BackIcon />
+            </IconButton>
+            <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: '900', color: '#000', letterSpacing: '-0.03em', fontSize: { xs: '1.2rem', sm: '1.25rem' } }}>
+              Top Teachers
+            </Typography>
+        </Toolbar>
+      </AppBar>
 
-      <Container maxWidth="sm">
+      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 }, pt: 3 }}>
         {loading ? (
           <Box display="flex" justifyContent="center" py={8}>
             <CircularProgress />
@@ -187,88 +195,58 @@ const TeacherLeaderboardPage = () => {
           </Box>
         ) : (
           <>
-            {/* Podium Section (Top 3) */}
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'flex-end', 
-              justifyContent: 'center', 
-              mb: 4, 
-              mt: 2,
-              px: 2
-            }}>
-              {/* Order: 2nd, 1st, 3rd to match visual podium style */}
-              <PodiumSpot teacher={leaders[1]} rank={2} />
-              <PodiumSpot teacher={leaders[0]} rank={1} />
-              <PodiumSpot teacher={leaders[2]} rank={3} />
-            </Box>
+            {/* Duolingo Floating Podium */}
+            <FloatingPodium topTeachers={leaders.slice(0, 3)} />
 
-            {/* List Section (Rank 4+) */}
+            {/* Minimalist Corporate List for Rank 4+ */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {leaders.slice(3).map((teacher, index) => {
                 const rank = index + 4;
-                const getRankColor = (rank) => {
-                  const colors = [
-                    '#4CAF50', // Green
-                    '#2196F3', // Blue
-                    '#9C27B0', // Purple
-                    '#FF9800', // Orange
-                    '#E91E63', // Pink
-                    '#00BCD4', // Cyan
-                    '#795548', // Brown
-                    '#607D8B', // Blue Grey
-                    '#FF5722', // Deep Orange
-                    '#3F51B5'  // Indigo
-                  ];
-                  return colors[(rank - 4) % colors.length];
-                };
-                const rankColor = getRankColor(rank);
                 return (
-                  <Card 
-                    key={rank} 
-                    elevation={1} 
-                    sx={{ 
-                      borderRadius: 3,
-                      transition: 'transform 0.1s',
-                      borderLeft: `4px solid ${rankColor}`,
-                      '&:hover': { transform: 'scale(1.02)' }
-                    }}
-                  >
-                    <CardContent sx={{ 
-                        p: '16px !important', 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                    }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Avatar 
-                          sx={{ 
-                            width: 32, 
-                            height: 32, 
-                            bgcolor: rankColor,
-                            color: '#fff',
-                            fontSize: 14,
-                            fontWeight: 'bold',
-                            mr: 2
-                          }}
-                        >
-                          {rank}
-                        </Avatar>
-                        <Typography variant="subtitle1" fontWeight="bold">
-                          {teacher.teacherName}
+                  <Grow in={true} timeout={400 + (index * 100)} key={rank}>
+                    <Card 
+                      elevation={0}
+                      sx={{ 
+                        borderRadius: 3,
+                        bgcolor: 'rgba(255,255,255,0.7)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                        border: '1px solid rgba(0,0,0,0.04)',
+                        transition: 'all 0.2s',
+                        '&:hover': { transform: 'scale(1.01)', boxShadow: '0 6px 16px rgba(0,0,0,0.05)', bgcolor: 'white' }
+                      }}
+                    >
+                      <CardContent sx={{ 
+                          p: '12px 20px !important', 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: {xs: 1.5, sm: 2} }}>
+                          <Typography variant="subtitle1" fontWeight="900" sx={{ color: 'text.disabled', minWidth: 24 }}>
+                             {rank}
+                          </Typography>
+                          <Avatar 
+                            sx={{ 
+                              width: 36, height: 36, 
+                              bgcolor: 'primary.light',
+                              color: 'primary.main',
+                              fontSize: 16,
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            {teacher.teacherName?.charAt(0)?.toUpperCase()}
+                          </Avatar>
+                          <Typography variant="subtitle1" fontWeight="bold" sx={{ color: 'text.primary' }}>
+                            {teacher.teacherName}
+                          </Typography>
+                        </Box>
+                        
+                        <Typography variant="h6" fontWeight="800" sx={{ color: 'text.primary' }}>
+                          {teacher.totalPoints}<span style={{ fontSize: '0.65em', color: '#9e9e9e', marginLeft: '4px' }}>pts</span>
                         </Typography>
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                         <StarIcon sx={{ color: rankColor, fontSize: 18, mr: 0.5 }} />
-                         <Typography variant="h6" fontWeight="bold" sx={{ color: rankColor }}>
-                           {teacher.totalPoints}
-                         </Typography>
-                         <Typography variant="caption" color="textSecondary" sx={{ ml: 0.5, mt: 0.5 }}>
-                            pts
-                         </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Grow>
                 );
               })}
             </Box>

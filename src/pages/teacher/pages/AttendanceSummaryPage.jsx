@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  AppBar,
+  Toolbar,
   Box,
   Paper,
   Typography,
@@ -173,78 +175,58 @@ const AttendanceSummaryPage = () => {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f5f7fa', display: 'flex', flexDirection: 'column' }}>
       
-      {/* 1. Header */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 2, 
-          position: 'sticky', 
-          top: 0, 
-          zIndex: 100, 
-          bgcolor: 'rgba(255,255,255,0.9)', 
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(0,0,0,0.1)' 
+      {/* 1. Glass Header (Sticky) */}
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: 'rgba(255, 255, 255, 0.92)',
+          backgroundImage: 'none',
+          borderBottom: `1px solid rgba(0,0,0,0.08)`,
+          backdropFilter: 'blur(22px)',
+          zIndex: 1000
         }}
       >
-        <Container maxWidth="xl">
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton onClick={handleBack} sx={{ mr: 1, bgcolor: 'grey.100' }}>
-                <BackIcon />
-                </IconButton>
-                <Typography variant="h6" fontWeight="800" color="text.primary">
-                Attendance Summary
-                </Typography>
-            </Box>
-            
-            {/* Quick Actions / Date Display */}
+        <Toolbar sx={{ py: 1, px: { xs: 1, sm: 2 } }}>
+           <IconButton onClick={handleBack} sx={{ mr: 1, color: '#000', bgcolor: 'rgba(0,0,0,0.04)' }}>
+              <BackIcon />
+            </IconButton>
+            <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: '900', color: '#000', letterSpacing: '-0.03em', fontSize: { xs: '1.2rem', sm: '1.25rem' } }}>
+              Summary
+            </Typography>
             <Chip 
-                label={format(new Date(selectedDate), 'EEEE, MMM d, yyyy')} 
+                label={format(new Date(selectedDate), 'MMM d, yyyy')} 
+                size="small"
                 variant="outlined" 
                 sx={{ fontWeight: 'bold' }}
             />
-          </Box>
-        </Container>
-      </Paper>
+        </Toolbar>
+      </AppBar>
 
-      <Container maxWidth="xl" sx={{ flex: 1, py: 3 }}>
+      <Container maxWidth="xl" sx={{ flex: 1, pt: 3, pb: 12 }}>
         
-        {/* 2. Filters Section */}
-        <Paper elevation={0} sx={{ p: 2, borderRadius: 3, mb: 3, border: '1px solid #e0e0e0' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
-                <FilterIcon color="action" fontSize="small" />
-                <Typography variant="subtitle2" fontWeight="bold">FILTERS</Typography>
-            </Box>
-            <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <FormControl fullWidth size="small">
-                        <InputLabel>Class</InputLabel>
-                        <Select value={selectedClass} label="Class" onChange={(e) => setSelectedClass(e.target.value)}>
-                            {classOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <FormControl fullWidth size="small">
-                        <InputLabel>Place</InputLabel>
-                        <Select value={selectedPlace} label="Place" onChange={(e) => setSelectedPlace(e.target.value)}>
-                            {placeOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Date"
-                      type="date"
-                      size="small"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                    />
-                </Grid>
-            </Grid>
-        </Paper>
+        {/* Scrollable Filters */}
+        <Box className="hide-scrollbar" sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 2, mb: 1, '&::-webkit-scrollbar': { display: 'none' } }}>
+          <TextField
+            type="date"
+            size="small"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            sx={{ minWidth: 150, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 130, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}>
+            <InputLabel>Class</InputLabel>
+            <Select value={selectedClass} label="Class" onChange={(e) => setSelectedClass(e.target.value)}>
+              {classOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 150, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}>
+            <InputLabel>Location</InputLabel>
+            <Select value={selectedPlace} label="Location" onChange={(e) => setSelectedPlace(e.target.value)}>
+              {placeOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
+            </Select>
+          </FormControl>
+        </Box>
 
         {loading ? (
           <Box display="flex" justifyContent="center" py={10}>

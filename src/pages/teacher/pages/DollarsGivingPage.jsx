@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  AppBar,
+  Toolbar,
   Box,
   Paper,
   Typography,
@@ -207,95 +209,40 @@ const DollarsGivingPage = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
       
-      {/* Header & Filters (Sticky) */}
-      <Paper 
-        elevation={2} 
-        sx={{ 
-          p: 2, 
-          position: 'sticky', 
-          top: 0, 
-          zIndex: 100, 
-          borderRadius: 0,
-          borderBottom: '1px solid rgba(0,0,0,0.1)'
+      {/* 1. Glass Header (Sticky) */}
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: 'rgba(255, 255, 255, 0.92)',
+          backgroundImage: 'none',
+          borderBottom: `1px solid rgba(0,0,0,0.08)`,
+          backdropFilter: 'blur(22px)',
+          zIndex: 1000
         }}
       >
-        <Container maxWidth="lg" disableGutters>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <IconButton onClick={handleBack} sx={{ mr: 1 }}>
+        <Toolbar sx={{ py: 1, px: { xs: 1, sm: 2 } }}>
+           <IconButton onClick={handleBack} sx={{ mr: 1, color: '#000', bgcolor: 'rgba(0,0,0,0.04)' }}>
               <BackIcon />
             </IconButton>
-            <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
+            <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: '900', color: '#000', letterSpacing: '-0.03em', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
               Give Dollars
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              {isMobile ? (
-                <Tooltip title={`Logout (${currentUser?.name || 'Teacher'})`}>
-                  <Button
-                    onClick={async () => {
-                      setLoadingLogout(true);
-                      try {
-                        await logout();
-                        navigate('/');
-                      } catch (error) {
-                        console.error('Logout error:', error);
-                      } finally {
-                        setLoadingLogout(false);
-                      }
-                    }}
-                    disabled={loadingLogout}
-                    startIcon={loadingLogout ? <CircularProgress size={16} color="inherit" /> : <LogoutIcon />}
-                    size="small"
-                    sx={{ 
-                      color: 'error.main',
-                      textTransform: 'none',
-                      fontSize: '0.75rem',
-                      px: 1.5,
-                      minWidth: 'auto'
-                    }}
-                  >
-                    {loadingLogout ? '' : (currentUser?.name?.split(' ')[0] || 'Teacher')}
-                  </Button>
-                </Tooltip>
-              ) : (
-                <Tooltip title="Logout">
-                  <IconButton
-                    onClick={async () => {
-                      setLoadingLogout(true);
-                      try {
-                        await logout();
-                        navigate('/');
-                      } catch (error) {
-                        console.error('Logout error:', error);
-                      } finally {
-                        setLoadingLogout(false);
-                      }
-                    }}
-                    disabled={loadingLogout}
-                    sx={{ color: 'error.main' }}
-                  >
-                    {loadingLogout ? <CircularProgress size={20} /> : <LogoutIcon />}
-                  </IconButton>
-                </Tooltip>
-              )}
-            </Box>
-          </Box>
+        </Toolbar>
+      </AppBar>
 
-          {/* Warning Alert for Non-Sunday */}
-          {!isSunday && (
-            <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
-              Rewards can only be given on Sundays. Today is {todayFormatted}.
-            </Alert>
-          )}
+      {/* Main Page Content */}
+      <Container maxWidth="lg" sx={{ pt: 3, pb: 12 }}>
 
-          {/* Filters */}
-          <Box sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 1 }}>
-            <FormControl size="small" sx={{ minWidth: 110, bgcolor: 'white' }}>
+          {/* Scrollable Filters */}
+          <Box className="hide-scrollbar" sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 2, mb: 2, '&::-webkit-scrollbar': { display: 'none' } }}>
+            <FormControl size="small" sx={{ minWidth: 130, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}>
               <InputLabel>Class</InputLabel>
               <Select value={selectedClass} label="Class" onChange={(e) => setSelectedClass(e.target.value)}>
                 {classOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 110, bgcolor: 'white' }}>
+            <FormControl size="small" sx={{ minWidth: 150, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}>
               <InputLabel>Location</InputLabel>
               <Select value={selectedPlace} label="Location" onChange={(e) => setSelectedPlace(e.target.value)}>
                 {placeOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
@@ -306,11 +253,16 @@ const DollarsGivingPage = () => {
               placeholder="Search student..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{ flexGrow: 1, minWidth: 150, bgcolor: 'white' }}
+              sx={{ flexGrow: 1, minWidth: 180, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}
             />
           </Box>
-        </Container>
-      </Paper>
+          
+          {/* Warning Alert for Non-Sunday */}
+          {!isSunday && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+              Rewards can only be given on Sundays. Today is {todayFormatted}.
+            </Alert>
+          )}
 
       {/* Success Alert */}
       <Fade in={showSuccess}>
@@ -318,7 +270,6 @@ const DollarsGivingPage = () => {
       </Fade>
 
       {/* Student List */}
-      <Container maxWidth="lg" sx={{ flex: 1, py: 2 }}>
         {loading ? (
           <Box display="flex" justifyContent="center" py={8}><CircularProgress /></Box>
         ) : filteredStudents.length === 0 ? (
@@ -353,7 +304,7 @@ const DollarsGivingPage = () => {
                             {student.name}
                           </Typography>
                         }
-                        secondary={`${student.studentId} • ${student.location || 'No Location'} • Current: $${dollarPoints}`}
+                        secondary={`${student.studentId} • ${student.location || student.place || 'No Location'} • Current: $${dollarPoints}`}
                       />
                       
                       <ListItemSecondaryAction>

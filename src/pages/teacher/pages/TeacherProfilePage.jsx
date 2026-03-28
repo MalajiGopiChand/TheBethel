@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  AppBar,
+  Toolbar,
   Box,
   Paper,
   Typography,
@@ -13,7 +15,8 @@ import {
   CardContent,
   Grid,
   IconButton,
-  Tooltip
+  Tooltip,
+  useTheme
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -31,6 +34,7 @@ import { handleBackNavigation } from '../../../utils/navigation';
 const TeacherProfilePage = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
   
   const handleBack = () => {
     handleBackNavigation(navigate, currentUser);
@@ -164,29 +168,39 @@ const TeacherProfilePage = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5' }}>
-      {/* Header */}
-      <Paper elevation={2} sx={{ p: 2, mb: 2, borderRadius: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Button startIcon={<BackIcon />} onClick={handleBack}>
-            Back
-          </Button>
-          <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-            My Profile
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="Install App">
-              <IconButton onClick={handleInstall} size="small">
-                <InstallIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Logout">
-              <IconButton onClick={handleLogout} size="small" color="error">
-                <LogoutIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Box>
-      </Paper>
+      {/* Glass Header (Sticky) */}
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: 'rgba(255, 255, 255, 0.92)',
+          backgroundImage: 'none',
+          borderBottom: `1px solid rgba(0,0,0,0.08)`,
+          backdropFilter: 'blur(22px)',
+          zIndex: 1000
+        }}
+      >
+        <Toolbar sx={{ py: 1, px: { xs: 1, sm: 2 } }}>
+           <IconButton onClick={handleBack} sx={{ mr: 1, color: '#000', bgcolor: 'rgba(0,0,0,0.04)' }}>
+              <BackIcon />
+            </IconButton>
+            <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: '900', color: '#000', letterSpacing: '-0.03em', fontSize: { xs: '1.25rem' } }}>
+              My Profile
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Tooltip title="Install App">
+                <IconButton onClick={handleInstall} sx={{ color: 'primary.main', bgcolor: 'rgba(0,0,0,0.04)' }}>
+                  <InstallIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Logout">
+                <IconButton onClick={handleLogout} sx={{ color: 'error.main', bgcolor: 'rgba(211,47,47,0.08)' }}>
+                  <LogoutIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+        </Toolbar>
+      </AppBar>
 
       <Box sx={{ maxWidth: 800, mx: 'auto', p: 2 }}>
         {success && (
@@ -195,15 +209,22 @@ const TeacherProfilePage = () => {
           </Alert>
         )}
 
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
+        <Card sx={{ mb: 3, borderRadius: 4, boxShadow: '0 8px 32px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.03)' }}>
+          <CardContent sx={{ p: { xs: 3, sm: 4 }, textAlign: 'center' }}>
+            <Typography variant="h6" fontWeight="800" color="text.secondary" sx={{ opacity: 0.8, textTransform: 'uppercase', letterSpacing: 1 }} gutterBottom>
               Profile Picture
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, mt: 3, mb: 1 }}>
               <Avatar
                 src={imagePreview}
-                sx={{ width: 120, height: 120, border: '4px solid #667eea' }}
+                sx={{ 
+                  width: 140, 
+                  height: 140, 
+                  border: '4px solid white', 
+                  boxShadow: '0 12px 28px rgba(0,0,0,0.12)',
+                  bgcolor: theme.palette.primary.main,
+                  fontSize: '3rem'
+                }}
               >
                 {profileData.name?.charAt(0)?.toUpperCase() || 'T'}
               </Avatar>
@@ -217,22 +238,25 @@ const TeacherProfilePage = () => {
                 />
                 <label htmlFor="image-upload">
                   <Button
-                    variant="outlined"
+                    variant={selectedFile ? "outlined" : "contained"}
+                    color={selectedFile ? "secondary" : "primary"}
                     component="span"
                     startIcon={<CameraIcon />}
-                    sx={{ mb: 1, display: 'block' }}
+                    sx={{ mt: 1, borderRadius: 999, px: 3, fontWeight: 'bold' }}
                   >
-                    Choose Image
+                    {selectedFile ? 'Change Selection' : 'Choose New Photo'}
                   </Button>
                 </label>
                 {selectedFile && (
                   <Button
                     variant="contained"
+                    color="success"
                     onClick={handleImageUpload}
                     disabled={uploading}
-                    startIcon={uploading ? <CircularProgress size={16} /> : <SaveIcon />}
+                    startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                    sx={{ mt: 1, ml: 1, borderRadius: 999, px: 3, fontWeight: 'bold', boxShadow: '0 4px 14px rgba(46,125,50,0.4)' }}
                   >
-                    {uploading ? 'Uploading...' : 'Upload'}
+                    {uploading ? 'Uploading...' : 'Confirm Upload'}
                   </Button>
                 )}
               </Box>
@@ -240,46 +264,57 @@ const TeacherProfilePage = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Personal Information
+        <Card sx={{ borderRadius: 4, boxShadow: '0 8px 32px rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.03)' }}>
+          <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+            <Typography variant="h6" fontWeight="800" color="text.secondary" sx={{ opacity: 0.8, textTransform: 'uppercase', letterSpacing: 1, mb: 3 }}>
+              Personal Details
             </Typography>
-            <Grid container spacing={2}>
+            <Grid container spacing={3}>
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Name"
+                  label="Full Name"
                   value={profileData.name}
                   onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                 />
               </Grid>
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Email"
+                  label="Email Address"
                   value={profileData.email}
                   onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                   type="email"
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                 />
               </Grid>
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Phone"
+                  label="Phone Number"
                   value={profileData.phone}
                   onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                   type="tel"
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={12} sx={{ mt: 1 }}>
                 <Button
                   variant="contained"
                   fullWidth
                   onClick={handleSave}
                   disabled={saving}
-                  startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
-                  sx={{ mt: 2 }}
+                  startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                  sx={{ 
+                    py: 1.5, 
+                    borderRadius: 999, 
+                    fontWeight: '900', 
+                    fontSize: '1.05rem',
+                    boxShadow: '0 8px 20px rgba(59,130,246,0.3)',
+                    transition: 'all 0.2s',
+                    '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 12px 24px rgba(59,130,246,0.4)' }
+                  }}
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
                 </Button>

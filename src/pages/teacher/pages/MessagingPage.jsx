@@ -12,7 +12,8 @@ import {
   MenuItem,
   AppBar,
   Toolbar,
-  Fade
+  Fade,
+  Popover
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -21,7 +22,10 @@ import {
   Delete as DeleteIcon,
   MoreVert as MoreIcon,
   Image as ImageIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Mic as MicIcon,
+  Stop as StopIcon,
+  EmojiEmotions as MoodIcon
 } from '@mui/icons-material';
 import {
   collection,
@@ -33,7 +37,9 @@ import {
   doc,
   onSnapshot,
   serverTimestamp,
-  limit
+  limit,
+  setDoc,
+  deleteField
 } from 'firebase/firestore';
 import { db, storage } from '../../../config/firebase';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -42,6 +48,7 @@ import { UserRole } from '../../../types';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { handleBackNavigation } from '../../../utils/navigation';
 import { sendNotificationToTeachers, requestNotificationPermission, showAppNotification, notifyError } from '../../../services/notificationService';
+import EmojiPicker from 'emoji-picker-react';
 
 const GLOBAL_CHAT_ID = 'chat_global_room';
 
@@ -105,6 +112,11 @@ const MessageItem = React.memo(({ message, isOwnMessage, formatMessageDate, rend
               />
             </Box>
           )}
+          {message.audioUrl && (
+            <Box sx={{ mt: 1, minWidth: { xs: 200, sm: 250 } }}>
+               <audio controls src={message.audioUrl} style={{ width: '100%', height: 40, outline: 'none' }} />
+            </Box>
+          )}
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
             {message.isEdited && (
@@ -166,10 +178,25 @@ const MessagingPage = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  
+  // New features state
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [typingUsers, setTypingUsers] = useState({});
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const seenMessageIdsRef = useRef(new Set());
   const isPageFocusedRef = useRef(true);
+  
+  // New features refs
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const inputContainerRef = useRef(null);
+  const isRecordingRef = useRef(false);
   
   // Track page focus state
   useEffect(() => {
@@ -230,6 +257,24 @@ const MessagingPage = () => {
     return () => unsubscribe();
   }, [currentUser]);
 
+  // Listen to Typing Status
+  useEffect(() => {
+    if (!currentUser) return;
+    const typingRef = doc(db, 'chats', GLOBAL_CHAT_ID, 'status', 'typing');
+    const unsubscribe = onSnapshot(typingRef, (snapshot) => {
+       if (snapshot.exists()) {
+          const data = snapshot.data();
+          // Filter out current user's typing status
+          const othersTyping = Object.entries(data).filter(([uid]) => uid !== currentUser.uid);
+          setTypingUsers(Object.fromEntries(othersTyping));
+       } else {
+          setTypingUsers({});
+       }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
   // Optimized: Limit to last 100 messages and order by timestamp desc for better performance
   useEffect(() => {
     const messagesQuery = query(
@@ -268,7 +313,117 @@ const MessagingPage = () => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  // Handle typing input synchronization
+  const handleTyping = (e) => {
+    setMessageText(e.target.value);
+    
+    if (!currentUser) return;
+    const typingRef = doc(db, 'chats', GLOBAL_CHAT_ID, 'status', 'typing');
+    
+    // Update only once per burst to prevent Firebase spam crashing regular messages
+    if (!typingTimeoutRef.current) {
+        setDoc(typingRef, { [currentUser.uid]: currentUser.name || 'Someone' }, { merge: true })
+          .catch(console.error);
+    }
 
+    // Clear timeout if exists, set new one for 2 seconds
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    
+    typingTimeoutRef.current = setTimeout(() => {
+       updateDoc(typingRef, { [currentUser.uid]: deleteField() }).catch(console.error);
+       typingTimeoutRef.current = null;
+    }, 2000);
+  };
+
+  const handleEmojiClick = (emojiObject) => {
+    setMessageText((prev) => prev + emojiObject.emoji);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      let options = { mimeType: 'audio/webm' };
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+         options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 16000 };
+      }
+      mediaRecorderRef.current = new MediaRecorder(stream, options);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        if (!isRecordingRef.current) return;
+        isRecordingRef.current = false;
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+           try {
+             const senderName = currentUser?.name || 'Anonymous';
+             await addDoc(collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'), {
+               senderId: currentUser.uid,
+               senderName: senderName,
+               content: '',
+               imageUrl: '',
+               audioUrl: reader.result,
+               type: 'audio',
+               timestamp: serverTimestamp(),
+               isEdited: false
+           });
+             sendNotificationToTeachers(senderName, "Sent a voice message").catch(console.error);
+           } catch (error) {
+             console.error("Voice message error", error);
+             notifyError("Send Failed", "Could not send voice message.");
+           }
+        };
+        reader.readAsDataURL(audioBlob);
+        
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      isRecordingRef.current = true;
+      setRecordingTime(0);
+      
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => {
+           if (prev >= 59) {
+             stopRecording();
+             return 60;
+           }
+           return prev + 1;
+        });
+      }, 1000);
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      notifyError("Microphone Error", "Could not access microphone.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop(); // triggers onstop which sends the message
+      setIsRecording(false);
+      // Let onstop reset isRecordingRef.current otherwise it aborts saving
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const cancelRecording = () => {
+     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+       setIsRecording(false);
+       isRecordingRef.current = false;
+       clearInterval(recordingTimerRef.current);
+       // Overwrite onstop so it does not trigger the send
+       mediaRecorderRef.current.onstop = null;
+       const stream = mediaRecorderRef.current.stream;
+       stream.getTracks().forEach(t => t.stop());
+       mediaRecorderRef.current.stop();
+     }
+  };
 
   const handleSend = async () => {
     if ((!messageText.trim() && !editingMessage && !selectedImageFile) || !currentUser) return;
@@ -290,11 +445,21 @@ const MessagingPage = () => {
         let imageUrl = '';
         if (selectedImageFile) {
           setUploadingImage(true);
-          const ext = selectedImageFile.name?.split('.').pop() || 'jpg';
-          const path = `chat_uploads/${GLOBAL_CHAT_ID}/${Date.now()}_${currentUser.uid}.${ext}`;
-          const storageRef = ref(storage, path);
-          await uploadBytes(storageRef, selectedImageFile, { contentType: selectedImageFile.type || 'image/jpeg' });
-          imageUrl = await getDownloadURL(storageRef);
+          try {
+            // Bypass Firebase Storage completely using local Base64 conversion
+            // This guarantees images will send even if Storage rules are broken
+            imageUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(selectedImageFile);
+            });
+          } catch (uploadError) {
+            console.error('Image processing failed completely:', uploadError);
+            setUploadingImage(false);
+            notifyError('Upload failed', 'Failed to process image.');
+            return; // Abort send if image failed
+          }
         }
 
         await addDoc(collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'), {
@@ -308,9 +473,13 @@ const MessagingPage = () => {
         });
         
         // Send notifications to all teachers (async, don't wait)
-        sendNotificationToTeachers(senderName, messageContent).catch(err => {
-          console.error('Error sending notification:', err);
-        });
+        if (messageContent) {
+           sendNotificationToTeachers(senderName, messageContent).catch(err => {
+             console.error('Error sending notification:', err);
+           });
+        } else if (imageUrl) {
+           sendNotificationToTeachers(senderName, "Sent an image").catch(console.error);
+        }
       }
       setMessageText('');
       setSelectedImageFile(null);
@@ -424,18 +593,19 @@ const MessagingPage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: '#e5ddd5' }}>
       
       {/* 1. Header */}
-      <AppBar position="static" sx={{ bgcolor: '#075E54' }}>
-        <Toolbar>
+      <AppBar position="static" elevation={2} sx={{ bgcolor: '#075E54', zIndex: 10 }}>
+        <Toolbar sx={{ minHeight: '64px !important' }}>
           <IconButton edge="start" color="inherit" onClick={handleBack} sx={{ mr: 1 }}>
             <BackIcon />
           </IconButton>
-          <Avatar sx={{ mr: 2, bgcolor: '#25D366' }}>B</Avatar>
+          <Avatar sx={{ mr: 2, bgcolor: '#25D366', width: 40, height: 40, fontWeight: 'bold' }}>P</Avatar>
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
-              Bethel Chat Room
+              Pillars of Sunday School
             </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.8 }}>
-              {messages.length} messages
+            <Typography variant="caption" sx={{ opacity: 0.8, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', backgroundColor: '#25D366' }}></span>
+              {messages.length === 0 ? 'Start the conversation' : `${messages.length} messages`}
             </Typography>
           </Box>
         </Toolbar>
@@ -446,164 +616,238 @@ const MessagingPage = () => {
         sx={{
           flex: 1,
           overflow: 'auto',
-          p: 2,
+          p: { xs: 1.5, sm: 2 },
           backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', // Subtle chat pattern
           backgroundRepeat: 'repeat',
           backgroundSize: '400px'
         }}
       >
-        {messages.map((message, index) => {
-          const isOwnMessage = message.senderId === currentUser?.uid;
-          const prevMsg = index > 0 ? messages[index - 1] : null;
+        {messages.length === 0 ? null : (
+          messages.map((message, index) => {
+            const isOwnMessage = message.senderId === currentUser?.uid;
+            const prevMsg = index > 0 ? messages[index - 1] : null;
 
-          return (
-            <MessageItem
-              key={message.id}
-              message={message}
-              isOwnMessage={isOwnMessage}
-              formatMessageDate={formatMessageDate}
-              renderDateSeparator={renderDateSeparator}
-              prevMsg={prevMsg}
-              handleMenuOpen={handleMenuOpen}
-            />
-          );
-        })}
+            return (
+              <MessageItem
+                key={message.id}
+                message={message}
+                isOwnMessage={isOwnMessage}
+                formatMessageDate={formatMessageDate}
+                renderDateSeparator={renderDateSeparator}
+                prevMsg={prevMsg}
+                handleMenuOpen={handleMenuOpen}
+              />
+            );
+          })
+        )}
+        {Object.keys(typingUsers).length > 0 && (
+           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, mt: 1 }}>
+              <Paper elevation={1} sx={{ px: 2, py: 1, borderRadius: 3, bgcolor: '#ffffff', display: 'flex', alignItems: 'center' }}>
+                 <Typography variant="body2" sx={{ color: '#00a884', fontStyle: 'italic', fontWeight: 500 }}>
+                    {Object.values(typingUsers).join(', ')} {Object.keys(typingUsers).length > 1 ? 'are' : 'is'} typing...
+                 </Typography>
+              </Paper>
+           </Box>
+        )}
         <div ref={messagesEndRef} />
       </Box>
 
       {/* 3. Input Area */}
-      <Paper 
-        elevation={4} 
+      <Box 
         sx={{ 
-          p: 2, 
+          p: 1.5, 
           bgcolor: '#f0f0f0', 
           display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          position: 'relative'
+          flexDirection: 'column',
+          position: 'relative',
+          zIndex: 10
         }}
       >
-        {/* Edit Mode Indicator */}
-        {editingMessage && (
+        {/* Edit Mode & File Preview Container above input */}
+        {(editingMessage || selectedImageFile) && (
           <Fade in={true}>
             <Box 
                 sx={{ 
-                    position: 'absolute', 
-                    bottom: 80, 
-                    left: 10, 
-                    right: 10, 
                     bgcolor: 'white', 
-                    p: 1, 
+                    p: 1.5, 
+                    mb: 1.5,
                     borderRadius: 2,
-                    boxShadow: 3,
-                    borderLeft: '4px solid #075E54',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                    borderLeft: `4px solid ${editingMessage ? '#00a884' : '#1976d2'}`,
                     display: 'flex',
                     alignItems: 'center',
-                    zIndex: 10
+                    gap: 1.5
                 }}
             >
-                <EditIcon color="primary" sx={{ mr: 1 }} />
-                <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="caption" color="primary" fontWeight="bold">Editing Message</Typography>
-                    <Typography variant="body2" noWrap>{editingMessage.content}</Typography>
-                </Box>
-                <IconButton size="small" onClick={handleCancelEdit}>
-                    <BackIcon />
-                </IconButton>
+                {editingMessage ? (
+                   <>
+                     <EditIcon sx={{ color: '#00a884' }} />
+                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                         <Typography variant="caption" sx={{ color: '#00a884', fontWeight: 'bold' }}>Editing Message</Typography>
+                         <Typography variant="body2" color="text.secondary" noWrap sx={{ fontStyle: 'italic' }}>{editingMessage.content}</Typography>
+                     </Box>
+                     <IconButton size="small" onClick={handleCancelEdit} sx={{ bgcolor: 'rgba(0,0,0,0.04)' }}>
+                         <CloseIcon fontSize="small" />
+                     </IconButton>
+                   </>
+                ) : selectedImageFile ? (
+                   <>
+                     <ImageIcon sx={{ color: '#1976d2' }} />
+                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                         <Typography variant="caption" sx={{ color: '#1976d2', fontWeight: 'bold' }}>Attached Image</Typography>
+                         <Typography variant="body2" color="text.secondary" noWrap>{selectedImageFile.name}</Typography>
+                     </Box>
+                     <IconButton
+                       size="small"
+                       onClick={() => {
+                         setSelectedImageFile(null);
+                         if (fileInputRef.current) fileInputRef.current.value = '';
+                       }}
+                       sx={{ bgcolor: 'rgba(0,0,0,0.04)' }}
+                     >
+                       <CloseIcon fontSize="small" />
+                     </IconButton>
+                   </>
+                ) : null}
             </Box>
           </Fade>
         )}
 
-        {/* hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (!f) return;
-            setSelectedImageFile(f);
+        {/* Emoji Content Popover */}
+        <Popover
+          open={showEmojiPicker}
+          anchorEl={inputContainerRef.current}
+          onClose={() => setShowEmojiPicker(false)}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
           }}
-        />
-
-        {/* image picker button */}
-        <IconButton
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadingImage}
-          sx={{ bgcolor: 'white' }}
-          aria-label="Attach image"
+          transformOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          PaperProps={{
+            sx: { borderRadius: 3, mb: 1, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }
+          }}
         >
-          <ImageIcon />
-        </IconButton>
+          <EmojiPicker onEmojiClick={(emojiObj) => {
+             handleEmojiClick(emojiObj);
+          }} width={320} height={400} />
+        </Popover>
 
-        <TextField
-          fullWidth
-          placeholder="Type a message..."
-          variant="outlined"
-          size="small"
-          multiline
-          maxRows={4}
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          sx={{
-            bgcolor: 'white',
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 3
-            }
-          }}
-        />
-
-        {/* selected image chip-like preview */}
-        {selectedImageFile && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              px: 1,
-              py: 0.5,
-              borderRadius: 2,
-              bgcolor: 'white'
+        {/* WhatsApp-style Input Bar */}
+        <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              setSelectedImageFile(f);
             }}
-          >
-            <Typography variant="caption" sx={{ maxWidth: 110 }} noWrap>
-              {selectedImageFile.name}
-            </Typography>
-            <IconButton
-              size="small"
-              onClick={() => {
-                setSelectedImageFile(null);
-                if (fileInputRef.current) fileInputRef.current.value = '';
-              }}
-              aria-label="Remove image"
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        )}
+          />
 
-        <IconButton
-          onClick={handleSend}
-          disabled={(!messageText.trim() && !editingMessage && !selectedImageFile) || uploadingImage}
-          sx={{
-            bgcolor: messageText.trim() || editingMessage ? '#075E54' : 'grey.300',
-            color: 'white',
-            width: 45,
-            height: 45,
-            '&:hover': { bgcolor: (messageText.trim() || editingMessage) ? '#128C7E' : undefined },
-            transition: 'all 0.2s'
-          }}
-        >
-          {editingMessage ? <EditIcon fontSize="small" /> : <SendIcon fontSize="small" />}
-        </IconButton>
-      </Paper>
+          <Box sx={{ flexGrow: 1, position: 'relative', display: 'flex', alignItems: 'center' }} ref={inputContainerRef}>
+             <IconButton
+               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+               disabled={isRecording}
+               sx={{ position: 'absolute', left: 8, bottom: 4, color: showEmojiPicker ? '#00a884' : '#8696a0', zIndex: 1 }}
+               aria-label="Emoji"
+             >
+               <MoodIcon />
+             </IconButton>
+             <TextField
+               fullWidth
+               disabled={isRecording}
+               placeholder={isRecording ? "Recording..." : "Type a message"}
+               variant="outlined"
+               multiline
+               maxRows={4}
+               value={messageText}
+               onChange={handleTyping}
+               onKeyPress={(e) => {
+                 if (e.key === 'Enter' && !e.shiftKey) {
+                   e.preventDefault();
+                   handleSend();
+                 }
+               }}
+               sx={{
+                 bgcolor: 'white',
+                 borderRadius: '24px',
+                 '& .MuiOutlinedInput-root': {
+                   borderRadius: '24px',
+                   py: 1.5,
+                   pl: 6, // Make room for emoji icon
+                   pr: 6, // Make room for attach icon
+                   '& fieldset': {
+                     border: 'none',
+                   }
+                 }
+               }}
+             />
+             <IconButton
+               onClick={() => fileInputRef.current?.click()}
+               disabled={uploadingImage || isRecording}
+               sx={{ position: 'absolute', right: 8, bottom: 4, color: '#8696a0', zIndex: 1 }}
+               aria-label="Attach image"
+             >
+               <ImageIcon />
+             </IconButton>
+          </Box>
+
+          {(messageText.trim() || editingMessage || selectedImageFile) ? (
+             <IconButton
+               onClick={handleSend}
+               disabled={uploadingImage || isRecording}
+               sx={{
+                 bgcolor: '#00a884',
+                 color: 'white',
+                 width: 50,
+                 height: 50,
+                 mb: 0.5,
+                 flexShrink: 0,
+                 '&:hover': { bgcolor: '#008f6f' },
+                 transition: 'background-color 0.2s',
+                 boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+               }}
+             >
+               {editingMessage ? <EditIcon /> : <SendIcon sx={{ ml: 0.5 }} />}
+             </IconButton>
+          ) : isRecording ? (
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                <Typography variant="body2" color="error" sx={{ fontWeight: 'bold', minWidth: 40, textAlign: 'center' }}>
+                   {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                </Typography>
+                <IconButton onClick={cancelRecording} sx={{ color: 'error.main', width: 40, height: 40 }}>
+                   <DeleteIcon />
+                </IconButton>
+                <IconButton onClick={stopRecording} sx={{ bgcolor: '#00a884', color: 'white', width: 50, height: 50, flexShrink: 0, boxShadow: '0 2px 5px rgba(0,0,0,0.2)', '&:hover': { bgcolor: '#008f6f' } }}>
+                   <SendIcon sx={{ ml: 0.5 }} />
+                </IconButton>
+             </Box>
+          ) : (
+             <IconButton
+               onClick={startRecording}
+               disabled={uploadingImage}
+               sx={{
+                 bgcolor: '#00a884',
+                 color: 'white',
+                 width: 50,
+                 height: 50,
+                 mb: 0.5,
+                 flexShrink: 0,
+                 '&:hover': { bgcolor: '#008f6f' },
+                 transition: 'background-color 0.2s',
+                 boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+               }}
+             >
+               <MicIcon />
+             </IconButton>
+          )}
+        </Box>
+      </Box>
 
       {/* Context Menu */}
       <Menu

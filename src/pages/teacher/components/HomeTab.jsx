@@ -24,11 +24,13 @@ import {
 import {
   collection,
   query,
+  where,
   orderBy,
   onSnapshot
 } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
+import { useAuth } from '../../../contexts/AuthContext';
 import AttendanceCard from '../../../components/AttendanceCard';
 import PodiumSection from '../../../components/PodiumSection';
 import ActionGrid from '../../../components/ActionGrid';
@@ -37,6 +39,7 @@ import InstallBanner from '../../../components/InstallBanner';
 
 const HomeTab = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
@@ -52,6 +55,7 @@ const HomeTab = () => {
   });
   const [loading, setLoading] = useState(true);
   const [announcements, setAnnouncements] = useState([]);
+  const [upcomingSchedules, setUpcomingSchedules] = useState([]);
   const [error, setError] = useState(null);
 
   // Add error boundary for component errors
@@ -80,8 +84,8 @@ const HomeTab = () => {
             const data = doc.data();
             const audience = data.audience || 'All';
             
-            // Show announcements for Teachers or All
-            if (audience === 'Teachers' || audience === 'All') {
+            // Show announcements for Teachers, All, or targeted directly to this teacher
+            if (audience === 'Teachers' || audience === 'All' || audience === currentUser?.name) {
               let createdAt;
               if (data.createdAt) {
                 if (typeof data.createdAt.toDate === 'function') {
@@ -118,7 +122,53 @@ const HomeTab = () => {
       console.error('Error setting up announcements listener:', err);
       setError('Failed to initialize announcements');
     }
-  }, []);
+  }, [currentUser?.name]);
+
+  // Fetch upcoming schedules
+  useEffect(() => {
+    if (!currentUser?.name) return;
+
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const schedulesQuery = query(
+        collection(db, 'timetables'),
+        where('assignedPersonName', '==', currentUser.name)
+      );
+
+      const unsubscribe = onSnapshot(schedulesQuery, (snapshot) => {
+        const schedulesList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        const validSchedules = schedulesList.filter(s => {
+          let sDate = 0;
+          if (s.date) {
+            if (typeof s.date === 'number') sDate = s.date;
+            else if (s.date.toDate) sDate = s.date.toDate().getTime();
+          }
+          // Include schedules from up to 7 days ago so recent test schedules are still visible
+          const pastBuffer = 7 * 24 * 60 * 60 * 1000;
+          return sDate >= (today.getTime() - pastBuffer);
+        }).sort((a,b) => {
+          const ad = a.date?.toDate ? a.date.toDate().getTime() : (a.date || 0);
+          const bd = b.date?.toDate ? b.date.toDate().getTime() : (b.date || 0);
+          return ad - bd;
+        });
+
+        // Get the closest upcoming sunday
+        setUpcomingSchedules(validSchedules);
+      }, (err) => {
+        console.error('Error fetching schedules:', err);
+      });
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.error('Error setting up schedules listener:', err);
+    }
+  }, [currentUser?.name]);
 
   // Helper function to calculate dollar points
   const calculateDollarPoints = (studentData) => {
@@ -324,7 +374,57 @@ const HomeTab = () => {
           <AttendanceCard data={overview} canEdit={true} />
         </Box>
 
-        {/* Announcements - Horizontal Scroll on Mobile */}
+        {/* Upcoming Schedules */}
+        {upcomingSchedules.length > 0 && (
+          <Box sx={{ mb: 3 }}>
+            <Typography 
+              variant="subtitle1" 
+              fontWeight="600" 
+              sx={{ mb: 1.5, px: 0.5 }}
+            >
+              🗓️ My Upcoming Schedule
+            </Typography>
+            {upcomingSchedules.map(schedule => {
+              const scheduleDate = new Date(typeof schedule.date === 'number' ? schedule.date : schedule.date?.toDate?.() || Date.now());
+              return (
+                <Card 
+                  key={schedule.id} 
+                  elevation={1}
+                  sx={{ 
+                    mb: 1.5, 
+                    borderLeft: '5px solid #2e7d32', 
+                    bgcolor: '#f4fbf5', 
+                    borderRadius: 2 
+                  }}
+                >
+                  <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box>
+                        <Typography variant="subtitle2" fontWeight="bold" color="success.main" sx={{ mb: 0.5 }}>
+                          {schedule.place} • {schedule.className}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" fontWeight="500">
+                          {schedule.serviceType}
+                          {schedule.assignedWork ? ` • ${schedule.assignedWork}` : ''}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'right', borderLeft: '1px solid rgba(0,0,0,0.1)', pl: 2 }}>
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          {format(scheduleDate, 'MMM dd')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" fontWeight="600" sx={{ textTransform: 'uppercase' }}>
+                          Sunday
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </Box>
+        )}
+
+        {/* Announcements */}
         {announcements.length > 0 && (
           <Box sx={{ mb: 3 }}>
             <Typography 
@@ -334,24 +434,8 @@ const HomeTab = () => {
             >
               📢 Announcements
             </Typography>
-            <Box 
-              sx={{ 
-                overflowX: 'auto',
-                overflowY: 'hidden',
-                whiteSpace: 'nowrap',
-                pb: 1,
-                '&::-webkit-scrollbar': {
-                  height: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: 'rgba(0,0,0,0.2)',
-                  borderRadius: '4px',
-                }
-              }}
-            >
-              <Box sx={{ display: 'flex', gap: 1.5, minWidth: 'min-content' }}>
-                <AnnouncementsSection announcements={announcements} />
-              </Box>
+            <Box>
+              <AnnouncementsSection announcements={announcements} />
             </Box>
           </Box>
         )}

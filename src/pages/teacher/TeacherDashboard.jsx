@@ -48,7 +48,14 @@ const TeacherDashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const [currentTab, setCurrentTab] = useState(0);
+  const [currentTab, setCurrentTab] = useState(() => {
+    const savedTab = sessionStorage.getItem('TeacherDashboard_currentTab');
+    return savedTab ? parseInt(savedTab, 10) : 0;
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('TeacherDashboard_currentTab', currentTab.toString());
+  }, [currentTab]);
   const [loadingLogout, setLoadingLogout] = useState(false);
 
   // Redirect if not authenticated or not a teacher - improved for PWA
@@ -204,10 +211,10 @@ const TeacherDashboard = () => {
               />
             </Box>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '-0.03em' }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: '-0.03em', color: '#000' }}>
                 Teacher Dashboard
               </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.7 }}>
+              <Typography variant="caption" sx={{ fontWeight: 800, color: '#000' }}>
                 {currentUser?.name || currentUser?.email}
               </Typography>
             </Box>
@@ -228,7 +235,7 @@ const TeacherDashboard = () => {
                 onClick={handleLogout}
                 disabled={loadingLogout}
                 startIcon={!loadingLogout && <LogoutIcon />}
-                sx={{ borderRadius: 999, px: 2.5 }}
+                sx={{ borderRadius: 999, px: 2.5, color: '#000', fontWeight: 'bold' }}
               >
                 {loadingLogout ? <CircularProgress size={18} color="inherit" /> : 'Logout'}
               </Button>
@@ -242,15 +249,12 @@ const TeacherDashboard = () => {
                 <Button
                   onClick={handleLogout}
                   disabled={loadingLogout}
-                  startIcon={loadingLogout ? <CircularProgress size={16} color="inherit" /> : <LogoutIcon />}
                   sx={{
-                    bgcolor: 'rgba(15,23,42,0.92)',
-                    color: 'primary.contrastText',
-                    '&:hover': { bgcolor: 'rgba(15,23,42,1)' },
-                    textTransform: 'none',
-                    fontSize: '0.75rem',
-                    px: 1.5,
-                    minWidth: 'auto'
+                    minWidth: 'auto',
+                    p: 1,
+                    color: '#000',
+                    borderRadius: 2,
+                    bgcolor: 'rgba(15,23,42,0.04)',
                   }}
                 >
                   {loadingLogout ? '' : (currentUser?.name?.split(' ')[0] || 'User')}

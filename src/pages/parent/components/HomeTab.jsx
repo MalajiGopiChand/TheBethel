@@ -11,14 +11,27 @@ import {
   Paper,
   Divider,
   Avatar,
-  Container
+  Container,
+  CardActionArea,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip
 } from '@mui/material';
 import {
   AttachMoney as DollarIcon,
   LocalFireDepartment as StreakIcon,
   CalendarMonth as CalendarIcon,
   School as SchoolIcon,
-  WavingHand as WaveIcon
+  WavingHand as WaveIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import {
   collection,
@@ -36,6 +49,8 @@ const HomeTab = ({ student }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const [announcements, setAnnouncements] = useState([]);
+  const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
+  const [isStreakModalOpen, setIsStreakModalOpen] = useState(false);
 
   useEffect(() => {
     // 1. QUERY FIX: Use 'date' to match Android App & Admin Panel
@@ -251,10 +266,13 @@ const HomeTab = ({ student }) => {
                     background: 'linear-gradient(135deg, #FFD700 0%, #FFA000 100%)',
                     color: '#fff',
                     position: 'relative',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    transition: 'all 0.3s ease',
+                    '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 8px 25px rgba(255,160,0,0.4)' }
                 }}
             >
-                <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <CardActionArea onClick={() => setIsRewardModalOpen(true)} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start" zIndex={2}>
                         <Box>
                             <Typography variant="subtitle2" fontWeight="medium" sx={{ opacity: 0.9 }}>
@@ -268,13 +286,14 @@ const HomeTab = ({ student }) => {
                             <DollarIcon />
                         </Avatar>
                     </Box>
-                    <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.9, zIndex: 2 }}>
-                        Great job! Keep earning rewards.
+                    <Typography variant="caption" fontWeight="bold" sx={{ mt: 2, display: 'inline-block', opacity: 0.9, zIndex: 2, bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 2 }}>
+                        Tap to view history 👉
                     </Typography>
                     <DollarIcon sx={{ 
                         position: 'absolute', bottom: -15, right: -15, fontSize: 120, opacity: 0.2, transform: 'rotate(-20deg)'
                     }} />
                 </CardContent>
+              </CardActionArea>
             </Card>
         </Grid>
 
@@ -288,10 +307,13 @@ const HomeTab = ({ student }) => {
                     background: 'linear-gradient(135deg, #FF6B6B 0%, #EE5253 100%)',
                     color: '#fff',
                     position: 'relative',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    transition: 'all 0.3s ease',
+                    '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 8px 25px rgba(238,82,83,0.4)' }
                 }}
             >
-                <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <CardActionArea onClick={() => setIsStreakModalOpen(true)} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start" zIndex={2}>
                         <Box>
                             <Typography variant="subtitle2" fontWeight="medium" sx={{ opacity: 0.9 }}>
@@ -305,13 +327,14 @@ const HomeTab = ({ student }) => {
                             <StreakIcon />
                         </Avatar>
                     </Box>
-                    <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.9, zIndex: 2 }}>
-                        Days in a row. You're on fire!
+                    <Typography variant="caption" fontWeight="bold" sx={{ mt: 2, display: 'inline-block', opacity: 0.9, zIndex: 2, bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 2 }}>
+                        Tap to view attendance 👉
                     </Typography>
                      <StreakIcon sx={{ 
                         position: 'absolute', bottom: -15, right: -15, fontSize: 120, opacity: 0.2, transform: 'rotate(-20deg)'
                     }} />
                 </CardContent>
+              </CardActionArea>
             </Card>
         </Grid>
       </Grid>
@@ -348,6 +371,112 @@ const HomeTab = ({ student }) => {
             </Paper>
         )}
       </Box>
+
+      {/* Rewards History Modal */}
+      <Dialog 
+        open={isRewardModalOpen} 
+        onClose={() => setIsRewardModalOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Typography variant="h6" fontWeight="900" display="flex" alignItems="center" gap={1}>
+             <DollarIcon color="warning" /> Dollar Points History
+          </Typography>
+          <IconButton onClick={() => setIsRewardModalOpen(false)} sx={{ bgcolor: 'action.hover' }}>
+             <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          {(!student.rewards || student.rewards.length === 0) ? (
+            <Box p={4} textAlign="center">
+                <Avatar sx={{ mx: 'auto', bgcolor: 'transparent', color: 'text.secondary', width: 64, height: 64, mb: 2 }}>
+                    <DollarIcon fontSize="large" />
+                </Avatar>
+                <Typography color="text.secondary" fontWeight="600">No rewards recorded yet.</Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table size="medium">
+                <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.02)' }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Reason</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Teacher</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {[...student.rewards].sort((a,b) => (b.date || '').localeCompare(a.date || '')).map((reward, i) => (
+                    <TableRow key={i} hover>
+                      <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>{reward.date || 'N/A'}</TableCell>
+                      <TableCell>
+                          <Typography color="success.main" fontWeight="900">
+                             +${reward.dollars}
+                          </Typography>
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>{reward.reason || '-'}</TableCell>
+                      <TableCell>
+                          <Chip size="small" label={reward.teacher || reward.awardedBy || '-'} sx={{ fontWeight: 600, bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Streak History Modal */}
+      <Dialog 
+        open={isStreakModalOpen} 
+        onClose={() => setIsStreakModalOpen(false)} 
+        maxWidth="xs" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Typography variant="h6" fontWeight="900" display="flex" alignItems="center" gap={1}>
+             <StreakIcon color="error" /> Attendance Log
+          </Typography>
+          <IconButton onClick={() => setIsStreakModalOpen(false)} sx={{ bgcolor: 'action.hover' }}>
+             <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          {(!student.attendance || student.attendance.length === 0) ? (
+            <Box p={4} textAlign="center">
+                <Avatar sx={{ mx: 'auto', bgcolor: 'transparent', color: 'text.secondary', width: 64, height: 64, mb: 2 }}>
+                    <StreakIcon fontSize="large" />
+                </Avatar>
+                <Typography color="text.secondary" fontWeight="600">No attendance recorded yet.</Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table size="small">
+                <TableBody>
+                  {[...student.attendance].sort((a,b) => (b || '').localeCompare(a || '')).map((dateStr, i) => {
+                    const teacherName = student.attendanceByDate?.[dateStr]?.teacherName || '-';
+                    return (
+                      <TableRow key={i} hover>
+                        <TableCell sx={{ fontWeight: 700 }}>{dateStr}</TableCell>
+                        <TableCell>
+                            <Chip size="small" label={teacherName} sx={{ fontWeight: 600, bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', maxWidth: 120 }} />
+                        </TableCell>
+                        <TableCell align="right">
+                            <Chip size="small" label="Present" sx={{ fontWeight: 800, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }} />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+      </Dialog>
 
     </Box>
   );

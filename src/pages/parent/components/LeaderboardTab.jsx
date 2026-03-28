@@ -21,7 +21,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 
-const LeaderboardTab = () => {
+const LeaderboardTab = ({ student }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -109,13 +109,68 @@ const LeaderboardTab = () => {
     );
   }
 
+  // Derive current child rank
+  const childIndex = students.findIndex(s => s.id === (student?.id || student?.studentId));
+  const childRank = childIndex !== -1 ? childIndex + 1 : null;
+  const childData = childIndex !== -1 ? students[childIndex] : null;
+
   return (
     <Box>
       <Typography variant="h5" gutterBottom fontWeight="bold">
         Leaderboard
       </Typography>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+      {/* Hero Widget for the Parent's Child */}
+      {childData && childRank && (
+         <Box sx={{ mb: 4, mt: 1 }}>
+            <Typography variant="subtitle2" color="primary" fontWeight="bold" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>
+               Your Child's Current Rank
+            </Typography>
+            <Card sx={{ 
+                borderRadius: 4, 
+                border: '2px solid', 
+                borderColor: 'primary.main',
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.05) 0%, rgba(59,130,246,0.15) 100%)',
+                boxShadow: '0 8px 32px rgba(59, 130, 246, 0.15)'
+            }}>
+              <CardContent sx={{ p: 2, sm: { p: 3 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ minWidth: 50, textAlign: 'center' }}>
+                    <Typography variant="h4" fontWeight="900" sx={{ color: getRankColor(childRank) }}>
+                      {getRankIcon(childRank)}
+                    </Typography>
+                    <Typography variant="caption" fontWeight="bold">#{childRank}</Typography>
+                  </Box>
+                  <Avatar sx={{ width: 56, height: 56, bgcolor: getRankColor(childRank), color: childRank <= 3 ? (childRank === 1 ? '#000' : '#fff') : '#fff', fontWeight: 'bold' }}>
+                    {childData.name?.charAt(0).toUpperCase()}
+                  </Avatar>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" fontWeight="800">{childData.name}</Typography>
+                    <Typography variant="body2" color="text.secondary" fontWeight="500">
+                      {childData.classType} • {childData.location}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    icon={<TrophyIcon />}
+                    label={`$${childData.dollarPoints || 0}`}
+                    size="medium"
+                    sx={{ 
+                      bgcolor: getRankColor(childRank), 
+                      color: childRank <= 3 ? (childRank === 1 ? '#000' : '#fff') : '#fff',
+                      fontWeight: '800',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+         </Box>
+      )}
+
+      <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" sx={{ mb: 2 }}>
+           Top Students
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {students.map((student, index) => {
           const rank = index + 1;
           return (

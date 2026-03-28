@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  AppBar,
+  Toolbar,
   Box,
   Paper,
   Typography,
@@ -185,6 +187,13 @@ const AttendancePage = () => {
       for (const student of filteredStudents) {
         const status = attendance[student.id] ?? getSavedStatusForDate(student, dateStr);
         const studentRef = doc(db, 'students', student.id);
+        
+        // Preserve original teacher's name if the status hasn't changed
+        const existingEntry = student.attendanceByDate?.[dateStr];
+        let finalTeacherName = teacherName;
+        if (existingEntry && existingEntry.status === status) {
+            finalTeacherName = existingEntry.teacherName || teacherName;
+        }
 
         // Always store the canonical one-record-per-day structure:
         // attendanceByDate[yyyy-MM-dd] = { status, teacherName, updatedAt }
@@ -192,7 +201,7 @@ const AttendancePage = () => {
           batch.update(studentRef, {
             [`attendanceByDate.${dateStr}`]: {
               status,
-              teacherName,
+              teacherName: finalTeacherName,
               updatedAt: serverTimestamp()
             }
           });
@@ -263,122 +272,83 @@ const AttendancePage = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
       
       {/* 1. Header & Filters (Sticky) */}
-      <Paper 
-        elevation={2} 
-        sx={{ 
-          p: 2, 
-          position: 'sticky', 
-          top: 0, 
-          zIndex: 100, 
-          borderRadius: 0,
-          borderBottom: '1px solid rgba(0,0,0,0.1)'
+      {/* 1. Glass Header (Sticky) */}
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: 'rgba(255, 255, 255, 0.92)',
+          backgroundImage: 'none',
+          borderBottom: `1px solid rgba(0,0,0,0.08)`,
+          backdropFilter: 'blur(22px)',
+          zIndex: 1000
         }}
       >
-        <Container maxWidth="lg" disableGutters>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <IconButton onClick={handleBack} sx={{ mr: 1 }}>
+        <Toolbar sx={{ py: 1, px: { xs: 1, sm: 2 } }}>
+           <IconButton onClick={handleBack} sx={{ mr: 1, color: '#000', bgcolor: 'rgba(0,0,0,0.04)' }}>
               <BackIcon />
             </IconButton>
-            <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-              Daily Attendance
+            <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: '900', color: '#000', letterSpacing: '-0.03em', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+              Mark Attendance
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               <Button 
                 variant="contained" 
                 color="primary" 
-                startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
                 onClick={handleSaveWithCheck} 
                 disabled={saving || !isSelectedDateSunday}
-                sx={{ borderRadius: 2 }}
+                sx={{ borderRadius: 999, fontWeight: 'bold', px: { xs: 2 }, boxShadow: '0 4px 14px rgba(59,130,246,0.35)' }}
               >
                 {saving ? 'Saving...' : 'Save'}
               </Button>
-              {isMobile ? (
-                <Tooltip title={`Logout (${currentUser?.name || 'Teacher'})`}>
-                  <Button
-                    onClick={async () => {
-                      setLoadingLogout(true);
-                      try {
-                        await logout();
-                        navigate('/');
-                      } catch (error) {
-                        console.error('Logout error:', error);
-                      } finally {
-                        setLoadingLogout(false);
-                      }
-                    }}
-                    disabled={loadingLogout}
-                    startIcon={loadingLogout ? <CircularProgress size={16} color="inherit" /> : <LogoutIcon />}
-                    size="small"
-                    sx={{ 
-                      color: 'error.main',
-                      textTransform: 'none',
-                      fontSize: '0.75rem',
-                      px: 1.5,
-                      minWidth: 'auto'
-                    }}
-                  >
-                    {loadingLogout ? '' : (currentUser?.name?.split(' ')[0] || 'Teacher')}
-                  </Button>
-                </Tooltip>
-              ) : (
-                <Tooltip title="Logout">
-                  <IconButton
-                    onClick={async () => {
-                      setLoadingLogout(true);
-                      try {
-                        await logout();
-                        navigate('/');
-                      } catch (error) {
-                        console.error('Logout error:', error);
-                      } finally {
-                        setLoadingLogout(false);
-                      }
-                    }}
-                    disabled={loadingLogout}
-                    sx={{ color: 'error.main' }}
-                  >
-                    {loadingLogout ? <CircularProgress size={20} /> : <LogoutIcon />}
-                  </IconButton>
-                </Tooltip>
-              )}
             </Box>
-          </Box>
+        </Toolbar>
+      </AppBar>
 
+      {/* Main Page Content */}
+      <Container maxWidth="lg" sx={{ pt: 3, pb: 12 }}>
+          
           {/* Quick Stats Bar */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2, p: 1.5, bgcolor: 'background.default', borderRadius: 2 }}>
-             <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="subtitle2" color="text.secondary">Total:</Typography>
-                <Typography variant="subtitle2" fontWeight="bold">{filteredStudents.length}</Typography>
+          <Box sx={{ display: 'flex', mb: 3, p: 2, bgcolor: 'white', borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="caption" color="text.secondary" fontWeight="800" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>Total</Typography>
+                <Typography variant="h5" fontWeight="900" color="primary.main" sx={{ mt: 0.5 }}>{filteredStudents.length}</Typography>
              </Box>
-             <Divider orientation="vertical" flexItem />
-             <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
-                <PresentIcon fontSize="small" />
-                <Typography variant="subtitle2" fontWeight="bold">{currentPresentCount}</Typography>
+             <Divider orientation="vertical" flexItem sx={{ mx: 1, opacity: 0.6 }} />
+             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'success.main' }}>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                    <PresentIcon fontSize="small" />
+                    <Typography variant="caption" fontWeight="800" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>Present</Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="900" sx={{ mt: 0.5 }}>{currentPresentCount}</Typography>
              </Box>
-             <Divider orientation="vertical" flexItem />
-             <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
-                <AbsentIcon fontSize="small" />
-                <Typography variant="subtitle2" fontWeight="bold">{currentAbsentCount}</Typography>
+             <Divider orientation="vertical" flexItem sx={{ mx: 1, opacity: 0.6 }} />
+             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'error.main' }}>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                    <AbsentIcon fontSize="small" />
+                    <Typography variant="caption" fontWeight="800" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>Absent</Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="900" sx={{ mt: 0.5 }}>{currentAbsentCount}</Typography>
              </Box>
           </Box>
 
-          {/* Collapsible Filters */}
-          <Box sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 1 }}>
+          {/* Scrollable Filters */}
+          <Box className="hide-scrollbar" sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 2, mb: 1, '&::-webkit-scrollbar': { display: 'none' } }}>
             <TextField
               type="date"
               size="small"
               value={attendanceDate}
               onChange={(e) => setAttendanceDate(e.target.value)}
-              sx={{ minWidth: 140, bgcolor: 'white' }}
+              sx={{ minWidth: 150, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}
             />
-            <FormControl size="small" sx={{ minWidth: 110, bgcolor: 'white' }}>
+            <FormControl size="small" sx={{ minWidth: 130, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}>
               <InputLabel>Class</InputLabel>
               <Select value={selectedClass} label="Class" onChange={(e) => setSelectedClass(e.target.value)}>
                 {classOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 110, bgcolor: 'white' }}>
+            <FormControl size="small" sx={{ minWidth: 150, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}>
               <InputLabel>Location</InputLabel>
               <Select value={selectedPlace} label="Location" onChange={(e) => setSelectedPlace(e.target.value)}>
                 {placeOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
@@ -389,11 +359,9 @@ const AttendancePage = () => {
               placeholder="Search student..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{ flexGrow: 1, minWidth: 150, bgcolor: 'white' }}
+              sx={{ flexGrow: 1, minWidth: 180, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}
             />
           </Box>
-        </Container>
-      </Paper>
 
       {/* 2. Warning Alert for Non-Sunday */}
       {!isSelectedDateSunday && (
@@ -407,8 +375,7 @@ const AttendancePage = () => {
         <Alert severity="success" sx={{ mx: 2, mt: 2, mb: 0 }}>Attendance saved successfully!</Alert>
       </Fade>
 
-      {/* 3. Student List */}
-      <Container maxWidth="lg" sx={{ flex: 1, py: 2 }}>
+      {/* 4. Student List */}
         {loading ? (
           <Box display="flex" justifyContent="center" py={8}><CircularProgress /></Box>
         ) : filteredStudents.length === 0 ? (
@@ -455,7 +422,7 @@ const AttendancePage = () => {
                             {student.name}
                           </Typography>
                         }
-                        secondary={`${student.studentId} • ${student.location || 'No Location'}`}
+                        secondary={`${student.studentId} • ${student.location || student.place || 'No Location'}`}
                       />
                       
                       <ListItemSecondaryAction>

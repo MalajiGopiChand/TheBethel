@@ -23,9 +23,13 @@ import {
 } from '@mui/material';
 import {
   HomeRounded as HomeIcon,
+  HomeOutlined as HomeOutlinedIcon,
   AssignmentRounded as HomeworkIcon,
+  AssignmentOutlined as HomeworkOutlinedIcon,
   EmojiEventsRounded as LeaderboardIcon,
+  EmojiEventsOutlined as LeaderboardOutlinedIcon,
   PersonRounded as ProfileIcon,
+  PersonOutlined as ProfileOutlinedIcon,
   LogoutRounded as LogoutIcon,
   Church as ChurchIcon,
 } from '@mui/icons-material';
@@ -47,7 +51,14 @@ const ParentDashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const [currentTab, setCurrentTab] = useState(0);
+  const [currentTab, setCurrentTab] = useState(() => {
+    const savedTab = sessionStorage.getItem('ParentDashboard_currentTab');
+    return savedTab ? parseInt(savedTab, 10) : 0;
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('ParentDashboard_currentTab', currentTab.toString());
+  }, [currentTab]);
   const [loadingLogout, setLoadingLogout] = useState(false);
   
   // Student Data State
@@ -134,7 +145,7 @@ const ParentDashboard = () => {
     const tabs = [
         <HomeTab student={student} />,
         <HomeworkTab student={student} />,
-        <LeaderboardTab />,
+        <LeaderboardTab student={student} />,
         <ProfileTab student={student} parentUser={currentUser} />
     ];
 
@@ -152,162 +163,95 @@ const ParentDashboard = () => {
         display: 'flex', 
         flexDirection: 'column', 
         minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        backgroundAttachment: 'fixed',
-        position: 'relative',
-        '&::before': {
-          content: '""',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%)',
-          pointerEvents: 'none',
-          zIndex: 0
-        }
+        bgcolor: 'background.default',
+        position: 'relative'
     }}>
       
-      {/* Top App Bar - Clean & Modern */}
-      <AppBar 
-        position="sticky" 
-        elevation={0} 
-        sx={{ 
-            bgcolor: 'rgba(255, 255, 255, 0.98)', 
-            backdropFilter: 'blur(24px) saturate(180%)',
-            borderBottom: '1px solid',
-            borderColor: 'rgba(102, 126, 234, 0.12)',
-            color: 'text.primary',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.04)'
+      {/* Top App Bar - Matched to Teacher Dashboard UI */}
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: 'transparent',
+          backgroundImage: 'none',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          backdropFilter: 'blur(22px)',
         }}
       >
-        <Toolbar sx={{ py: 1.5, px: { xs: 2, sm: 3 } }}>
-          <Box sx={{ 
-            mr: 2, 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            width: 44, 
-            height: 44, 
-            borderRadius: '12px', 
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: '#fff', 
-            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              transform: 'scale(1.08) rotate(5deg)',
-              boxShadow: '0 6px 16px rgba(102, 126, 234, 0.4)'
-            }
-          }}>
-             <ChurchIcon fontSize="small" />
-          </Box>
-
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Typography 
-              variant="h6" 
-              component="div" 
-              sx={{ 
-                fontWeight: '800', 
-                lineHeight: 1.2, 
-                letterSpacing: '-0.02em',
-                fontSize: { xs: '1rem', sm: '1.25rem' },
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-                WebkitBackgroundClip: 'text', 
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
+        <Toolbar sx={{ py: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 3,
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                bgcolor: 'rgba(15,23,42,0.95)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 14px 30px rgba(15,23,42,0.55)',
               }}
             >
-              The Bethel Church
-            </Typography>
-            <Box display="flex" alignItems="center" gap={1} mt={0.25}>
-              <Chip 
-                label="Parent Portal" 
-                size="small" 
-                sx={{ 
-                  height: 22, 
-                  fontSize: '0.7rem', 
-                  fontWeight: '700',
-                  bgcolor: 'rgba(102, 126, 234, 0.08)',
-                  color: '#667eea',
-                  border: '1px solid rgba(102, 126, 234, 0.2)',
-                  '& .MuiChip-label': {
-                    px: 1.5
-                  }
-                }} 
+              <Box
+                component="img"
+                src="/image.png"
+                alt="Bethel AMS"
+                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  opacity: 0.65, 
-                  fontWeight: '600',
-                  fontSize: '0.7rem',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {student?.name || currentUser?.name?.split(' ')[0] || 'Guest'}
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: '-0.03em', color: '#000' }}>
+                Parent Dashboard
+              </Typography>
+              <Typography variant="caption" sx={{ fontWeight: 800, color: '#000' }}>
+                {student?.name || currentUser?.name || 'Guest'}
               </Typography>
             </Box>
           </Box>
-          
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <InstallButton size="small" />
-            {isMobile ? (
-              <Tooltip title={`Logout (${currentUser?.name || 'User'})`} arrow>
+
+          {!isMobile && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Chip
+                size="small"
+                color="primary"
+                variant="outlined"
+                label="Parent Portal • Live"
+                sx={{ borderRadius: 999 }}
+              />
+              <InstallButton size="small" />
+              <Button
+                color="inherit"
+                onClick={handleLogout}
+                disabled={loadingLogout}
+                startIcon={!loadingLogout && <LogoutIcon />}
+                sx={{ borderRadius: 999, px: 2.5, color: '#000', fontWeight: 'bold' }}
+              >
+                {loadingLogout ? <CircularProgress size={18} color="inherit" /> : 'Logout'}
+              </Button>
+            </Box>
+          )}
+
+          {isMobile && (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <InstallButton size="small" />
+              <Tooltip title={`Logout (${currentUser?.name || 'User'})`}>
                 <Button
                   onClick={handleLogout}
                   disabled={loadingLogout}
-                  startIcon={loadingLogout ? <CircularProgress size={16} color="inherit" /> : <LogoutIcon />}
-                  size="small"
-                  sx={{ 
-                    bgcolor: 'rgba(102, 126, 234, 0.08)', 
-                    color: '#667eea',
-                    border: '1px solid rgba(102, 126, 234, 0.15)',
-                    textTransform: 'none',
-                    fontSize: '0.75rem',
-                    px: 1.5,
+                  sx={{
                     minWidth: 'auto',
-                    '&:hover': { 
-                      bgcolor: 'rgba(244, 67, 54, 0.1)', 
-                      color: '#f44336',
-                      borderColor: 'rgba(244, 67, 54, 0.2)',
-                    },
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                    p: 1,
+                    color: '#000',
+                    borderRadius: 2,
+                    bgcolor: 'rgba(15,23,42,0.04)',
                   }}
                 >
-                  {loadingLogout ? '' : (currentUser?.name?.split(' ')[0] || 'User')}
+                  {loadingLogout ? <CircularProgress size={20} color="inherit" /> : <LogoutIcon />}
                 </Button>
               </Tooltip>
-            ) : (
-              <Tooltip title="Logout" arrow>
-                <IconButton 
-                    onClick={handleLogout} 
-                    disabled={loadingLogout}
-                    size="small"
-                    sx={{ 
-                        bgcolor: 'rgba(102, 126, 234, 0.08)', 
-                        color: '#667eea',
-                        border: '1px solid rgba(102, 126, 234, 0.15)',
-                        width: 40,
-                        height: 40,
-                        '&:hover': { 
-                          bgcolor: 'rgba(244, 67, 54, 0.1)', 
-                          color: '#f44336',
-                          borderColor: 'rgba(244, 67, 54, 0.2)',
-                          transform: 'scale(1.1)'
-                        },
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                >
-                    {loadingLogout ? <CircularProgress size={18} color="inherit" /> : <LogoutIcon fontSize="small" />}
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -318,72 +262,60 @@ const ParentDashboard = () => {
         </Container>
       </Box>
 
-      {/* Bottom Navigation (Glassmorphism Dock) */}
-      <Slide direction="up" in={true} mountOnEnter unmountOnExit timeout={500}>
-        <Paper 
-          sx={{ 
-              position: 'fixed', 
-              bottom: 0, 
-              left: 0, 
-              right: 0, 
-              zIndex: 1000,
-              bgcolor: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
-              borderTop: '1px solid rgba(102, 126, 234, 0.2)',
-              boxShadow: '0 -4px 20px rgba(0,0,0,0.1)'
-          }} 
-          elevation={0}
+      {/* Bottom Navigation – glass floating dock */}
+      <Paper
+        className="page-card-enter"
+        sx={{
+          position: 'fixed',
+          bottom: 16,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          borderRadius: 999,
+          bgcolor: 'rgba(15,23,42,0.96)',
+          backdropFilter: 'blur(24px)',
+          px: 1,
+          boxShadow: '0 22px 60px rgba(15,23,42,0.9)',
+          width: '92%',
+          maxWidth: 620,
+        }}
+        elevation={0}
+      >
+        <BottomNavigation
+          value={currentTab}
+          onChange={(event, newValue) => {
+              setCurrentTab(newValue);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          showLabels
+          sx={{
+            bgcolor: 'transparent',
+            '& .MuiBottomNavigationAction-root': {
+              minWidth: 'auto',
+              padding: '8px 6px',
+              color: 'rgba(148,163,184,0.75)',
+              '&.Mui-selected': {
+                color: theme.palette.primary.main,
+              },
+              '& .MuiSvgIcon-root': {
+                transition: 'all 0.25s ease',
+              },
+              '&.Mui-selected .MuiSvgIcon-root': {
+                transform: 'translateY(-3px) scale(1.15)',
+              },
+              '& .MuiBottomNavigationAction-label': {
+                fontSize: 11,
+                fontWeight: 600,
+              },
+            },
+          }}
         >
-          <Container maxWidth="md" disableGutters>
-              <BottomNavigation
-              value={currentTab}
-              onChange={(event, newValue) => {
-                  setCurrentTab(newValue);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              showLabels
-              sx={{
-                  height: 72,
-                  bgcolor: 'transparent',
-                  '& .MuiBottomNavigationAction-root': {
-                      minWidth: 'auto',
-                      padding: '8px 0',
-                      color: 'text.secondary',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&.Mui-selected': {
-                          color: theme.palette.primary.main,
-                          transform: 'translateY(-4px)',
-                          '& .MuiSvgIcon-root': {
-                              fontSize: '1.8rem',
-                              filter: `drop-shadow(0 4px 8px rgba(102, 126, 234, 0.4))`,
-                              animation: 'pulse 2s infinite'
-                          }
-                      },
-                      '& .MuiSvgIcon-root': {
-                          transition: 'all 0.3s',
-                          fontSize: '1.6rem',
-                          mb: 0.5
-                      },
-                      '& .MuiBottomNavigationAction-label': {
-                          fontSize: '0.7rem',
-                          fontWeight: 'bold',
-                          transition: 'all 0.2s',
-                          '&.Mui-selected': {
-                              fontSize: '0.75rem',
-                              fontWeight: '800'
-                          }
-                      }
-                  }
-              }}
-              >
-              <BottomNavigationAction label="Home" icon={<HomeIcon />} />
-              <BottomNavigationAction label="Homework" icon={<HomeworkIcon />} />
-              <BottomNavigationAction label="Leaderboard" icon={<LeaderboardIcon />} />
-              <BottomNavigationAction label="Profile" icon={<ProfileIcon />} />
-              </BottomNavigation>
-          </Container>
-        </Paper>
-      </Slide>
+          <BottomNavigationAction label="Home" icon={currentTab === 0 ? <HomeIcon /> : <HomeOutlinedIcon />} />
+          <BottomNavigationAction label="Homework" icon={currentTab === 1 ? <HomeworkIcon /> : <HomeworkOutlinedIcon />} />
+          <BottomNavigationAction label="Leaderboard" icon={currentTab === 2 ? <LeaderboardIcon /> : <LeaderboardOutlinedIcon />} />
+          <BottomNavigationAction label="Profile" icon={currentTab === 3 ? <ProfileIcon /> : <ProfileOutlinedIcon />} />
+        </BottomNavigation>
+      </Paper>
 
       {/* PWA Install Prompt - Cross Platform */}
       <PWAInstallPrompt />

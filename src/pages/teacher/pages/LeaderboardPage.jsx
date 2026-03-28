@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Paper, Typography, Button, Card, CardContent,
+  AppBar, Toolbar, IconButton, Fade, Grow, Stack,
+  Box, Paper, Typography, Card, CardContent,
   Avatar, Chip, CircularProgress, FormControl, InputLabel,
-  Select, MenuItem, Grid, Alert
+  Select, MenuItem, Grid, Alert, Container
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -102,91 +103,205 @@ const LeaderboardPage = () => {
     return colors[(rank - 4) % colors.length];
   };
 
-  return (
-    <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', pb: 4 }}>
-      {/* Header & Filters */}
-      <Paper elevation={3} sx={{ p: 2, mb: 3, borderRadius: 0, borderBottom: '3px solid #1976d2' }}>
-        <Grid container alignItems="center" spacing={2}>
-          <Grid item xs={12} md={3}>
-            <Button startIcon={<BackIcon />} onClick={handleBack}>Back</Button>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Typography variant="h5" sx={{ textAlign: 'center', fontWeight: 'bold', color: '#1976d2' }}>
-              Bethel Leaderboard
-            </Typography>
-          </Grid>
-          
-          {/* Filter Section */}
-          <Grid item xs={12} md={5} sx={{ display: 'flex', gap: 1 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Class</InputLabel>
-              <Select value={selectedClass} label="Class" onChange={(e) => setSelectedClass(e.target.value)}>
-                {classOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
-              </Select>
-            </FormControl>
-            
-            <FormControl fullWidth size="small">
-              <InputLabel>Area / Place</InputLabel>
-              <Select value={selectedPlace} label="Area / Place" onChange={(e) => setSelectedPlace(e.target.value)}>
-                {placeOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-      </Paper>
+  // Duolingo-style Floating Avatar Podium Helper for Students
+  const FloatingPodium = ({ topStudents }) => {
+    if (!topStudents || topStudents.length === 0) return null;
+    
+    // Order needs to be 2, 1, 3 for rendering visually.
+    const podiumOrder = [
+        { rank: 2, student: topStudents[1] },
+        { rank: 1, student: topStudents[0] },
+        { rank: 3, student: topStudents[2] }
+    ];
 
-      {/* Podium/List View */}
-      <Box sx={{ maxWidth: 700, margin: 'auto', px: 2 }}>
+    return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: {xs: 2, sm: 4}, mt: 6, mb: 4 }}>
+            {podiumOrder.map((item) => {
+                if (!item.student) return <Box key={`empty-${item.rank}`} sx={{ width: 80 }} />;
+                
+                const isFirst = item.rank === 1;
+                const size = isFirst ? 110 : 80;
+                const colors = {
+                    1: 'linear-gradient(135deg, #FFD700 0%, #F59E0B 100%)', // Gold
+                    2: 'linear-gradient(135deg, #E5E7EB 0%, #9CA3AF 100%)', // Silver
+                    3: 'linear-gradient(135deg, #FDBA74 0%, #C2410C 100%)'  // Bronze
+                };
+                const shadowColors = { 1: '#F59E0B', 2: '#9CA3AF', 3: '#C2410C' };
+                const bgGradient = colors[item.rank];
+                const shadowCol = shadowColors[item.rank];
+
+                return (
+                    <Fade in={true} timeout={item.rank * 400} key={item.rank}>
+                        <Box sx={{ 
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', 
+                            position: 'relative',
+                            transform: isFirst ? 'translateY(-30px)' : 'none',
+                            zIndex: isFirst ? 10 : 1
+                        }}>
+                            {/* Crown for 1st */}
+                            {isFirst && (
+                                <Box sx={{ 
+                                    position: 'absolute', top: -38, zIndex: 12,
+                                    animation: 'float 3s ease-in-out infinite',
+                                    '@keyframes float': {
+                                        '0%, 100%': { transform: 'translateY(0)' },
+                                        '50%': { transform: 'translateY(-6px)' }
+                                    }
+                                }}>
+                                    <TrophyIcon sx={{ fontSize: 45, color: '#FFB300', filter: 'drop-shadow(0 4px 6px rgba(255,179,0,0.5))' }} />
+                                </Box>
+                            )}
+                            
+                            <Box sx={{ position: 'relative' }}>
+                                <Avatar sx={{ 
+                                    width: size, height: size, 
+                                    background: bgGradient, color: isFirst ? '#000' : '#fff', 
+                                    fontWeight: '900', fontSize: isFirst ? '2.5rem' : '1.8rem',
+                                    border: `4px solid white`,
+                                    boxShadow: `0 12px 24px ${shadowCol}60`
+                                }}>
+                                    {item.student.name?.charAt(0)?.toUpperCase()}
+                                </Avatar>
+                                {/* Rank Badge */}
+                                <Box sx={{
+                                    position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)',
+                                    width: 32, height: 32, borderRadius: '50%',
+                                    background: bgGradient, border: '3px solid white',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontWeight: '900', fontSize: '1rem', color: isFirst ? '#000' : '#fff',
+                                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                                }}>
+                                    {item.rank}
+                                </Box>
+                            </Box>
+                            
+                            <Typography variant="subtitle1" fontWeight="900" sx={{ mt: 2.5, textAlign: 'center', width: {xs: 90, sm: 110}, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                {item.student.name}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, opacity: 0.8 }}>
+                               <TrophyIcon sx={{ fontSize: 14, color: '#F59E0B' }} />
+                               <Typography variant="caption" fontWeight="bold">
+                                   ${item.student.dollarPoints}
+                               </Typography>
+                            </Box>
+                        </Box>
+                    </Fade>
+                )
+            })}
+        </Box>
+    );
+  };
+
+  return (
+    <Box sx={{ bgcolor: '#f5f7fa', minHeight: '100vh', pb: 4 }}>
+      {/* Glass Header (Sticky) */}
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: 'rgba(255, 255, 255, 0.92)',
+          backgroundImage: 'none',
+          borderBottom: `1px solid rgba(0,0,0,0.08)`,
+          backdropFilter: 'blur(22px)',
+          zIndex: 1000
+        }}
+      >
+        <Toolbar sx={{ py: 1, px: { xs: 1, sm: 2 } }}>
+           <IconButton onClick={handleBack} sx={{ mr: 1, color: '#000', bgcolor: 'rgba(0,0,0,0.04)' }}>
+              <BackIcon />
+            </IconButton>
+            <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: '900', color: '#000', letterSpacing: '-0.03em', fontSize: { xs: '1.2rem', sm: '1.25rem' } }}>
+              Student Leaderboard
+            </Typography>
+        </Toolbar>
+      </AppBar>
+
+      <Container maxWidth="md" sx={{ pt: 3, pb: 12 }}>
+        
+        {/* Scrollable Filters */}
+        <Box className="hide-scrollbar" sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 2, mb: 1, '&::-webkit-scrollbar': { display: 'none' } }}>
+          <FormControl size="small" sx={{ minWidth: 150, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}>
+            <InputLabel>Class</InputLabel>
+            <Select value={selectedClass} label="Class" onChange={(e) => setSelectedClass(e.target.value)}>
+              {classOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 160, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}>
+            <InputLabel>Area / Place</InputLabel>
+            <Select value={selectedPlace} label="Area / Place" onChange={(e) => setSelectedPlace(e.target.value)}>
+              {placeOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
+            </Select>
+          </FormControl>
+        </Box>
         {loading ? (
           <Box display="flex" justifyContent="center" py={10}><CircularProgress /></Box>
         ) : students.length === 0 ? (
-          <Alert severity="info" variant="filled">No students found in this area/class.</Alert>
+          <Alert severity="info" sx={{ borderRadius: 2 }}>No students found in this area/class.</Alert>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {students.map((student, index) => {
-              const rank = index + 1;
-              const rankColor = getRankColor(rank);
-              
-              return (
-                <Card key={student.id} sx={{ 
-                  borderRadius: 2,
-                  boxShadow: rank <= 3 ? 4 : 1,
-                  transform: rank <= 3 ? 'scale(1.02)' : 'none',
-                  borderLeft: `6px solid ${rankColor}`
-                }}>
-                  <CardContent sx={{ py: '10px !important' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Typography variant="h5" sx={{ minWidth: 40, fontWeight: 'bold', color: rankColor }}>
-                        {getRankIcon(rank)}
-                      </Typography>
-                      
-                      <Avatar sx={{ bgcolor: rankColor, color: rank === 1 ? '#000' : '#fff' }}>
-                        {student.name.charAt(0)}
-                      </Avatar>
+          <>
+            {/* Duolingo Floating Podium for Top 3 */}
+            <FloatingPodium topStudents={students.slice(0, 3)} />
 
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="subtitle1" fontWeight="bold">{student.name}</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <PlaceIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                          <Typography variant="caption" color="text.secondary">
-                            {student.place} • {student.classType}
+            {/* Minimalist Corporate List for Rank 4+ */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              {students.slice(3).map((student, index) => {
+                const rank = index + 4;
+                return (
+                  <Grow in={true} timeout={400 + (index * 100)} key={student.id}>
+                    <Card 
+                      elevation={0}
+                      sx={{ 
+                        borderRadius: 3,
+                        bgcolor: 'rgba(255,255,255,0.7)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                        border: '1px solid rgba(0,0,0,0.04)',
+                        transition: 'all 0.2s',
+                        '&:hover': { transform: 'scale(1.01)', boxShadow: '0 6px 16px rgba(0,0,0,0.05)', bgcolor: 'white' }
+                      }}
+                    >
+                      <CardContent sx={{ 
+                          p: '12px 20px !important', 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: {xs: 1.5, sm: 2} }}>
+                          <Typography variant="subtitle1" fontWeight="900" sx={{ color: 'text.disabled', minWidth: 24 }}>
+                             {rank}
                           </Typography>
+                          <Avatar 
+                            sx={{ 
+                              width: 36, height: 36, 
+                              bgcolor: 'primary.light',
+                              color: 'primary.main',
+                              fontSize: 16,
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            {student.name?.charAt(0)?.toUpperCase()}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle1" fontWeight="bold" sx={{ color: 'text.primary', lineHeight: 1.2 }}>
+                              {student.name}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
+                              {student.place} • {student.classType}
+                            </Typography>
+                          </Box>
                         </Box>
-                      </Box>
-
-                      <Chip 
-                        icon={<TrophyIcon style={{ color: 'white' }} />} 
-                        label={`$${student.dollarPoints}`} 
-                        sx={{ bgcolor: rankColor, color: rank === 1 ? '#000' : '#fff', fontWeight: 'bold' }}
-                      />
-                    </Box>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </Box>
+                        
+                        <Typography variant="h6" fontWeight="800" sx={{ color: 'text.primary', display: 'flex', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.75em', color: '#F59E0B', marginRight: '2px' }}>$</span>{student.dollarPoints}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grow>
+                );
+              })}
+            </Box>
+          </>
         )}
-      </Box>
+      </Container>
     </Box>
   );
 };

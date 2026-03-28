@@ -60,7 +60,14 @@ const AdminDashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const [currentTab, setCurrentTab] = useState(0);
+  const [currentTab, setCurrentTab] = useState(() => {
+    const savedTab = sessionStorage.getItem('AdminDashboard_currentTab');
+    return savedTab ? parseInt(savedTab, 10) : 0;
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('AdminDashboard_currentTab', currentTab.toString());
+  }, [currentTab]);
   const [loading, setLoading] = useState(false); // For actions like logout
   const [checkingAuth, setCheckingAuth] = useState(true); // For initial role check
   const [error, setError] = useState(null);
@@ -177,10 +184,10 @@ const AdminDashboard = () => {
               />
             </Box>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '-0.03em' }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: '-0.03em', color: '#000' }}>
                 Admin Dashboard
               </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.7 }}>
+              <Typography variant="caption" sx={{ fontWeight: 800, color: '#000' }}>
                 {currentUser?.name || currentUser?.email}
               </Typography>
             </Box>
@@ -212,7 +219,7 @@ const AdminDashboard = () => {
                 onClick={handleLogout}
                 disabled={loading}
                 startIcon={!loading && <LogoutIcon />}
-                sx={{ borderRadius: 999, px: 2.5 }}
+                sx={{ borderRadius: 999, px: 2.5, color: '#000', fontWeight: 'bold' }}
               >
                 {loading ? <CircularProgress size={18} color="inherit" /> : 'Logout'}
               </Button>
@@ -226,15 +233,12 @@ const AdminDashboard = () => {
                 <Button
                   onClick={handleLogout}
                   disabled={loading}
-                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <LogoutIcon />}
                   sx={{
-                    bgcolor: 'rgba(15,23,42,0.92)',
-                    color: 'primary.contrastText',
-                    '&:hover': { bgcolor: 'rgba(15,23,42,1)' },
-                    textTransform: 'none',
-                    fontSize: '0.75rem',
-                    px: 1.5,
-                    minWidth: 'auto'
+                    minWidth: 'auto',
+                    p: 1,
+                    color: '#000',
+                    borderRadius: 2,
+                    bgcolor: 'rgba(15,23,42,0.04)'
                   }}
                 >
                   {loading ? '' : (currentUser?.name?.split(' ')[0] || 'Admin')}

@@ -506,7 +506,7 @@ const OfferingsPage = () => {
                                           record.userName ||
                                           record.name ||
                                           (record.createdByUid ? `User ${record.createdByUid.substring(0, 8)}` : null);
-                            return creator || 'Unknown';
+                            return creator || 'Admin (Legacy)';
                           })()}
                         </Typography>
                       </TableCell>

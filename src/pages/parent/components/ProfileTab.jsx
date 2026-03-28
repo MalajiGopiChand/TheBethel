@@ -247,7 +247,7 @@ const ProfileTab = ({ student, parentUser }) => {
                   <List sx={{ px: 2, py: 1 }}>
                       <InfoItem icon={<SchoolIcon />} label="Class / Grade" value={student.classType} delay={1300} />
                       <Divider variant="inset" component="li" />
-                      <InfoItem icon={<LocationIcon />} label="Branch / Location" value={student.location} delay={1400} />
+                      <InfoItem icon={<LocationIcon />} label="Branch / Location" value={student.location || student.place} delay={1400} />
                       <Divider variant="inset" component="li" />
                       <InfoItem icon={<IdIcon />} label="Roll Number / ID" value={student.studentId} delay={1500} />
                   </List>

@@ -38,6 +38,7 @@ import TeacherLeaderboardPage from './pages/teacher/pages/TeacherLeaderboardPage
 import TeacherAttendancePage from './pages/teacher/pages/TeacherAttendancePage';
 import TeacherProfilePage from './pages/teacher/pages/TeacherProfilePage';
 import { Box, CircularProgress } from '@mui/material';
+import GlobalNotificationListener from './components/GlobalNotificationListener';
 
 function App() {
   const { currentUser, loading } = useAuth();
@@ -71,7 +72,8 @@ function App() {
 
   return (
     <Box className="page-shell page-glow-background">
-    <Routes>
+      <GlobalNotificationListener />
+      <Routes>
       <Route
         path="/"
         element={

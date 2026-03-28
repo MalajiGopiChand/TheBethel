@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  AppBar,
+  Toolbar,
   Box,
   Paper,
   Typography,
@@ -114,43 +116,44 @@ const AbsentStudentsPage = () => {
       }}
     >
       
-      {/* 1. Header & Filters (Sticky) */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 2, 
-          position: 'sticky', 
-          top: 0, 
-          zIndex: 100,
-          bgcolor: 'rgba(255,255,255,0.9)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(0,0,0,0.1)'
+      {/* 1. Glass Header (Sticky) */}
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: 'rgba(255, 255, 255, 0.92)',
+          backgroundImage: 'none',
+          borderBottom: `1px solid rgba(0,0,0,0.08)`,
+          backdropFilter: 'blur(22px)',
+          zIndex: 1000
         }}
       >
-        <Container maxWidth="lg" disableGutters>
-          {/* Top Bar */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <IconButton onClick={handleBack} sx={{ mr: 1, bgcolor: 'white', boxShadow: 1 }}>
+        <Toolbar sx={{ py: 1, px: { xs: 1, sm: 2 } }}>
+           <IconButton onClick={handleBack} sx={{ mr: 1, color: '#000', bgcolor: 'rgba(0,0,0,0.04)' }}>
               <BackIcon />
             </IconButton>
-            <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: '800', color: '#d32f2f' }}>
+            <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: '900', color: '#000', letterSpacing: '-0.03em', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
               Absent List
             </Typography>
             <Chip 
               icon={<AbsentIcon style={{ color: 'white' }} />} 
               label={`${students.length} Absent`} 
+              size="small"
               sx={{ bgcolor: '#d32f2f', color: 'white', fontWeight: 'bold' }} 
             />
-          </Box>
+        </Toolbar>
+      </AppBar>
 
-          {/* Filters Row */}
-          <Box sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 0.5 }}>
+      {/* Main Page Content */}
+      <Container maxWidth="lg" sx={{ pt: 3, pb: 12 }}>
+          {/* Scrollable Filters */}
+          <Box className="hide-scrollbar" sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 2, mb: 1, '&::-webkit-scrollbar': { display: 'none' } }}>
             <TextField
               type="date"
               size="small"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              sx={{ minWidth: 150, bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              sx={{ minWidth: 150, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}
               InputProps={{
                 startAdornment: <InputAdornment position="start"><DateIcon fontSize="small" color="error" /></InputAdornment>
               }}
@@ -161,7 +164,7 @@ const AbsentStudentsPage = () => {
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
               size="small"
-              sx={{ minWidth: 140, bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              sx={{ minWidth: 130, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}
               InputProps={{
                 startAdornment: <InputAdornment position="start"><ClassIcon fontSize="small" color="action" /></InputAdornment>
               }}
@@ -174,7 +177,7 @@ const AbsentStudentsPage = () => {
               value={selectedPlace}
               onChange={(e) => setSelectedPlace(e.target.value)}
               size="small"
-              sx={{ minWidth: 140, bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              sx={{ minWidth: 150, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}
               InputProps={{
                 startAdornment: <InputAdornment position="start"><PlaceIcon fontSize="small" color="action" /></InputAdornment>
               }}
@@ -182,11 +185,8 @@ const AbsentStudentsPage = () => {
               {placeOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
             </TextField>
           </Box>
-        </Container>
-      </Paper>
 
       {/* 2. Content Grid */}
-      <Container maxWidth="lg" sx={{ flex: 1, py: 3 }}>
         {loading ? (
           <Box display="flex" justifyContent="center" py={8}>
             <CircularProgress color="error" />
@@ -271,7 +271,14 @@ const AbsentStudentsPage = () => {
                             color="error" 
                             size="small" 
                             startIcon={<PhoneIcon />}
-                            onClick={() => alert(`Calling parent of ${student.name}...`)}
+                            onClick={() => {
+                                const phoneNum = student.parentPhone || student.phone || student.contactNumber || student.parentContact;
+                                if (phoneNum) {
+                                    window.location.href = `tel:${phoneNum}`;
+                                } else {
+                                    alert(`No phone number recorded for ${student.name}'s parent.`);
+                                }
+                            }}
                             sx={{ borderRadius: 2, textTransform: 'none' }}
                         >
                             Call Parent

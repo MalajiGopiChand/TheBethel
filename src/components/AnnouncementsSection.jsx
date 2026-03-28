@@ -1,105 +1,70 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
   Typography,
   Box,
-  Chip,
-  IconButton,
-  Collapse
+  Chip
 } from '@mui/material';
 import {
-  Info as InfoIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
+  Campaign as AnnouncementIcon,
   PriorityHigh as PriorityHighIcon
 } from '@mui/icons-material';
 
 const AnnouncementsSection = ({ announcements }) => {
-  const [expanded, setExpanded] = useState(false);
-
-  if (announcements.length === 0) {
+  if (!announcements || announcements.length === 0) {
     return null;
   }
 
   return (
-    <Card
-      sx={{
-        mb: 2,
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: '#fff',
-        cursor: 'pointer'
-      }}
-      onClick={() => setExpanded(!expanded)}
-    >
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <InfoIcon />
-            <Typography variant="h6" fontWeight="bold">
-              Announcements
-            </Typography>
-          </Box>
-          <IconButton size="small" sx={{ color: '#fff' }}>
-            {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </Box>
-
-        {!expanded && (
-          <Box sx={{ mt: 1 }}>
-            <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              {announcements.length} announcement{announcements.length !== 1 ? 's' : ''}
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.7 }}>
-              Tap to view
-            </Typography>
-          </Box>
-        )}
-
-        <Collapse in={expanded}>
-          <Box sx={{ mt: 2 }}>
-            {announcements.map((announcement, index) => (
-              <Box key={index} sx={{ mb: index < announcements.length - 1 ? 2 : 0 }}>
-                {index > 0 && <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.2)', pt: 2, mt: 2 }} />}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
-                  <Box sx={{ flex: 1 }}>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-                      <Chip
-                        label={announcement.audience}
-                        size="small"
-                        sx={{
-                          bgcolor: announcement.audience === 'Teachers' 
-                            ? 'rgba(255, 154, 158, 0.2)'
-                            : 'rgba(132, 250, 176, 0.2)',
-                          border: `1px solid ${announcement.audience === 'Teachers' ? 'rgba(255, 154, 158, 0.5)' : 'rgba(132, 250, 176, 0.5)'}`,
-                          color: '#fff',
-                          fontSize: '0.7rem'
-                        }}
-                      />
-                      {announcement.isImportant && (
-                        <PriorityHighIcon sx={{ fontSize: 16, color: '#ff4444' }} />
-                      )}
-                    </Box>
-                    <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 0.5 }}>
-                      {announcement.title}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                      {announcement.message}
-                    </Typography>
-                  </Box>
-                  <Typography variant="caption" sx={{ opacity: 0.7, whiteSpace: 'nowrap' }}>
-                    {announcement.date}
+    <Box>
+      {announcements.map((announcement, index) => (
+        <Card 
+          key={index}
+          elevation={1}
+          sx={{ 
+            mb: 1.5, 
+            borderLeft: announcement.isImportant ? '5px solid #d32f2f' : '5px solid #1976d2', 
+            bgcolor: announcement.isImportant ? '#fff5f5' : '#f0f7ff', 
+            borderRadius: 2 
+          }}
+        >
+          <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box sx={{ flex: 1, pr: 2 }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
+                  <Typography variant="subtitle2" fontWeight="bold" sx={{ color: announcement.isImportant ? '#d32f2f' : '#1976d2' }}>
+                    {announcement.title}
+                  </Typography>
+                  {announcement.isImportant && (
+                    <Chip size="small" icon={<PriorityHighIcon sx={{ fontSize: '14px !important' }}/>} label="Urgent" color="error" sx={{ height: 20, fontSize: '0.65rem' }} />
+                  )}
+                </Box>
+                <Typography variant="body2" color="text.secondary" fontWeight="500" sx={{ mb: 1, whiteSpace: 'pre-wrap' }}>
+                  {announcement.message}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.5)', fontWeight: 'bold' }}>
+                    {announcement.sender || 'Admin'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.3)' }}>•</Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.5)' }}>
+                    {announcement.audience}
                   </Typography>
                 </Box>
               </Box>
-            ))}
-            <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', textAlign: 'center', mt: 2 }}>
-              Tap to collapse
-            </Typography>
-          </Box>
-        </Collapse>
-      </CardContent>
-    </Card>
+              
+              <Box sx={{ textAlign: 'right', borderLeft: '1px solid rgba(0,0,0,0.1)', pl: 2, minWidth: '70px' }}>
+                <Typography variant="caption" color="text.secondary" fontWeight="600" sx={{ display: 'block' }}>
+                  {announcement.date || 'Recent'}
+                </Typography>
+                <AnnouncementIcon sx={{ fontSize: 20, color: announcement.isImportant ? 'rgba(211,47,47,0.5)' : 'rgba(25,118,210,0.5)', mt: 1 }} />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      ))}
+    </Box>
   );
 };
 
