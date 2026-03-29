@@ -159,6 +159,7 @@ const FinanceManagementPage = () => {
 
   const handleSubmitOffering = async (e) => {
     e.preventDefault();
+    if (loading) return;
     if (!offeringForm.amount || !offeringForm.reason) {
       notifyError('Missing fields', 'Please fill in all fields.');
       return;
@@ -173,7 +174,7 @@ const FinanceManagementPage = () => {
       await addDoc(collection(db, 'financial_records'), {
         type: 'OFFERING',
         place: selectedPlace,
-        amount: parseFloat(offeringForm.amount),
+        amount: String(offeringForm.amount),
         reason: offeringForm.reason,
         items: [],
         timestamp: serverTimestamp(),
@@ -195,6 +196,7 @@ const FinanceManagementPage = () => {
 
   const handleSubmitExpense = async (e) => {
     e.preventDefault();
+    if (loading) return;
     if (!expenseForm.amount || !expenseForm.reason) {
       notifyError('Missing fields', 'Please fill in all fields.');
       return;
@@ -215,7 +217,7 @@ const FinanceManagementPage = () => {
       await addDoc(collection(db, 'financial_records'), {
         type: 'EXPENSE',
         place: selectedPlace,
-        amount: expenseAmount,
+        amount: String(expenseForm.amount),
         reason: expenseForm.reason,
         items: [],
         timestamp: serverTimestamp(),
@@ -427,8 +429,8 @@ const FinanceManagementPage = () => {
                 rows={3}
                 sx={{ mb: 3, bgcolor: 'white' }}
               />
-              <Button type="submit" variant="contained" fullWidth size="large" sx={{ py: 1.5, borderRadius: 2, bgcolor: '#2e7d32', '&:hover': { bgcolor: '#1b5e20' } }}>
-                Record Offering
+              <Button type="submit" variant="contained" fullWidth size="large" disabled={loading} sx={{ py: 1.5, borderRadius: 2, bgcolor: '#2e7d32', '&:hover': { bgcolor: '#1b5e20' } }}>
+                {loading ? 'Recording...' : 'Record Offering'}
               </Button>
             </form>
           </Box>
@@ -457,8 +459,8 @@ const FinanceManagementPage = () => {
                 rows={3}
                 sx={{ mb: 3, bgcolor: 'white' }}
               />
-              <Button type="submit" variant="contained" color="error" fullWidth size="large" sx={{ py: 1.5, borderRadius: 2 }}>
-                Record Expense
+              <Button type="submit" variant="contained" color="error" fullWidth size="large" disabled={loading} sx={{ py: 1.5, borderRadius: 2 }}>
+                {loading ? 'Recording...' : 'Record Expense'}
               </Button>
             </form>
           </Box>
@@ -475,29 +477,17 @@ const FinanceManagementPage = () => {
                 Sync Legacy Records
               </Button>
             </Box>
-            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee', borderRadius: 2 }}>
-              <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell><strong>Date</strong></TableCell>
-                  <TableCell><strong>Type</strong></TableCell>
-                  <TableCell><strong>Amount</strong></TableCell>
-                  <TableCell><strong>Reason</strong></TableCell>
-                  <TableCell><strong>Recorded By</strong></TableCell>
-                  <TableCell><strong>Action</strong></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {records.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      No records found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  records.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {records.length === 0 ? (
+              <Typography align="center" color="text.secondary" sx={{ py: 4 }}>
+                No records found
+              </Typography>
+            ) : (
+              records.map((record) => (
+                <Card key={record.id} elevation={1} sx={{ borderRadius: 2, border: '1px solid #eee' }}>
+                  <CardContent sx={{ p: '16px !important' }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                      <Typography variant="caption" color="text.secondary" fontWeight="medium">
                         {(() => {
                           try {
                             // Handle Firestore timestamp
@@ -516,7 +506,7 @@ const FinanceManagementPage = () => {
                               }
                               
                               if (date && !isNaN(date.getTime())) {
-                                return format(date, 'yyyy-MM-dd HH:mm');
+                                return format(date, 'MMM dd, yyyy • hh:mm a');
                               }
                             }
                             // Fallback to createdAt
@@ -533,56 +523,50 @@ const FinanceManagementPage = () => {
                               }
                               
                               if (date && !isNaN(date.getTime())) {
-                                return format(date, 'yyyy-MM-dd HH:mm');
+                                return format(date, 'MMM dd, yyyy • hh:mm a');
                               }
                             }
                             return 'N/A';
                           } catch (error) {
-                            console.error('Error formatting date:', error, record);
                             return 'N/A';
                           }
                         })()}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={record.type}
-                          color={record.type === 'OFFERING' ? 'success' : 'error'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>₹{record.amount?.toFixed(2) || '0.00'}</TableCell>
-                      <TableCell>{record.reason || '-'}</TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {(() => {
-                            // Try multiple possible field names for creator
-                            const creator = record.createdBy || 
-                                          record.createdByName || 
-                                          record.recordedBy || 
-                                          record.uploadedBy ||
-                                          record.userName ||
-                                          record.name ||
-                                          (record.createdByUid ? `User ${record.createdByUid.substring(0, 8)}` : null);
-                            return creator || 'Admin (Legacy)';
-                          })()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="small"
-                          color="error"
-                          startIcon={<DeleteIcon />}
-                          onClick={() => handleDeleteRecord(record.id)}
-                        >
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                      </Typography>
+                      <Chip
+                        label={record.type}
+                        color={record.type === 'OFFERING' ? 'success' : 'error'}
+                        size="small"
+                        sx={{ height: 20, fontSize: '0.7rem', fontWeight: 'bold' }}
+                      />
+                    </Box>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                       <Typography variant="h6" fontWeight="900" sx={{ color: record.type === 'OFFERING' ? '#2e7d32' : '#d32f2f' }}>
+                         ₹{parseFloat(record.amount || 0).toFixed(2)}
+                       </Typography>
+                       <IconButton size="small" color="error" onClick={() => handleDeleteRecord(record.id)} sx={{ bgcolor: 'error.main', color: 'white', '&:hover': { bgcolor: 'error.dark' }, width: 28, height: 28 }}>
+                         <DeleteIcon sx={{ fontSize: 16 }} />
+                       </IconButton>
+                    </Box>
+                    <Typography variant="body2" sx={{ mb: 1.5, color: 'text.primary', bgcolor: 'rgba(0,0,0,0.03)', p: 1, borderRadius: 1 }}>
+                      {record.reason || 'No reason provided'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                      Recorded by: {(() => {
+                        const creator = record.createdBy || 
+                                      record.createdByName || 
+                                      record.recordedBy || 
+                                      record.uploadedBy ||
+                                      record.userName ||
+                                      record.name ||
+                                      (record.createdByUid ? `User ${record.createdByUid.substring(0, 8)}` : null);
+                        return creator || 'Admin (Legacy)';
+                      })()}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </Box>
           </Box>
         )}
         </Box>

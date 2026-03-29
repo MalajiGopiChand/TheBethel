@@ -226,9 +226,9 @@ const AttendancePage = () => {
         const legacyAttendance = (student.attendance || []).filter((d) => d !== dateStr && !(typeof d === 'string' && d.startsWith(`${dateStr}::`)));
         const legacyAbsent = (student.absentDates || []).filter((d) => d !== dateStr && !(typeof d === 'string' && d.startsWith(`${dateStr}::`)));
         
-        // Push in identical format as Android App
-        if (status === 'present') legacyAttendance.push(`${dateStr}::${finalTeacherName}`);
-        if (status === 'absent') legacyAbsent.push(`${dateStr}::${finalTeacherName}`);
+        // Push strictly as "yyyy-MM-dd" to perfectly sync with Android App schema and avoid duplicates
+        if (status === 'present') legacyAttendance.push(dateStr);
+        if (status === 'absent') legacyAbsent.push(dateStr);
 
         const extractDateStr = (entry) => typeof entry === 'string' ? entry.split('::')[0] : entry;
         const sortedAttendance = [...legacyAttendance].sort((a, b) => extractDateStr(a).localeCompare(extractDateStr(b)));

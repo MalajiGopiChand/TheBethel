@@ -35,11 +35,11 @@ import {
   getDocs,
   getDoc,
   addDoc,
-  doc,
   query,
   where,
   orderBy,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
@@ -75,91 +75,63 @@ const OfferingsPage = () => {
   const [expenses, setExpenses] = useState([]);
 
   useEffect(() => {
-    fetchBalanceAndRecords();
-  }, [selectedPlace]);
+    setLoading(true);
+    
+    const recordsQuery = query(
+      collection(db, 'financial_records'),
+      where('place', '==', selectedPlace)
+    );
 
-  const fetchBalanceAndRecords = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch offerings
-      const offeringsQuery = query(
-        collection(db, 'financial_records'),
-        where('place', '==', selectedPlace),
-        where('type', '==', 'OFFERING')
-      );
-      const offeringsSnapshot = await getDocs(offeringsQuery);
-      const totalOfferings = offeringsSnapshot.docs.reduce((sum, doc) => {
-        return sum + (doc.data().amount || 0);
-      }, 0);
-      
-      // Fetch expenses
-      const expensesQuery = query(
-        collection(db, 'financial_records'),
-        where('place', '==', selectedPlace),
-        where('type', '==', 'EXPENSE')
-      );
-      const expensesSnapshot = await getDocs(expensesQuery);
-      const expensesData = expensesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      const totalExpenses = expensesData.reduce((sum, record) => {
-        return sum + (parseFloat(record.amount) || 0);
-      }, 0);
-      
-      setExpenses(expensesData);
-      
-      // Fetch all records for history
-      let recordsData = [];
+    const unsubscribe = onSnapshot(recordsQuery, (snapshot) => {
       try {
-        const allRecordsQuery = query(
-          collection(db, 'financial_records'),
-          where('place', '==', selectedPlace),
-          orderBy('timestamp', 'desc')
-        );
-        const allRecordsSnapshot = await getDocs(allRecordsQuery);
-        recordsData = allRecordsSnapshot.docs.map(doc => ({
+        const allRecords = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-      } catch (indexError) {
-        // Fallback: fetch without orderBy and sort in memory
-        if (indexError.message?.includes('index')) {
-          console.warn('Composite index missing, using fallback query');
-          const fallbackQuery = query(
-            collection(db, 'financial_records'),
-            where('place', '==', selectedPlace)
-          );
-          const fallbackSnapshot = await getDocs(fallbackQuery);
-          recordsData = fallbackSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })).sort((a, b) => {
-            const aTime = a.timestamp?.toDate?.() || a.timestamp || 0;
-            const bTime = b.timestamp?.toDate?.() || b.timestamp || 0;
-            return bTime - aTime;
-          });
-        } else {
-          throw indexError;
-        }
+
+        let totalOfferings = 0;
+        let totalExpenses = 0;
+        const expensesData = [];
+
+        allRecords.forEach(record => {
+          const amt = parseFloat(record.amount) || 0;
+          if (record.type === 'OFFERING') {
+            totalOfferings += amt;
+          } else if (record.type === 'EXPENSE') {
+            totalExpenses += amt;
+            expensesData.push(record);
+          }
+        });
+
+        const sortedRecords = allRecords.sort((a, b) => {
+          const aTime = a.timestamp?.toDate?.() || a.timestamp || a.createdAt?.toDate?.() || 0;
+          const bTime = b.timestamp?.toDate?.() || b.timestamp || b.createdAt?.toDate?.() || 0;
+          return bTime - aTime;
+        });
+
+        setExpenses(expensesData);
+        setBalance({
+          totalOfferings,
+          totalExpenses,
+          balance: totalOfferings - totalExpenses
+        });
+        setRecords(sortedRecords);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error processing finance snapshot:', error);
+        setLoading(false);
       }
-      
-      setBalance({
-        totalOfferings,
-        totalExpenses,
-        balance: totalOfferings - totalExpenses
-      });
-      setRecords(recordsData);
-    } catch (error) {
-      console.error('Error fetching finance data:', error);
-    } finally {
+    }, (error) => {
+      console.error('Snapshot listener error:', error);
       setLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, [selectedPlace]);
 
   const handleSubmitOffering = async (e) => {
     e.preventDefault();
+    if (loading) return;
     if (!offeringForm.amount || !offeringForm.reason) {
       notifyError('Missing fields', 'Please fill in all fields.');
       return;
@@ -188,7 +160,7 @@ const OfferingsPage = () => {
       await addDoc(collection(db, 'financial_records'), {
         type: 'OFFERING',
         place: selectedPlace,
-        amount: parseFloat(offeringForm.amount),
+        amount: String(offeringForm.amount),
         reason: offeringForm.reason,
         items: [],
         timestamp: serverTimestamp(),
@@ -198,7 +170,6 @@ const OfferingsPage = () => {
       });
       
       setOfferingForm({ amount: '', reason: '' });
-      fetchBalanceAndRecords();
       notifySuccess('Offering submitted', 'Offering recorded successfully.');
     } catch (error) {
       console.error('Error saving offering:', error);
@@ -210,6 +181,7 @@ const OfferingsPage = () => {
 
   const handleSubmitExpense = async (e) => {
     e.preventDefault();
+    if (loading) return;
     if (!expenseForm.amount || !expenseForm.reason) {
       notifyError('Missing fields', 'Please fill in all fields.');
       return;
@@ -244,7 +216,7 @@ const OfferingsPage = () => {
       await addDoc(collection(db, 'financial_records'), {
         type: 'EXPENSE',
         place: selectedPlace,
-        amount: expenseAmount,
+        amount: String(expenseForm.amount),
         reason: expenseForm.reason,
         items: [],
         timestamp: serverTimestamp(),
@@ -254,7 +226,6 @@ const OfferingsPage = () => {
       });
       
       setExpenseForm({ amount: '', reason: '' });
-      fetchBalanceAndRecords();
       notifySuccess('Expense submitted', 'Expense recorded successfully.');
     } catch (error) {
       console.error('Error saving expense:', error);
@@ -383,8 +354,8 @@ const OfferingsPage = () => {
                 rows={3}
                 sx={{ mb: 2 }}
               />
-              <Button type="submit" variant="contained" fullWidth>
-                Record Offering
+              <Button type="submit" variant="contained" fullWidth disabled={loading}>
+                {loading ? 'Recording...' : 'Record Offering'}
               </Button>
             </form>
           </Paper>
@@ -413,34 +384,23 @@ const OfferingsPage = () => {
                 rows={3}
                 sx={{ mb: 2 }}
               />
-              <Button type="submit" variant="contained" color="error" fullWidth>
-                Record Expense
+              <Button type="submit" variant="contained" color="error" fullWidth disabled={loading}>
+                {loading ? 'Recording...' : 'Record Expense'}
               </Button>
             </form>
           </Paper>
         ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell><strong>Date</strong></TableCell>
-                  <TableCell><strong>Type</strong></TableCell>
-                  <TableCell><strong>Amount</strong></TableCell>
-                  <TableCell><strong>Reason</strong></TableCell>
-                  <TableCell><strong>Recorded By</strong></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {records.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      No records found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  records.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {records.length === 0 ? (
+              <Typography align="center" color="text.secondary" sx={{ py: 4 }}>
+                No records found
+              </Typography>
+            ) : (
+              records.map((record) => (
+                <Card key={record.id} elevation={1} sx={{ borderRadius: 2 }}>
+                  <CardContent sx={{ p: '16px !important' }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                      <Typography variant="caption" color="text.secondary" fontWeight="medium">
                         {(() => {
                           try {
                             // Handle Firestore timestamp
@@ -459,7 +419,7 @@ const OfferingsPage = () => {
                               }
                               
                               if (date && !isNaN(date.getTime())) {
-                                return format(date, 'yyyy-MM-dd HH:mm');
+                                return format(date, 'MMM dd, yyyy • hh:mm a');
                               }
                             }
                             // Fallback to createdAt
@@ -476,46 +436,45 @@ const OfferingsPage = () => {
                               }
                               
                               if (date && !isNaN(date.getTime())) {
-                                return format(date, 'yyyy-MM-dd HH:mm');
+                                return format(date, 'MMM dd, yyyy • hh:mm a');
                               }
                             }
                             return 'N/A';
                           } catch (error) {
-                            console.error('Error formatting date:', error, record);
                             return 'N/A';
                           }
                         })()}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={record.type}
-                          color={record.type === 'OFFERING' ? 'success' : 'error'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>₹{record.amount?.toFixed(2) || '0.00'}</TableCell>
-                      <TableCell>{record.reason || '-'}</TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {(() => {
-                            // Try multiple possible field names for creator
-                            const creator = record.createdBy || 
-                                          record.createdByName || 
-                                          record.recordedBy || 
-                                          record.uploadedBy ||
-                                          record.userName ||
-                                          record.name ||
-                                          (record.createdByUid ? `User ${record.createdByUid.substring(0, 8)}` : null);
-                            return creator || 'Admin (Legacy)';
-                          })()}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                      </Typography>
+                      <Chip
+                        label={record.type}
+                        color={record.type === 'OFFERING' ? 'success' : 'error'}
+                        size="small"
+                        sx={{ height: 20, fontSize: '0.7rem', fontWeight: 'bold' }}
+                      />
+                    </Box>
+                    <Typography variant="h6" fontWeight="900" sx={{ mb: 1, color: record.type === 'OFFERING' ? '#2e7d32' : '#d32f2f' }}>
+                      ₹{parseFloat(record.amount || 0).toFixed(2)}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1.5, color: 'text.primary', bgcolor: 'rgba(0,0,0,0.03)', p: 1, borderRadius: 1 }}>
+                      {record.reason || 'No reason provided'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                      Recorded by: {(() => {
+                        const creator = record.createdBy || 
+                                      record.createdByName || 
+                                      record.recordedBy || 
+                                      record.uploadedBy ||
+                                      record.userName ||
+                                      record.name ||
+                                      (record.createdByUid ? `User ${record.createdByUid.substring(0, 8)}` : null);
+                        return creator || 'Admin (Legacy)';
+                      })()}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </Box>
         )}
       </Box>
     </Box>
