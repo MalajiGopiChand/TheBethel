@@ -261,39 +261,6 @@ const AdminDashboard = () => {
             </Alert>
           )}
 
-          {/* Quick actions row */}
-          <Box
-            className="page-card-enter"
-            sx={{
-              mb: 3,
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 1.5,
-              alignItems: 'center',
-            }}
-          >
-            <Chip
-              icon={<DashboardIcon />}
-              label="Today’s snapshot"
-              color="primary"
-              variant="filled"
-              sx={{ borderRadius: 999 }}
-            />
-            <Chip
-              icon={<AttendanceIcon />}
-              label="Mark Students Attendance"
-              variant="outlined"
-              sx={{ borderRadius: 999 }}
-              onClick={() => setCurrentTab(1)}
-            />
-            <Chip
-              icon={<ManageIcon />}
-              label="Manage Students Details"
-              variant="outlined"
-              sx={{ borderRadius: 999 }}
-              onClick={() => setCurrentTab(2)}
-            />
-          </Box>
 
           {/* Render the selected tab with animation */}
           {renderTabContent()}
