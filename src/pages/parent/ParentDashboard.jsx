@@ -270,7 +270,7 @@ const ParentDashboard = () => {
         className="page-card-enter"
         sx={{
           position: 'fixed',
-          bottom: 'calc(16px + env(safe-area-inset-bottom))',
+          bottom: 16,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,
