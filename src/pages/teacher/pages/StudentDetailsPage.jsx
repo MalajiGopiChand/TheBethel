@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box, Paper, Typography, Button, Card, CardContent, CircularProgress,
   TextField, Grid, Chip, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Alert, InputAdornment, IconButton
+  TableHead, TableRow, Alert, InputAdornment, IconButton, useTheme, useMediaQuery, Stack
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -19,6 +19,8 @@ import { db } from '../../../config/firebase';
 
 const StudentDetailsPage = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Logic: Get ID from URL, or null if empty
@@ -231,19 +233,19 @@ const StudentDetailsPage = () => {
                 </Typography>
                 <Grid container spacing={2} sx={{ mt: 1 }}>
                   <Grid item xs={6}>
-                     <Paper elevation={0} sx={{ p: 2, bgcolor: '#f0fdf4', textAlign: 'center', borderRadius: 2 }}>
+                     <Paper elevation={0} sx={{ p: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(76,175,80,0.1)' : '#f0fdf4', textAlign: 'center', borderRadius: 2 }}>
                         <Typography variant="caption" color="text.secondary">Dollar Points</Typography>
                         <Typography variant="h4" color="success.main" fontWeight="bold">${student.dollarPoints}</Typography>
                      </Paper>
                   </Grid>
                   <Grid item xs={6}>
-                     <Paper elevation={0} sx={{ p: 2, bgcolor: '#fff7ed', textAlign: 'center', borderRadius: 2 }}>
+                     <Paper elevation={0} sx={{ p: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,152,0,0.1)' : '#fff7ed', textAlign: 'center', borderRadius: 2 }}>
                         <Typography variant="caption" color="text.secondary">Streak</Typography>
                         <Typography variant="h4" color="warning.main" fontWeight="bold">{student.currentStreak}🔥</Typography>
                      </Paper>
                   </Grid>
                   <Grid item xs={12}>
-                     <Box sx={{ mt: 1, p: 2, bgcolor: '#f8fafc', borderRadius: 2 }}>
+                     <Box sx={{ mt: 1, p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
                         <Grid container>
                             <Grid item xs={6}>
                                 <Typography variant="caption">Attendance</Typography>
@@ -270,15 +272,34 @@ const StudentDetailsPage = () => {
                 </Typography>
                 {rewards.length === 0 ? (
                   <Typography color="text.secondary" sx={{ mt: 2, textAlign: 'center', py: 4 }}>No rewards recorded yet</Typography>
+                ) : isMobile ? (
+                  <Stack spacing={2} sx={{ mt: 2 }}>
+                    {rewards.map((reward, index) => (
+                      <Card key={index} variant="outlined" sx={{ borderRadius: 2, bgcolor: 'background.default' }}>
+                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                          <Box display="flex" justifyContent="space-between" mb={1}>
+                            <Typography variant="caption" color="text.secondary">{reward.date || 'N/A'}</Typography>
+                            <Typography fontWeight="bold" color="success.main">+${reward.dollars}</Typography>
+                          </Box>
+                          <Typography variant="body2" sx={{ mb: 1.5, wordBreak: 'break-word' }}>
+                            {reward.reason || '-'}
+                          </Typography>
+                          <Box display="flex" justifyContent="flex-end">
+                            <Chip label={reward.teacher || 'Unknown'} size="small" variant="outlined" />
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Stack>
                 ) : (
                   <TableContainer sx={{ maxHeight: 400 }}>
                     <Table stickyHeader size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell>Date</TableCell>
-                          <TableCell>Amount</TableCell>
-                          <TableCell>Reason</TableCell>
-                          <TableCell>Teacher</TableCell>
+                          <TableCell sx={{ bgcolor: 'background.paper' }}>Date</TableCell>
+                          <TableCell sx={{ bgcolor: 'background.paper' }}>Amount</TableCell>
+                          <TableCell sx={{ bgcolor: 'background.paper' }}>Reason</TableCell>
+                          <TableCell sx={{ bgcolor: 'background.paper' }}>Teacher</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>

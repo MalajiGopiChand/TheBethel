@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
-import { lightTheme } from './utils/theme';
+import { ThemeContextProvider } from './contexts/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import './styles/animations.css';
 import { registerPushTokenForUser, listenForForegroundPushMessages } from './services/notificationService';
@@ -15,11 +15,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <BrowserRouter future={{ v7_startTransition: true }}>
         <AuthProvider>
-          <ThemeProvider theme={lightTheme}>
+          <ThemeContextProvider>
             <CssBaseline />
             <PushBootstrap />
             <App />
-          </ThemeProvider>
+          </ThemeContextProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

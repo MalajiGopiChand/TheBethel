@@ -235,13 +235,16 @@ const AdminDashboard = () => {
                   disabled={loading}
                   sx={{
                     minWidth: 'auto',
-                    p: 1,
-                    color: '#000',
+                    p: '6px 12px',
+                    color: '#d32f2f',
                     borderRadius: 2,
-                    bgcolor: 'rgba(15,23,42,0.04)'
+                    bgcolor: 'rgba(211,47,47,0.08)',
+                    fontWeight: 'bold',
+                    fontSize: '0.8rem'
                   }}
+                  startIcon={!loading && <LogoutIcon sx={{ width: 18, height: 18 }} />}
                 >
-                  {loading ? '' : (currentUser?.name?.split(' ')[0] || 'Admin')}
+                  {loading ? <CircularProgress size={16} color="inherit" /> : 'Logout'}
                 </Button>
               </Tooltip>
             </Box>

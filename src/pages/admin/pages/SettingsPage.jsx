@@ -18,28 +18,14 @@ import {
   DarkMode as DarkModeIcon
 } from '@mui/icons-material';
 import { handleBackNavigation } from '../../../utils/navigation';
+import { useAppTheme } from '../../../contexts/ThemeContext';
 
 const SettingsPage = () => {
   const navigate = useNavigate();
-  const [darkMode, setDarkMode] = React.useState(false);
+  const { isDarkMode, toggleTheme } = useAppTheme();
   
   const handleBack = () => {
     handleBackNavigation(navigate);
-  };
-
-  // Load theme preference from localStorage
-  React.useEffect(() => {
-    const savedTheme = localStorage.getItem('themePreference');
-    if (savedTheme === 'dark') {
-      setDarkMode(true);
-    }
-  }, []);
-
-  const handleThemeChange = (event) => {
-    const newDarkMode = event.target.checked;
-    setDarkMode(newDarkMode);
-    localStorage.setItem('themePreference', newDarkMode ? 'dark' : 'light');
-    // You can also trigger a theme change event here if needed
   };
 
   return (
@@ -68,8 +54,8 @@ const SettingsPage = () => {
             <FormControlLabel
               control={
                 <Switch
-                  checked={darkMode}
-                  onChange={handleThemeChange}
+                  checked={isDarkMode}
+                  onChange={toggleTheme}
                   color="primary"
                 />
               }
@@ -97,7 +83,7 @@ const SettingsPage = () => {
               Version: 1.0.0
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              School Management System - The Bethel Church
+              Sunday School Management - The Bethel Church
             </Typography>
           </CardContent>
         </Card>

@@ -311,17 +311,17 @@ const TeacherAttendancePage = () => {
         ) : filteredReports.length === 0 ? (
           <Typography color="text.secondary">No reports found.</Typography>
         ) : (
-          <Stack spacing={1.5}>
+          <Stack spacing={2}>
             {filteredReports.map((report) => (
-              <Card key={report.id} variant="outlined">
-                <CardContent sx={{ py: '12px !important' }}>
-                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2}>
+              <Card key={report.id} variant="outlined" sx={{ borderRadius: 2 }}>
+                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
                     <Box>
-                      <Typography fontWeight="bold">{report.teacherName || 'Teacher'}</Typography>
+                      <Typography fontWeight="bold" variant="h6">{report.teacherName || 'Teacher'}</Typography>
                       <Typography variant="body2" color="text.secondary">
                         Class: {report.className || '-'} • Place: {report.teachingPlace || '-'}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
                         {formatDateTime(report.createdAt)}
                       </Typography>
                     </Box>
@@ -336,34 +336,34 @@ const TeacherAttendancePage = () => {
                       ) : null}
                     </Box>
                   </Box>
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="body2" fontWeight="bold">
+                  <Box sx={{ mt: 2, bgcolor: 'background.default', p: 1.5, borderRadius: 2 }}>
+                    <Typography variant="body2" fontWeight="bold" color="primary">
                       Lesson Topics
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ wordBreak: 'break-word', mt: 0.5 }}>
                       {report.lessonTopicsCovered || '-'}
                     </Typography>
                   </Box>
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="body2" fontWeight="bold">
+                  <Box sx={{ mt: 1.5, bgcolor: 'background.default', p: 1.5, borderRadius: 2 }}>
+                    <Typography variant="body2" fontWeight="bold" color="secondary">
                       Teaching Methods
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ wordBreak: 'break-word', mt: 0.5 }}>
                       {report.teachingMethodsUsed || '-'}
                     </Typography>
                   </Box>
-                  <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                     {isAdmin && (
-                      <IconButton size="small" onClick={() => handleSetPoints(report)}>
-                        <PointsIcon fontSize="small" />
-                      </IconButton>
+                      <Button size="small" variant="outlined" startIcon={<PointsIcon />} onClick={() => handleSetPoints(report)}>
+                        Points
+                      </Button>
                     )}
-                    <IconButton size="small" onClick={() => handleOpenEdit(report)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(report)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                    <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => handleOpenEdit(report)}>
+                      Edit
+                    </Button>
+                    <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => handleDelete(report)}>
+                      Delete
+                    </Button>
                   </Box>
                 </CardContent>
               </Card>

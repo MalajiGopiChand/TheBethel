@@ -17,7 +17,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   IconButton,
   Container,
   Dialog,
@@ -284,52 +283,61 @@ const DollarsGivingPage = () => {
                   <React.Fragment key={student.id}>
                     <ListItem 
                       sx={{ 
-                        bgcolor: 'white',
+                        bgcolor: 'background.paper',
                         transition: 'background-color 0.3s',
-                        '&:hover': { bgcolor: 'grey.50' }
+                        '&:hover': { bgcolor: 'action.hover' },
+                        display: 'flex',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        alignItems: isMobile ? 'stretch' : 'center',
+                        gap: isMobile ? 2 : 0,
+                        py: 2
                       }}
                     >
-                      <Avatar 
-                        sx={{ 
-                          bgcolor: theme.palette.primary.main,
-                          width: 40, height: 40, mr: 2, fontSize: '0.9rem'
-                        }}
-                      >
-                        {student.name.charAt(0)}
-                      </Avatar>
-                      
-                      <ListItemText 
-                        primary={
-                          <Typography variant="subtitle1" fontWeight="bold">
-                            {student.name}
-                          </Typography>
-                        }
-                        secondary={`${student.studentId} • ${student.location || student.place || 'No Location'} • Current: $${dollarPoints}`}
-                      />
-                      
-                      <ListItemSecondaryAction>
-                        <Button
-                          variant="contained"
-                          startIcon={<DollarIcon />}
-                          onClick={() => handleOpenDialog(student)}
-                          disabled={!isSunday}
-                          size="small"
-                          sx={{
-                            bgcolor: 'primary.main',
-                            color: 'white',
-                            textTransform: 'none',
-                            '&:hover': {
-                              bgcolor: 'primary.dark',
-                            },
-                            '&:disabled': {
-                              bgcolor: 'grey.300',
-                              color: 'grey.500'
-                            }
+                      <Box display="flex" alignItems="center" flexGrow={1} width={isMobile ? '100%' : 'auto'}>
+                        <Avatar 
+                          sx={{ 
+                            bgcolor: theme.palette.primary.main,
+                            width: 48, height: 48, mr: 2, fontSize: '1.2rem', fontWeight: 'bold'
                           }}
                         >
-                          {isSunday ? 'Give Reward' : 'Only on Sundays'}
-                        </Button>
-                      </ListItemSecondaryAction>
+                          {student.name.charAt(0)}
+                        </Avatar>
+                        
+                        <ListItemText 
+                          primary={
+                            <Typography variant="subtitle1" fontWeight="bold">
+                              {student.name}
+                            </Typography>
+                          }
+                          secondary={`${student.studentId} • ${student.location || student.place || 'No Location'} • Current: $${dollarPoints}`}
+                        />
+                      </Box>
+                      
+                      <Button
+                        variant="contained"
+                        startIcon={<DollarIcon />}
+                        onClick={() => handleOpenDialog(student)}
+                        disabled={!isSunday}
+                        size={isMobile ? "medium" : "small"}
+                        fullWidth={isMobile}
+                        sx={{
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          textTransform: 'none',
+                          fontWeight: 'bold',
+                          borderRadius: 2,
+                          py: isMobile ? 1 : undefined,
+                          '&:hover': {
+                            bgcolor: 'primary.dark',
+                          },
+                          '&:disabled': {
+                            bgcolor: 'action.disabledBackground',
+                            color: 'action.disabled'
+                          }
+                        }}
+                      >
+                        {isSunday ? 'Give Reward' : 'Only on Sundays'}
+                      </Button>
                     </ListItem>
                     {index < filteredStudents.length - 1 && <Divider component="li" />}
                   </React.Fragment>

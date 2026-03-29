@@ -7,7 +7,7 @@ import {
   Grid, IconButton, Menu, MenuItem as ContextMenuItem, Dialog,
   DialogTitle, DialogContent, DialogActions, List, ListItem, 
   ListItemText, ListItemSecondaryAction, Fade, Grow, Zoom,
-  InputAdornment, Avatar, useTheme, Card, CardContent
+  InputAdornment, Avatar, useTheme, Card, CardContent, useMediaQuery, Stack
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -40,6 +40,7 @@ const adminEmails = ["gop1@gmail.com", "premkumartenali@gmail.com", "admin@gmail
 const DollarHistoryPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const handleBack = () => {
     handleBackNavigation(navigate);
@@ -346,65 +347,112 @@ const DollarHistoryPage = () => {
 
         {/* 4. Data Table */}
         <Fade in={!loading}>
-          <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 3, border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+          <Box>
             {loading ? (
-               <Box p={8} display="flex" justifyContent="center"><CircularProgress /></Box>
+               <Box p={4} display="flex" justifyContent="center"><CircularProgress /></Box>
             ) : filteredData.length === 0 ? (
                <Box p={6} textAlign="center">
                  <Typography variant="h6" color="text.secondary">No records found matching your filters.</Typography>
                </Box>
-            ) : (
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Date</TableCell>
-                    <TableCell sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Student</TableCell>
-                    <TableCell sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Amount</TableCell>
-                    <TableCell sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Reason</TableCell>
-                    <TableCell sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Teacher</TableCell>
-                    {isAdmin && <TableCell align="right" sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Actions</TableCell>}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredData.map((row) => (
-                    <TableRow key={row.uniqueId} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                      <TableCell sx={{ color: 'text.secondary' }}>{row.date}</TableCell>
-                      <TableCell>
+            ) : isMobile ? (
+              <Stack spacing={2}>
+                {filteredData.map((row) => (
+                  <Card key={row.uniqueId} elevation={0} sx={{ borderRadius: 3, border: '1px solid rgba(0,0,0,0.08)' }}>
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                      <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
                         <Box>
-                          <Typography variant="subtitle2" fontWeight="bold">{row.studentName}</Typography>
-                          <Box display="flex" gap={1} mt={0.5}>
-                            <Chip label={row.classType} size="small" sx={{ height: 20, fontSize: '0.65rem', bgcolor: 'grey.100' }} />
-                            <Chip label={row.location} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />
-                          </Box>
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            {row.studentName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            {row.date}
+                          </Typography>
                         </Box>
-                      </TableCell>
-                      <TableCell>
                         <Chip 
-                          icon={<DollarIcon style={{ color: 'white' }} />} 
+                          icon={<DollarIcon style={{ color: 'white', width: 16 }} />} 
                           label={row.dollars} 
                           size="small" 
-                          sx={{ bgcolor: '#4CAF50', color: 'white', fontWeight: 'bold', minWidth: 60 }} 
+                          sx={{ bgcolor: '#4CAF50', color: 'white', fontWeight: 'bold' }} 
                         />
-                      </TableCell>
-                      <TableCell sx={{ maxWidth: 200 }}>
-                        <Typography variant="body2" noWrap title={row.reason}>{row.reason}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={row.teacher} size="small" variant="outlined" avatar={<Avatar sx={{ width: 16, height: 16, fontSize: '0.6rem' }}>{row.teacher[0]}</Avatar>} />
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell align="right">
-                          <IconButton size="small" onClick={(e) => { setAnchorEl(e.currentTarget); setSelectedReward(row); }}>
+                      </Box>
+                      
+                      <Box display="flex" gap={1} mb={2}>
+                        <Chip label={row.classType} size="small" sx={{ height: 22, fontSize: '0.7rem', bgcolor: 'grey.100' }} />
+                        <Chip label={row.location} size="small" variant="outlined" sx={{ height: 22, fontSize: '0.7rem' }} />
+                      </Box>
+                      
+                      <Box bgcolor="grey.50" p={1.5} borderRadius={2} mb={1.5}>
+                        <Typography variant="body2" color="text.secondary" fontWeight="bold">Reason</Typography>
+                        <Typography variant="body2">{row.reason}</Typography>
+                      </Box>
+                      
+                      <Box display="flex" justifyContent="space-between" alignItems="center" pt={1} borderTop="1px solid rgba(0,0,0,0.04)">
+                        <Chip label={row.teacher} size="small" variant="text" avatar={<Avatar sx={{ width: 18, height: 18, fontSize: '0.65rem' }}>{row.teacher[0]}</Avatar>} />
+                        
+                        {isAdmin && (
+                          <IconButton size="small" onClick={(e) => { setAnchorEl(e.currentTarget); setSelectedReward(row); }} sx={{ bgcolor: 'rgba(0,0,0,0.04)' }}>
                             <MoreIcon fontSize="small" />
                           </IconButton>
-                        </TableCell>
-                      )}
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Stack>
+            ) : (
+              <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 3, border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Date</TableCell>
+                      <TableCell sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Student</TableCell>
+                      <TableCell sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Amount</TableCell>
+                      <TableCell sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Reason</TableCell>
+                      <TableCell sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Teacher</TableCell>
+                      {isAdmin && <TableCell align="right" sx={{ bgcolor: '#fcfcfc', fontWeight: 'bold' }}>Actions</TableCell>}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {filteredData.map((row) => (
+                      <TableRow key={row.uniqueId} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                        <TableCell sx={{ color: 'text.secondary' }}>{row.date}</TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="subtitle2" fontWeight="bold">{row.studentName}</Typography>
+                            <Box display="flex" gap={1} mt={0.5}>
+                              <Chip label={row.classType} size="small" sx={{ height: 20, fontSize: '0.65rem', bgcolor: 'grey.100' }} />
+                              <Chip label={row.location} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            icon={<DollarIcon style={{ color: 'white' }} />} 
+                            label={row.dollars} 
+                            size="small" 
+                            sx={{ bgcolor: '#4CAF50', color: 'white', fontWeight: 'bold', minWidth: 60 }} 
+                          />
+                        </TableCell>
+                        <TableCell sx={{ maxWidth: 200 }}>
+                          <Typography variant="body2" noWrap title={row.reason}>{row.reason}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip label={row.teacher} size="small" variant="outlined" avatar={<Avatar sx={{ width: 16, height: 16, fontSize: '0.6rem' }}>{row.teacher[0]}</Avatar>} />
+                        </TableCell>
+                        {isAdmin && (
+                          <TableCell align="right">
+                            <IconButton size="small" onClick={(e) => { setAnchorEl(e.currentTarget); setSelectedReward(row); }}>
+                              <MoreIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             )}
-          </TableContainer>
+          </Box>
         </Fade>
       </Box>
 
