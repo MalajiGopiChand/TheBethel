@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { lightTheme, darkTheme } from '../utils/theme';
 
@@ -19,23 +20,28 @@ export const ThemeContextProvider = ({ children }) => {
     }
   });
 
+  const location = useLocation();
+  const forceLightMode = location.pathname.startsWith('/teacher') || location.pathname.startsWith('/parent');
+  
+  const effectiveDarkMode = forceLightMode ? false : isDarkMode;
+
   useEffect(() => {
     localStorage.setItem('themePreference', isDarkMode ? 'dark' : 'light');
-    if (isDarkMode) {
+    if (effectiveDarkMode) {
       document.documentElement.classList.add('dark-mode');
     } else {
       document.documentElement.classList.remove('dark-mode');
     }
-  }, [isDarkMode]);
+  }, [isDarkMode, effectiveDarkMode]);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
   };
 
-  const theme = useMemo(() => isDarkMode ? darkTheme : lightTheme, [isDarkMode]);
+  const theme = useMemo(() => effectiveDarkMode ? darkTheme : lightTheme, [effectiveDarkMode]);
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+    <ThemeContext.Provider value={{ isDarkMode, effectiveDarkMode, toggleTheme }}>
       <MuiThemeProvider theme={theme}>
         {children}
       </MuiThemeProvider>

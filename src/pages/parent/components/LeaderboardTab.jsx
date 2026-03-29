@@ -16,7 +16,6 @@ import {
   getDocs,
   query,
   orderBy,
-  limit,
   onSnapshot
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
@@ -45,8 +44,7 @@ const LeaderboardTab = ({ student }) => {
     setLoading(true);
     const leaderboardQuery = query(
       collection(db, 'students'),
-      orderBy('dollarPoints', 'desc'),
-      limit(50)
+      orderBy('dollarPoints', 'desc')
     );
     
     const unsubscribe = onSnapshot(leaderboardQuery, (snapshot) => {
@@ -171,40 +169,44 @@ const LeaderboardTab = ({ student }) => {
            Top Students
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {students.map((student, index) => {
-          const rank = index + 1;
-          return (
-            <Card key={student.id}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ minWidth: 50, textAlign: 'center' }}>
-                    <Typography variant="h5" fontWeight="bold" sx={{ color: getRankColor(rank) }}>
-                      {getRankIcon(rank)}
-                    </Typography>
-                    <Typography variant="caption">#{rank}</Typography>
+        {students
+          .filter(s => s.id !== (student?.id || student?.studentId))
+          .slice(0, 50)
+          .map((otherStudent) => {
+            // Re-calculate their actual global rank by finding them in the original complete array
+            const rank = students.findIndex(s => s.id === otherStudent.id) + 1;
+            return (
+              <Card key={otherStudent.id}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ minWidth: 50, textAlign: 'center' }}>
+                      <Typography variant="h5" fontWeight="bold" sx={{ color: getRankColor(rank) }}>
+                        {getRankIcon(rank)}
+                      </Typography>
+                      <Typography variant="caption">#{rank}</Typography>
+                    </Box>
+                    <Avatar sx={{ bgcolor: getRankColor(rank), color: rank <= 3 ? (rank === 1 ? '#000' : '#fff') : '#fff' }}>
+                      {otherStudent.name?.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6">{otherStudent.name}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {otherStudent.classType} • {otherStudent.location}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      icon={<TrophyIcon />}
+                      label={`$${otherStudent.dollarPoints || 0}`}
+                      sx={{ 
+                        bgcolor: getRankColor(rank), 
+                        color: rank <= 3 ? (rank === 1 ? '#000' : '#fff') : '#fff',
+                        fontWeight: 'bold' 
+                      }}
+                    />
                   </Box>
-                  <Avatar sx={{ bgcolor: getRankColor(rank), color: rank <= 3 ? (rank === 1 ? '#000' : '#fff') : '#fff' }}>
-                    {student.name.charAt(0).toUpperCase()}
-                  </Avatar>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6">{student.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {student.classType} • {student.location}
-                    </Typography>
-                  </Box>
-                  <Chip
-                    icon={<TrophyIcon />}
-                    label={`$${student.dollarPoints || 0}`}
-                    sx={{ 
-                      bgcolor: getRankColor(rank), 
-                      color: rank <= 3 ? (rank === 1 ? '#000' : '#fff') : '#fff',
-                      fontWeight: 'bold' 
-                    }}
-                  />
-                </Box>
-              </CardContent>
-            </Card>
-          );
+                </CardContent>
+              </Card>
+            );
         })}
       </Box>
     </Box>
