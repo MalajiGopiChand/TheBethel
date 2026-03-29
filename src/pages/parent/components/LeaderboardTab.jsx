@@ -48,7 +48,7 @@ const LeaderboardTab = ({ student }) => {
     );
     
     const unsubscribe = onSnapshot(leaderboardQuery, (snapshot) => {
-      const studentsData = snapshot.docs.map(doc => {
+      let studentsData = snapshot.docs.map(doc => {
         const data = doc.data();
         // Calculate dollar points from rewards array
         const calculatedPoints = calculateDollarPoints(data);
@@ -58,6 +58,12 @@ const LeaderboardTab = ({ student }) => {
           dollarPoints: calculatedPoints
         };
       });
+      
+      // Filter out students NOT in the child's specific area ("of only her area only")
+      const childLocation = student?.location || student?.place;
+      if (childLocation) {
+        studentsData = studentsData.filter(s => (s.location || s.place) === childLocation);
+      }
       
       // Sort by calculated points (in case dollarPoints field is outdated)
       studentsData.sort((a, b) => (b.dollarPoints || 0) - (a.dollarPoints || 0));
@@ -115,7 +121,7 @@ const LeaderboardTab = ({ student }) => {
   return (
     <Box>
       <Typography variant="h5" gutterBottom fontWeight="bold">
-        Leaderboard
+        Area Leaderboard
       </Typography>
 
       {/* Hero Widget for the Parent's Child */}
@@ -145,7 +151,7 @@ const LeaderboardTab = ({ student }) => {
                   <Box sx={{ flexGrow: 1 }}>
                     <Typography variant="h6" fontWeight="800">{childData.name}</Typography>
                     <Typography variant="body2" color="text.secondary" fontWeight="500">
-                      {childData.classType} • {childData.location}
+                      {childData.classType} • {childData.location || childData.place}
                     </Typography>
                   </Box>
                   <Chip
@@ -191,7 +197,7 @@ const LeaderboardTab = ({ student }) => {
                     <Box sx={{ flexGrow: 1 }}>
                       <Typography variant="h6">{otherStudent.name}</Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {otherStudent.classType} • {otherStudent.location}
+                        {otherStudent.classType} • {otherStudent.location || otherStudent.place}
                       </Typography>
                     </Box>
                     <Chip

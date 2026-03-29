@@ -12,9 +12,7 @@ export const ThemeContextProvider = ({ children }) => {
     try {
       const savedTheme = localStorage.getItem('themePreference');
       if (savedTheme === 'dark') return true;
-      if (savedTheme === 'light') return false;
-      // Default to dark mode if system prefers it, otherwise light
-      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return false; // Force light mode default
     } catch (e) {
       return false;
     }

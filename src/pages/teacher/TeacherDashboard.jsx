@@ -280,7 +280,7 @@ const TeacherDashboard = () => {
         className="page-card-enter"
         sx={{
           position: 'fixed',
-          bottom: 16,
+          bottom: 'calc(16px + env(safe-area-inset-bottom))',
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,
