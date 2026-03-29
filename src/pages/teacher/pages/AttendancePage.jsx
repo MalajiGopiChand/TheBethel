@@ -108,8 +108,13 @@ const AttendancePage = () => {
     // Backward compatibility: legacy arrays without teacher name
     const attendanceList = student.attendance || [];
     const absentDates = student.absentDates || [];
-    if (attendanceList.includes(dateStr)) return 'present';
-    if (absentDates.includes(dateStr)) return 'absent';
+    
+    const isPresent = attendanceList.some(v => v === dateStr || (typeof v === 'string' && v.startsWith(`${dateStr}::`)));
+    if (isPresent) return 'present';
+    
+    const isAbsent = absentDates.some(v => v === dateStr || (typeof v === 'string' && v.startsWith(`${dateStr}::`)));
+    if (isAbsent) return 'absent';
+    
     return null;
   };
 
@@ -160,7 +165,11 @@ const AttendancePage = () => {
   // Streak Logic
   const calculateStreak = (dates, today) => {
     if (dates.length === 0) return 0;
-    const sorted = dates.sort().reverse();
+    
+    // Extract exact date string ignoring the appended '::TeacherName'
+    const extractDateStr = (entry) => typeof entry === 'string' ? entry.split('::')[0] : entry;
+    
+    const sorted = dates.map(extractDateStr).sort().reverse();
     let streak = 0;
     for (let i = 0; i < sorted.length; i++) {
       if (sorted[i] <= today) {
@@ -214,12 +223,15 @@ const AttendancePage = () => {
 
         // Keep legacy arrays consistent (so old parts of app keep working)
         // by removing that date from both and re-adding based on status.
-        const legacyAttendance = (student.attendance || []).filter((d) => d !== dateStr);
-        const legacyAbsent = (student.absentDates || []).filter((d) => d !== dateStr);
-        if (status === 'present') legacyAttendance.push(dateStr);
-        if (status === 'absent') legacyAbsent.push(dateStr);
+        const legacyAttendance = (student.attendance || []).filter((d) => d !== dateStr && !(typeof d === 'string' && d.startsWith(`${dateStr}::`)));
+        const legacyAbsent = (student.absentDates || []).filter((d) => d !== dateStr && !(typeof d === 'string' && d.startsWith(`${dateStr}::`)));
+        
+        // Push in identical format as Android App
+        if (status === 'present') legacyAttendance.push(`${dateStr}::${finalTeacherName}`);
+        if (status === 'absent') legacyAbsent.push(`${dateStr}::${finalTeacherName}`);
 
-        const sortedAttendance = [...legacyAttendance].sort();
+        const extractDateStr = (entry) => typeof entry === 'string' ? entry.split('::')[0] : entry;
+        const sortedAttendance = [...legacyAttendance].sort((a, b) => extractDateStr(a).localeCompare(extractDateStr(b)));
         const newStreak = status === 'present' ? calculateStreak(sortedAttendance, dateStr) : 0;
 
         batch.update(studentRef, {

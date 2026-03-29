@@ -149,9 +149,8 @@ const HomeTab = () => {
             if (typeof s.date === 'number') sDate = s.date;
             else if (s.date.toDate) sDate = s.date.toDate().getTime();
           }
-          // Include schedules from up to 7 days ago so recent test schedules are still visible
-          const pastBuffer = 7 * 24 * 60 * 60 * 1000;
-          return sDate >= (today.getTime() - pastBuffer);
+          // Only show schedules from today onwards
+          return sDate >= today.getTime();
         }).sort((a,b) => {
           const ad = a.date?.toDate ? a.date.toDate().getTime() : (a.date || 0);
           const bd = b.date?.toDate ? b.date.toDate().getTime() : (b.date || 0);
@@ -209,14 +208,17 @@ const HomeTab = () => {
       const today = format(new Date(), 'yyyy-MM-dd');
       
       // Calculate today's attendance
-      const todayPresentCount = students.filter(student => 
-        (student.attendance || []).some(date => {
+      const todayPresentCount = students.filter(student => {
+        const byDate = student.attendanceByDate || {};
+        if (byDate[today]?.status === 'present') return true;
+
+        return (student.attendance || []).some(date => {
           if (typeof date === 'string') {
             return date.startsWith(today);
           }
           return false;
-        })
-      ).length;
+        });
+      }).length;
       
       const todayAbsentCount = totalStudents - todayPresentCount;
       const attendancePercentage = totalStudents > 0
