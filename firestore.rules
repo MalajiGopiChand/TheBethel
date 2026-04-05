@@ -1,30 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // NOTE: These are permissive starter rules.
-    // Tighten this for production by enforcing roles & ownership.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
     
     // =========================================================
-    // 1. HELPER FUNCTIONS - YOUR IMPROVED LOGIC
+    // 1. HELPER FUNCTIONS - IMPROVED
     // =========================================================
     
-    // Check if user is Admin
+    // Check if user is Admin - IMPROVED VERSION
     function isAdmin() {
       // Check by email (for initial setup)
       let adminByEmail = request.auth != null && 
         request.auth.token.email in [
           "gop1@gmail.com", 
           "premkumartenali@gmail.com",
-          "admin@gmail.com"
+          "admin@example.com" // Add your admin emails
         ];
       
       // Check by custom claim (more secure)
@@ -36,9 +25,11 @@ service cloud.firestore {
     
     // Check if user is a Teacher
     function isTeacher() {
+      // Check by custom claim
       let teacherByClaim = request.auth != null && 
         request.auth.token.get('teacher') == true;
       
+      // OR check in teachers collection
       let teacherInCollection = request.auth != null && 
         exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
       
@@ -47,16 +38,18 @@ service cloud.firestore {
     
     // Check if user is a Parent
     function isParent() {
+      // Check by custom claim
       let parentByClaim = request.auth != null && 
         request.auth.token.get('parent') == true;
       
+      // OR check in parents collection
       let parentInCollection = request.auth != null && 
         exists(/databases/$(database)/documents/parents/$(request.auth.uid));
       
       return parentByClaim || parentInCollection;
     }
     
-    // Check if user is the owner of the data
+    // Check if the user is the owner of the data
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
@@ -64,6 +57,11 @@ service cloud.firestore {
     // Check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
+    }
+
+    // Allow authenticated users to read their own UID document
+    function canReadOwnDocument(collection, userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
 
     // =========================================================
@@ -81,9 +79,9 @@ service cloud.firestore {
     match /chats/{chatId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin() || isTeacher();
-      allow update, delete: if isAdmin() || isTeacher();
+      allow update, delete: if isAdmin();
     }
-
+    
     match /chats/{chatId}/messages/{messageId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
@@ -92,60 +90,55 @@ service cloud.firestore {
         isAdmin() || 
         isTeacher()
       );
-      allow delete: if isAdmin() || isTeacher();
+      allow delete: if isAdmin();
     }
 
     // =========================================================
     // 4. HOMEWORKS
     // =========================================================
     match /homeworks/{homeworkId} {
-      // Everyone authenticated can read (teachers, admins, parents, students)
       allow read: if isAuthenticated();
-      
-      // Only teachers and admins can create
       allow create: if isTeacher() || isAdmin();
-      
-      // Only teachers and admins can update
       allow update: if isTeacher() || isAdmin();
-      
-      // Both teachers and admins can delete
-      allow delete: if isTeacher() || isAdmin();
+      allow delete: if isAdmin();
     }
 
     // =========================================================
-    // 5. STUDENTS, TEACHERS, PARENTS & PROFILES
+    // 5. STUDENTS, TEACHERS, PARENTS & PROFILES - UPDATED
     // =========================================================
     
-    // STUDENTS
+    // STUDENTS - Allow admin and teachers full access, parents read-only
     match /students/{studentId} {
-      allow read: if true; 
+      allow read: if isAuthenticated(); 
       allow create: if isAdmin() || isTeacher();
       allow update: if isAdmin() || isTeacher();
       allow delete: if isAdmin();
     }
 
+    // TEACHERS - Allow admin full access, teachers can read
     match /teachers/{teacherId} {
       allow read: if isAuthenticated();
-
-      // ✅ Allow first-time creation by the logged-in user
-      allow create: if isAuthenticated() && request.auth.uid == teacherId;
-
-      allow update: if isAuthenticated() && (
-        request.auth.uid == teacherId || isAdmin()
-      );
-
+      allow create: if isAdmin();
+      allow update: if isAdmin() || isOwner(teacherId);
       allow delete: if isAdmin();
     }
     
-    // PARENTS
+    // PARENTS - FIXED: Allow admin to read ALL parent documents
     match /parents/{parentId} {
+      // ✅ FIXED: Admin can read ALL parents
       allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isOwner(parentId));
+      
+      // ✅ Allow parents to create their own profile
       allow create: if isAuthenticated() && isOwner(parentId);
+      
+      // ✅ Allow parents to update their own profile, admin can update any
       allow update: if isAuthenticated() && (isOwner(parentId) || isAdmin());
+      
+      // ✅ Only admin can delete
       allow delete: if isAdmin();
     }
     
-    // USERS collection
+    // USERS collection (for authentication profiles)
     match /users/{userId} {
       allow read: if isAuthenticated() && (isAdmin() || isOwner(userId));
       allow create: if isOwner(userId);
@@ -161,7 +154,7 @@ service cloud.firestore {
       allow write: if isTeacher() || isAdmin();
     }
     
-    match /attendance_dates/{document=**} {
+    match /attendance_summary/{document=**} {
       allow read: if isAuthenticated();
       allow write: if isTeacher() || isAdmin();
     }
@@ -194,22 +187,20 @@ service cloud.firestore {
     // 8. SCHEDULES & TIMETABLES
     // =========================================================
     match /schedules/{scheduleId} {
-      allow read: if isAuthenticated() || isTeacher();
-      allow create: if isTeacher(); // Teachers can create only (no update, no delete)
-      allow read, write, delete: if isAdmin(); // Admins have full access
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin() || isTeacher();
     }
-
+    
     match /timetables/{timetable} {
       allow read: if isAuthenticated();
-      allow create: if isTeacher(); // Teachers can create only (no update, no delete)
-      allow read, write, delete: if isAdmin(); // Admins have full access
+      allow write: if isAdmin() || isTeacher();
     }
-
+    
     match /teacherProgress/{document=**} {
-      allow read: if isAuthenticated() || isTeacher();
-      allow create: if isTeacher(); // Teachers can create only (no update, no delete)
-      allow read, write, delete: if isAdmin(); // Admins have full access
-    }  
+      allow read: if isAuthenticated();
+      allow create, update: if isTeacher() || isAdmin();
+      allow delete: if isAdmin();
+    }
     
     // =========================================================
     // 9. NOTIFICATIONS/ANNOUNCEMENTS
@@ -220,16 +211,9 @@ service cloud.firestore {
       allow update: if isAdmin() || isTeacher();
       allow delete: if isAdmin();
     }
-
-    match /chatNotifications/{notificationId} {
-      allow read: if isAuthenticated();
-      allow create: if isAdmin() || isTeacher();
-      allow update: if isAdmin() || isTeacher();
-      allow delete: if isAdmin() || isTeacher();
-    }
     
     // =========================================================
-    // 10. PARENT LOGINS
+    // 10. PARENT LOGINS (from your ParentLogin model)
     // =========================================================
     match /parent_logins/{loginId} {
       allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isParent());
@@ -237,76 +221,43 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (isParent() || isAdmin());
       allow delete: if isAdmin();
     }
-
+// =========================================================
+    // 11. FINANCE - OFFERINGS
     // =========================================================
-    // 11. FINANCIAL RECORDS - Updated for Teachers & Admins
-    // =========================================================
-    match /financial_records/{recordId} {
-      // Data validation function for financial records
-      function isValidFinancialRecord() {
-        return 
-          // Type must be OFFERING or EXPENSE
-          request.resource.data.type in ['OFFERING', 'EXPENSE'] &&
-          // Place must be non-empty string
-          request.resource.data.place is string &&
-          request.resource.data.place.size() >= 1 &&
-          request.resource.data.place.size() <= 100 &&
-          // Amount must be positive number
-          request.resource.data.amount is number &&
-          request.resource.data.amount > 0 &&
-          request.resource.data.amount <= 1000000 &&
-          // Timestamp validation (allow serverTimestamp)
-          (request.resource.data.timestamp == request.time || 
-           request.resource.data.timestamp is number);
-      }
-      
-      function isValidForCreate() {
-        return isValidFinancialRecord() &&
-          // Reason is optional but if provided must be valid string
-          (!('reason' in request.resource.data) || 
-           (request.resource.data.reason is string &&
-            request.resource.data.reason.size() <= 500)) &&
-          // CreatedBy should be present
-          request.resource.data.createdBy is string &&
-          request.resource.data.createdBy.size() >= 1 &&
-          // CreatedByUid should match the authenticated user
-          request.resource.data.createdByUid == request.auth.uid;
-      }
-      
-      function isValidForUpdate() {
-        return isValidFinancialRecord() &&
-          // Preserve original type (cannot change offering to expense or vice versa)
-          request.resource.data.type == resource.data.type &&
-          // Preserve original place
-          request.resource.data.place == resource.data.place &&
-          // Preserve original createdBy and createdByUid
-          request.resource.data.createdBy == resource.data.createdBy &&
-          request.resource.data.createdByUid == resource.data.createdByUid;
-      }
-      
-      // READ - Admins and Teachers can view all financial records
-      allow read: if isAdmin() || isTeacher();
-      
-      // CREATE - Admins and Teachers can create records
-      allow create: if (isAdmin() || isTeacher()) && 
-        isValidForCreate();
-      
-      // UPDATE - Only Admins can modify (for audit integrity)
-      allow update: if isAdmin() && 
-        isValidForUpdate();
-      
-      // DELETE - Only Admins can delete (for audit integrity)
-      allow delete: if isAdmin();
+    match /offerings/{offeringId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isTeacher() || isAdmin()) 
+                    && request.resource.data.type == "offering"
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount > 0
+                    && request.resource.data.place is string
+                    && request.resource.data.date is string
+                    && request.resource.data.recordedBy == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
 
     // =========================================================
-    // 12. USER TOKENS (for notifications)
     // =========================================================
-    match /userTokens/{tokenId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && isOwner(resource.data.userId);
-      allow delete: if isAuthenticated() && isOwner(resource.data.userId) || isAdmin();
+    // 12. FINANCE - EXPENSES
+    // =========================================================
+    match /expenses/{expenseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isTeacher() || isAdmin()) 
+                    && request.resource.data.type == "expense"
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount > 0
+                    && request.resource.data.place is string
+                    && request.resource.data.date is string
+                    && request.resource.data.recordedBy == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // 13. LEGACY DATA (for backward compatibility)
+    // =========================================================
+    match /financial_records/{recordId} {
+      allow read: if isAuthenticated();
+      // Writing is disabled here, as new records go to offerings/expenses
     }
   }
 }

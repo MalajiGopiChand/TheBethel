@@ -88,68 +88,70 @@ const FinanceManagementPage = () => {
       
       // Fetch offerings
       const offeringsQuery = query(
-        collection(db, 'financial_records'),
-        where('place', '==', selectedPlace),
-        where('type', '==', 'OFFERING')
+        collection(db, 'offerings'),
+        where('place', '==', selectedPlace)
       );
       const offeringsSnapshot = await getDocs(offeringsQuery);
-      const totalOfferings = offeringsSnapshot.docs.reduce((sum, doc) => {
-        return sum + (doc.data().amount || 0);
+      const offeringsData = offeringsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        type: 'offering'
+      }));
+      const totalOfferings = offeringsData.reduce((sum, item) => {
+        const amt = item.amount;
+        return sum + (typeof amt === 'string' ? parseFloat(amt) : (amt || 0));
       }, 0);
       
       // Fetch expenses
       const expensesQuery = query(
-        collection(db, 'financial_records'),
-        where('place', '==', selectedPlace),
-        where('type', '==', 'EXPENSE')
+        collection(db, 'expenses'),
+        where('place', '==', selectedPlace)
       );
       const expensesSnapshot = await getDocs(expensesQuery);
-      const totalExpenses = expensesSnapshot.docs.reduce((sum, doc) => {
-        return sum + (doc.data().amount || 0);
+      const expensesData = expensesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        type: 'expense'
+      }));
+      const totalExpenses = expensesData.reduce((sum, item) => {
+        const amt = item.amount;
+        return sum + (typeof amt === 'string' ? parseFloat(amt) : (amt || 0));
       }, 0);
       
-      // Fetch all records for history
-      // Try with orderBy first, fallback to without if index is missing
-      let recordsData = [];
-      try {
-        const allRecordsQuery = query(
-          collection(db, 'financial_records'),
-          where('place', '==', selectedPlace),
-          orderBy('timestamp', 'desc')
-        );
-        const allRecordsSnapshot = await getDocs(allRecordsQuery);
-        recordsData = allRecordsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } catch (indexError) {
-        // Fallback: fetch without orderBy and sort in memory
-        if (indexError.message?.includes('index')) {
-          console.warn('Composite index missing, using fallback query');
-          const fallbackQuery = query(
-            collection(db, 'financial_records'),
-            where('place', '==', selectedPlace)
-          );
-          const fallbackSnapshot = await getDocs(fallbackQuery);
-          recordsData = fallbackSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })).sort((a, b) => {
-            const aTime = a.timestamp?.toDate?.() || a.timestamp || 0;
-            const bTime = b.timestamp?.toDate?.() || b.timestamp || 0;
-            return bTime - aTime;
-          });
-        } else {
-          throw indexError;
-        }
-      }
+      // Fetch legacy records
+      const legacyQuery = query(
+        collection(db, 'financial_records'),
+        where('place', '==', selectedPlace)
+      );
+      const legacySnapshot = await getDocs(legacyQuery);
+      const legacyData = legacySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Merge and sort for history
+      const allRecords = [...offeringsData, ...expensesData, ...legacyData].sort((a, b) => {
+        const aTime = a.timestamp?.toDate?.() || a.timestamp || 0;
+        const bTime = b.timestamp?.toDate?.() || b.timestamp || 0;
+        return bTime - aTime;
+      });
+
+      // Calculate totals including legacy
+      let finalOfferings = totalOfferings;
+      let finalExpenses = totalExpenses;
+      legacyData.forEach(r => {
+        const amt = typeof r.amount === 'string' ? parseFloat(r.amount) : (r.amount || 0);
+        const type = r.type ? r.type.toLowerCase() : '';
+        if (type === 'offering') finalOfferings += amt;
+        else if (type === 'expense') finalExpenses += amt;
+      });
       
       setBalance({
-        totalOfferings,
-        totalExpenses,
-        balance: totalOfferings - totalExpenses
+        totalOfferings: finalOfferings,
+        totalExpenses: finalExpenses,
+        balance: finalOfferings - finalExpenses
       });
-      setRecords(recordsData);
+      setRecords(allRecords);
     } catch (error) {
       console.error('Error fetching finance data:', error);
     } finally {
@@ -159,36 +161,44 @@ const FinanceManagementPage = () => {
 
   const handleSubmitOffering = async (e) => {
     e.preventDefault();
-    if (loading) return;
-    if (!offeringForm.amount || !offeringForm.reason) {
-      notifyError('Missing fields', 'Please fill in all fields.');
+    const amountValue = Number(offeringForm.amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      notifyError('Invalid amount', 'Please enter a valid number.');
       return;
     }
 
     try {
       setLoading(true);
+      console.log('DEBUG: Admin saving offering...', { amount: amountValue, place: selectedPlace });
       
       // For admins, use email as name (since admin emails are hardcoded)
       const creatorName = currentUser?.email || currentUser?.name || 'Admin';
       
-      await addDoc(collection(db, 'financial_records'), {
-        type: 'OFFERING',
+      const payload = {
+        type: 'offering',
         place: selectedPlace,
-        amount: String(offeringForm.amount),
+        amount: amountValue,
         reason: offeringForm.reason,
         items: [],
         timestamp: serverTimestamp(),
+        recordedBy: currentUser?.uid || 'admin-manual',
+        date: format(new Date(), 'yyyy-MM-dd'),
         createdBy: creatorName,
         createdByUid: currentUser?.uid || null,
         createdAt: serverTimestamp()
-      });
+      };
+
+      console.log('DEBUG: Admin payload:', payload);
+
+      const docRef = await addDoc(collection(db, 'offerings'), payload);
+      console.log('DEBUG: Success ID in offerings:', docRef.id);
       
       setOfferingForm({ amount: '', reason: '' });
       fetchBalanceAndRecords();
       notifySuccess('Offering submitted', 'Offering recorded successfully.');
     } catch (error) {
-      console.error('Error saving offering:', error);
-      notifyError('Offering failed', error.message || 'Failed to save offering.');
+      console.error('CRITICAL: Admin offering write failed:', error);
+      window.alert('CRITICAL ERROR: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -196,14 +206,13 @@ const FinanceManagementPage = () => {
 
   const handleSubmitExpense = async (e) => {
     e.preventDefault();
-    if (loading) return;
-    if (!expenseForm.amount || !expenseForm.reason) {
-      notifyError('Missing fields', 'Please fill in all fields.');
+    const amountValue = Number(expenseForm.amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      notifyError('Invalid amount', 'Please enter a valid number.');
       return;
     }
 
-    const expenseAmount = parseFloat(expenseForm.amount);
-    if (expenseAmount > balance.balance) {
+    if (amountValue > balance.balance) {
       notifyError('Insufficient funds', `Available: ₹${balance.balance.toFixed(2)}`);
       return;
     }
@@ -214,37 +223,43 @@ const FinanceManagementPage = () => {
       // For admins, use email as name (since admin emails are hardcoded)
       const creatorName = currentUser?.email || currentUser?.name || 'Admin';
       
-      await addDoc(collection(db, 'financial_records'), {
-        type: 'EXPENSE',
+      const payload = {
+        type: 'expense',
         place: selectedPlace,
-        amount: String(expenseForm.amount),
+        amount: amountValue,
         reason: expenseForm.reason,
         items: [],
         timestamp: serverTimestamp(),
+        recordedBy: currentUser?.uid || 'admin-manual',
+        date: format(new Date(), 'yyyy-MM-dd'),
         createdBy: creatorName,
         createdByUid: currentUser?.uid || null,
         createdAt: serverTimestamp()
-      });
+      };
+
+      await addDoc(collection(db, 'expenses'), payload);
       
       setExpenseForm({ amount: '', reason: '' });
       fetchBalanceAndRecords();
       notifySuccess('Expense submitted', 'Expense recorded successfully.');
     } catch (error) {
-      console.error('Error saving expense:', error);
+      console.error('CRITICAL ERROR:', error);
+      window.alert('CRITICAL ERROR: ' + (error.message || 'Unknown error'));
       notifyError('Expense failed', error.message || 'Failed to save expense.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteRecord = async (recordId) => {
+  const handleDeleteRecord = async (recordId, type) => {
     if (!window.confirm('Are you sure you want to delete this record?')) {
       return;
     }
 
     try {
       setLoading(true);
-      await deleteDoc(doc(db, 'financial_records', recordId));
+      const collectionName = type?.toLowerCase() === 'offering' ? 'offerings' : 'expenses';
+      await deleteDoc(doc(db, collectionName, recordId));
       fetchBalanceAndRecords();
       notifySuccess('Deleted', 'Record deleted successfully.');
     } catch (error) {
@@ -533,17 +548,17 @@ const FinanceManagementPage = () => {
                         })()}
                       </Typography>
                       <Chip
-                        label={record.type}
-                        color={record.type === 'OFFERING' ? 'success' : 'error'}
+                        label={record.type ? record.type.toUpperCase() : ''}
+                        color={record.type && record.type.toUpperCase() === 'OFFERING' ? 'success' : 'error'}
                         size="small"
                         sx={{ height: 20, fontSize: '0.7rem', fontWeight: 'bold' }}
                       />
                     </Box>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                       <Typography variant="h6" fontWeight="900" sx={{ color: record.type === 'OFFERING' ? '#2e7d32' : '#d32f2f' }}>
+                       <Typography variant="h6" fontWeight="900" sx={{ color: (record.type && record.type.toUpperCase() === 'OFFERING') ? '#2e7d32' : '#d32f2f' }}>
                          ₹{parseFloat(record.amount || 0).toFixed(2)}
                        </Typography>
-                       <IconButton size="small" color="error" onClick={() => handleDeleteRecord(record.id)} sx={{ bgcolor: 'error.main', color: 'white', '&:hover': { bgcolor: 'error.dark' }, width: 28, height: 28 }}>
+                       <IconButton size="small" color="error" onClick={() => handleDeleteRecord(record.id, record.type)} sx={{ bgcolor: 'error.main', color: 'white', '&:hover': { bgcolor: 'error.dark' }, width: 28, height: 28 }}>
                          <DeleteIcon sx={{ fontSize: 16 }} />
                        </IconButton>
                     </Box>

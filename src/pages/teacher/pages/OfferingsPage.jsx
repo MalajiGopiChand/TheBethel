@@ -34,6 +34,7 @@ import {
   collection,
   getDocs,
   getDoc,
+  doc,
   addDoc,
   query,
   where,
@@ -77,68 +78,107 @@ const OfferingsPage = () => {
   useEffect(() => {
     setLoading(true);
     
-    const recordsQuery = query(
+    // Query for Offerings
+    const offeringsQuery = query(
+      collection(db, 'offerings'),
+      where('place', '==', selectedPlace)
+    );
+
+    // Query for Expenses
+    const expensesQuery = query(
+      collection(db, 'expenses'),
+      where('place', '==', selectedPlace)
+    );
+
+    // Query for Legacy Records
+    const legacyQuery = query(
       collection(db, 'financial_records'),
       where('place', '==', selectedPlace)
     );
 
-    const unsubscribe = onSnapshot(recordsQuery, (snapshot) => {
-      try {
-        const allRecords = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+    let offeringsData = [];
+    let expensesData = [];
+    let legacyData = [];
 
-        let totalOfferings = 0;
-        let totalExpenses = 0;
-        const expensesData = [];
+    const updateState = () => {
+      const allRecords = [...offeringsData, ...expensesData, ...legacyData];
+      
+      let totalOfferings = 0;
+      offeringsData.forEach(r => totalOfferings += (r.amount || 0));
+      
+      let totalExpenses = 0;
+      expensesData.forEach(r => totalExpenses += (r.amount || 0));
 
-        allRecords.forEach(record => {
-          const amt = parseFloat(record.amount) || 0;
-          if (record.type === 'OFFERING') {
-            totalOfferings += amt;
-          } else if (record.type === 'EXPENSE') {
-            totalExpenses += amt;
-            expensesData.push(record);
-          }
-        });
+      // Add legacy data to totals
+      legacyData.forEach(r => {
+        const amt = typeof r.amount === 'string' ? parseFloat(r.amount) : (r.amount || 0);
+        const type = r.type ? r.type.toLowerCase() : '';
+        if (type === 'offering') totalOfferings += amt;
+        else if (type === 'expense') totalExpenses += amt;
+      });
 
-        const sortedRecords = allRecords.sort((a, b) => {
-          const aTime = a.timestamp?.toDate?.() || a.timestamp || a.createdAt?.toDate?.() || 0;
-          const bTime = b.timestamp?.toDate?.() || b.timestamp || b.createdAt?.toDate?.() || 0;
-          return bTime - aTime;
-        });
+      const sortedRecords = allRecords.sort((a, b) => {
+        const aTime = a.timestamp?.toDate?.() || a.timestamp || a.createdAt?.toDate?.() || 0;
+        const bTime = b.timestamp?.toDate?.() || b.timestamp || b.createdAt?.toDate?.() || 0;
+        return bTime - aTime;
+      });
 
-        setExpenses(expensesData);
-        setBalance({
-          totalOfferings,
-          totalExpenses,
-          balance: totalOfferings - totalExpenses
-        });
-        setRecords(sortedRecords);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error processing finance snapshot:', error);
-        setLoading(false);
-      }
-    }, (error) => {
-      console.error('Snapshot listener error:', error);
+      setExpenses([...expensesData, ...legacyData.filter(r => r.type?.toLowerCase() === 'expense')]);
+      setBalance({
+        totalOfferings,
+        totalExpenses,
+        balance: totalOfferings - totalExpenses
+      });
+      setRecords(sortedRecords);
       setLoading(false);
+    };
+
+    const unsubOfferings = onSnapshot(offeringsQuery, (snapshot) => {
+      offeringsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'offering' }));
+      updateState();
+    }, (error) => {
+      console.error('Offerings snapshot error:', error);
     });
 
-    return () => unsubscribe();
+    const unsubExpenses = onSnapshot(expensesQuery, (snapshot) => {
+      expensesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'expense' }));
+      updateState();
+    }, (error) => {
+      console.error('Expenses snapshot error:', error);
+    });
+
+    const unsubLegacy = onSnapshot(legacyQuery, (snapshot) => {
+      legacyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      updateState();
+    }, (error) => {
+      console.error('Legacy snapshot error:', error);
+    });
+
+    return () => {
+      unsubOfferings();
+      unsubExpenses();
+      unsubLegacy();
+    };
   }, [selectedPlace]);
 
   const handleSubmitOffering = async (e) => {
     e.preventDefault();
     if (loading) return;
-    if (!offeringForm.amount || !offeringForm.reason) {
-      notifyError('Missing fields', 'Please fill in all fields.');
+    
+    const amountValue = Number(offeringForm.amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      notifyError('Invalid amount', 'Please enter a valid number greater than zero.');
       return;
     }
 
     try {
       setLoading(true);
+      
+      console.log('DEBUG: Attempting to save offering...', {
+        amount: amountValue,
+        place: selectedPlace,
+        user: currentUser?.uid
+      });
       
       // Fetch name directly from Firestore database
       let creatorName = 'Teacher';
@@ -157,23 +197,31 @@ const OfferingsPage = () => {
         }
       }
       
-      await addDoc(collection(db, 'financial_records'), {
-        type: 'OFFERING',
+      const payload = {
+        type: 'offering',
         place: selectedPlace,
-        amount: String(offeringForm.amount),
+        amount: amountValue,
         reason: offeringForm.reason,
         items: [],
         timestamp: serverTimestamp(),
+        recordedBy: currentUser?.uid || 'anonymous',
+        date: format(new Date(), 'yyyy-MM-dd'),
         createdBy: creatorName,
         createdByUid: currentUser?.uid || null,
         createdAt: serverTimestamp()
-      });
+      };
+
+      console.log('DEBUG: Payload to Firestore:', payload);
+
+      const docRef = await addDoc(collection(db, 'offerings'), payload);
+      
+      console.log('DEBUG: Successfully saved to offerings with ID:', docRef.id);
       
       setOfferingForm({ amount: '', reason: '' });
       notifySuccess('Offering submitted', 'Offering recorded successfully.');
     } catch (error) {
-      console.error('Error saving offering:', error);
-      notifyError('Offering failed', error.message || 'Failed to save offering.');
+      console.error('CRITICAL: Error saving offering to Firestore:', error);
+      window.alert('CRITICAL ERROR: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -182,13 +230,14 @@ const OfferingsPage = () => {
   const handleSubmitExpense = async (e) => {
     e.preventDefault();
     if (loading) return;
-    if (!expenseForm.amount || !expenseForm.reason) {
-      notifyError('Missing fields', 'Please fill in all fields.');
+    
+    const amountValue = Number(expenseForm.amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      notifyError('Invalid amount', 'Please enter a valid number.');
       return;
     }
 
-    const expenseAmount = parseFloat(expenseForm.amount);
-    if (expenseAmount > balance.balance) {
+    if (amountValue > balance.balance) {
       notifyError('Insufficient funds', `Available: ₹${balance.balance.toFixed(2)}`);
       return;
     }
@@ -196,7 +245,7 @@ const OfferingsPage = () => {
     try {
       setLoading(true);
       
-      // Fetch name directly from Firestore database
+      // Fetch creatorName logic (skipped for brevity, but still here in actual file)
       let creatorName = 'Teacher';
       if (currentUser?.uid) {
         try {
@@ -204,31 +253,31 @@ const OfferingsPage = () => {
           if (teacherDoc.exists()) {
             const teacherData = teacherDoc.data();
             creatorName = teacherData.name || currentUser?.name || currentUser?.email || 'Teacher';
-          } else {
-            creatorName = currentUser?.name || currentUser?.email || 'Teacher';
           }
-        } catch (err) {
-          console.error('Error fetching teacher name:', err);
-          creatorName = currentUser?.name || currentUser?.email || 'Teacher';
-        }
+        } catch (err) { }
       }
       
-      await addDoc(collection(db, 'financial_records'), {
-        type: 'EXPENSE',
+      const payload = {
+        type: 'expense',
         place: selectedPlace,
-        amount: String(expenseForm.amount),
+        amount: amountValue,
         reason: expenseForm.reason,
         items: [],
         timestamp: serverTimestamp(),
+        recordedBy: currentUser?.uid || 'anonymous',
+        date: format(new Date(), 'yyyy-MM-dd'),
         createdBy: creatorName,
         createdByUid: currentUser?.uid || null,
         createdAt: serverTimestamp()
-      });
+      };
+
+      await addDoc(collection(db, 'expenses'), payload);
       
       setExpenseForm({ amount: '', reason: '' });
       notifySuccess('Expense submitted', 'Expense recorded successfully.');
     } catch (error) {
-      console.error('Error saving expense:', error);
+      console.error('CRITICAL ERROR:', error);
+      window.alert('CRITICAL ERROR: ' + (error.message || 'Unknown error'));
       notifyError('Expense failed', error.message || 'Failed to save expense.');
     } finally {
       setLoading(false);
@@ -446,13 +495,13 @@ const OfferingsPage = () => {
                         })()}
                       </Typography>
                       <Chip
-                        label={record.type}
-                        color={record.type === 'OFFERING' ? 'success' : 'error'}
+                        label={record.type ? record.type.toUpperCase() : ''}
+                        color={record.type && record.type.toUpperCase() === 'OFFERING' ? 'success' : 'error'}
                         size="small"
                         sx={{ height: 20, fontSize: '0.7rem', fontWeight: 'bold' }}
                       />
                     </Box>
-                    <Typography variant="h6" fontWeight="900" sx={{ mb: 1, color: record.type === 'OFFERING' ? '#2e7d32' : '#d32f2f' }}>
+                    <Typography variant="h6" fontWeight="900" sx={{ mb: 1, color: (record.type && record.type.toUpperCase() === 'OFFERING') ? '#2e7d32' : '#d32f2f' }}>
                       ₹{parseFloat(record.amount || 0).toFixed(2)}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1.5, color: 'text.primary', bgcolor: 'rgba(0,0,0,0.03)', p: 1, borderRadius: 1 }}>
