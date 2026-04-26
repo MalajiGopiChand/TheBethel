@@ -254,7 +254,7 @@ const OfferingsPage = () => {
             const teacherData = teacherDoc.data();
             creatorName = teacherData.name || currentUser?.name || currentUser?.email || 'Teacher';
           }
-        } catch (err) { }
+        } catch (err) { /* silent fail */ }
       }
       
       const payload = {

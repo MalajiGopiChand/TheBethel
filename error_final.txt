@@ -1,0 +1,3 @@
+C:\Users\Gopi\Downloads\projectB\website\src\pages\teacher\pages\OfferingsPage.jsx: line 257, col 23, Error - Empty block statement. (no-empty)
+
+1 problem
