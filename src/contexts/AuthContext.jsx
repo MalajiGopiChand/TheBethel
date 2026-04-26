@@ -145,7 +145,14 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null);
       
-      // For parents, verify student exists
+      // Create auth user
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Update display name
+      await updateProfile(user, { displayName: name });
+
+      // For parents, verify student exists (Now authenticated)
       if (role === UserRole.PARENT && studentRollNumber) {
         const studentsQuery = query(
           collection(db, 'students'),
@@ -157,13 +164,6 @@ export const AuthProvider = ({ children }) => {
           throw new Error('Student roll number not found. Please check with teacher.');
         }
       }
-
-      // Create auth user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Update display name
-      await updateProfile(user, { displayName: name });
 
       // Create user document in Firestore
       const userData = {

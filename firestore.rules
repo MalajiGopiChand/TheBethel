@@ -3,17 +3,17 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // =========================================================
-    // 1. HELPER FUNCTIONS - IMPROVED
+    // 1. HELPER FUNCTIONS
     // =========================================================
     
-    // Check if user is Admin - IMPROVED VERSION
+    // Check if user is Admin
     function isAdmin() {
       // Check by email (for initial setup)
       let adminByEmail = request.auth != null && 
         request.auth.token.email in [
           "gop1@gmail.com", 
           "premkumartenali@gmail.com",
-          "admin@example.com" // Add your admin emails
+          "admin@example.com"
         ];
       
       // Check by custom claim (more secure)
@@ -59,11 +59,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Allow authenticated users to read their own UID document
-    function canReadOwnDocument(collection, userId) {
-      return request.auth != null && request.auth.uid == userId;
-    }
-
     // =========================================================
     // 2. GLOBAL RULES
     // =========================================================
@@ -77,18 +72,21 @@ service cloud.firestore {
     // 3. CHATS & MESSAGES
     // =========================================================
     match /chats/{chatId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (isAdmin() || isTeacher());
       allow create: if isAdmin() || isTeacher();
       allow update, delete: if isAdmin();
+      
+      match /status/{statusDoc} {
+        allow read, write: if isAuthenticated() && (isAdmin() || isTeacher());
+      }
     }
     
     match /chats/{chatId}/messages/{messageId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && (isAdmin() || isTeacher());
+      allow create: if isAuthenticated() && (isAdmin() || isTeacher());
       allow update: if isAuthenticated() && (
         resource.data.senderId == request.auth.uid || 
-        isAdmin() || 
-        isTeacher()
+        isAdmin()
       );
       allow delete: if isAdmin();
     }
@@ -104,10 +102,10 @@ service cloud.firestore {
     }
 
     // =========================================================
-    // 5. STUDENTS, TEACHERS, PARENTS & PROFILES - UPDATED
+    // 5. STUDENTS, TEACHERS, PARENTS & PROFILES
     // =========================================================
     
-    // STUDENTS - Allow admin and teachers full access, parents read-only
+    // STUDENTS
     match /students/{studentId} {
       allow read: if isAuthenticated(); 
       allow create: if isAdmin() || isTeacher();
@@ -115,7 +113,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // TEACHERS - Allow admin full access, teachers can read
+    // TEACHERS
     match /teachers/{teacherId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin();
@@ -123,9 +121,9 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
-    // PARENTS - FIXED: Allow admin to read ALL parent documents
+    // PARENTS
     match /parents/{parentId} {
-      // ✅ FIXED: Admin can read ALL parents
+      // ✅ FIXED: Admin and Teachers can read ALL parents
       allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isOwner(parentId));
       
       // ✅ Allow parents to create their own profile
@@ -213,15 +211,20 @@ service cloud.firestore {
     }
     
     // =========================================================
-    // 10. PARENT LOGINS (from your ParentLogin model)
+    // 10. PARENT LOGINS
     // =========================================================
     match /parent_logins/{loginId} {
-      allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isParent());
-      allow create: if isAuthenticated() && isParent();
-      allow update: if isAuthenticated() && (isParent() || isAdmin());
+      allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isOwner(resource.data.parentId));
+      
+      // ✅ FIX: Allow authenticated users to create their first login record
+      // Using isParent() here would fail for new signups.
+      allow create: if isAuthenticated();
+      
+      allow update: if isAuthenticated() && (isAdmin() || isOwner(resource.data.parentId));
       allow delete: if isAdmin();
     }
-// =========================================================
+
+    // =========================================================
     // 11. FINANCE - OFFERINGS
     // =========================================================
     match /offerings/{offeringId} {
@@ -236,7 +239,6 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // =========================================================
     // =========================================================
     // 12. FINANCE - EXPENSES
     // =========================================================
@@ -257,7 +259,6 @@ service cloud.firestore {
     // =========================================================
     match /financial_records/{recordId} {
       allow read: if isAuthenticated();
-      // Writing is disabled here, as new records go to offerings/expenses
     }
   }
 }
