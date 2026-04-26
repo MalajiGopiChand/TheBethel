@@ -39,6 +39,7 @@ import TeacherAttendancePage from './pages/teacher/pages/TeacherAttendancePage';
 import TeacherProfilePage from './pages/teacher/pages/TeacherProfilePage';
 import { Box, CircularProgress } from '@mui/material';
 import GlobalNotificationListener from './components/GlobalNotificationListener';
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 function App() {
   const { currentUser, loading } = useAuth();
@@ -485,6 +486,7 @@ function App() {
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
+      <SpeedInsights />
     </Routes>
     </Box>
   );
