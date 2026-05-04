@@ -58,8 +58,10 @@ import { notifyError, notifySuccess } from '../../../services/notificationServic
 const getThisSunday = () => {
   const today = new Date();
   const day = today.getDay();
-  const diff = today.getDate() - day; // days to subtract to get Sunday
-  const sunday = new Date(today.setDate(diff));
+  // If today is Sunday (0), return today. Otherwise, skip to the next Sunday.
+  const diff = day === 0 ? 0 : 7 - day; 
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() + diff);
   sunday.setHours(0, 0, 0, 0);
   return sunday;
 };
@@ -333,6 +335,7 @@ const TimetablePage = () => {
               audience: timetableData.assignedPersonName,
               isImportant: false,
               type: 'SCHEDULE',
+              scheduleDate: timetableData.date,
               createdAt: serverTimestamp(),
               sender: currentUser?.name || 'Admin'
            };

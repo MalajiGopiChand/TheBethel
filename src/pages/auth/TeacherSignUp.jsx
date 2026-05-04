@@ -40,6 +40,8 @@ const TeacherSignUp = () => {
     clearError();
   }, []);
 
+  const [successMessage, setSuccessMessage] = useState('');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -49,10 +51,9 @@ const TeacherSignUp = () => {
 
     setLoading(true);
     clearError();
-
     try {
       await signUp(name, email, password, phone, UserRole.TEACHER);
-      navigate('/teacher/dashboard');
+      // Let App.jsx handle the routing based on currentUser.isVerified
     } catch (err) {
       // Error is handled by context
     } finally {
@@ -107,6 +108,12 @@ const TeacherSignUp = () => {
             {error && (
               <Alert severity="error" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={clearError}>
                 {error}
+              </Alert>
+            )}
+
+            {successMessage && (
+              <Alert severity="success" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={() => setSuccessMessage('')}>
+                {successMessage}
               </Alert>
             )}
 

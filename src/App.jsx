@@ -37,9 +37,11 @@ import TeacherProgressPage from './pages/teacher/pages/TeacherProgressPage';
 import TeacherLeaderboardPage from './pages/teacher/pages/TeacherLeaderboardPage';
 import TeacherAttendancePage from './pages/teacher/pages/TeacherAttendancePage';
 import TeacherProfilePage from './pages/teacher/pages/TeacherProfilePage';
+import PendingApprovalPage from './pages/auth/PendingApprovalPage';
 import { Box, CircularProgress } from '@mui/material';
 import GlobalNotificationListener from './components/GlobalNotificationListener';
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { isTeacherPendingAccess } from './utils/teacherVerification';
 
 function App() {
   const { currentUser, loading } = useAuth();
@@ -86,7 +88,7 @@ function App() {
                 currentUser.email === 'premkumartenali@gmail.com'
                   ? '/admin/dashboard'
                   : currentUser.role === UserRole.TEACHER
-                  ? '/teacher/dashboard'
+                  ? (isTeacherPendingAccess(currentUser) ? '/teacher/pending-approval' : '/teacher/dashboard')
                   : '/parent/dashboard'
               }
               replace
@@ -98,11 +100,11 @@ function App() {
       />
       <Route
         path="/auth/teacher/login"
-        element={currentUser ? <Navigate to="/teacher/dashboard" replace /> : <TeacherLogin />}
+        element={currentUser ? (isTeacherPendingAccess(currentUser) ? <Navigate to="/teacher/pending-approval" replace /> : <Navigate to="/teacher/dashboard" replace />) : <TeacherLogin />}
       />
       <Route
         path="/auth/teacher/signup"
-        element={currentUser ? <Navigate to="/teacher/dashboard" replace /> : <TeacherSignUp />}
+        element={currentUser ? (isTeacherPendingAccess(currentUser) ? <Navigate to="/teacher/pending-approval" replace /> : <Navigate to="/teacher/dashboard" replace />) : <TeacherSignUp />}
       />
       
       <Route
@@ -125,6 +127,8 @@ function App() {
             currentUser.email === 'gop1@gmail.com' || 
             currentUser.email === 'premkumartenali@gmail.com' ? (
               <Navigate to="/admin/dashboard" replace />
+            ) : isTeacherPendingAccess(currentUser) ? (
+              <Navigate to="/teacher/pending-approval" replace />
             ) : (
               <TeacherDashboard />
             )
@@ -138,6 +142,16 @@ function App() {
             >
               <CircularProgress />
             </Box>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/teacher/pending-approval"
+        element={
+          currentUser && currentUser.role === UserRole.TEACHER ? (
+            <PendingApprovalPage />
           ) : (
             <Navigate to="/" replace />
           )

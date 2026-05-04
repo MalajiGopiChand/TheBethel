@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // =========================================================
-    // 1. HELPER FUNCTIONS
+    // 1. HELPER FUNCTIONS - IMPROVED
     // =========================================================
     
     // Check if user is Admin
@@ -23,17 +23,18 @@ service cloud.firestore {
       return adminByEmail || adminByClaim;
     }
     
-    // Check if user is a Teacher
+    // Check if user is a Teacher (custom claim or explicitly approved in Firestore)
     function isTeacher() {
-      // Check by custom claim
       let teacherByClaim = request.auth != null && 
         request.auth.token.get('teacher') == true;
       
-      // OR check in teachers collection
-      let teacherInCollection = request.auth != null && 
-        exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+      let teacherPath = /databases/$(database)/documents/teachers/$(request.auth.uid);
+      let isApprovedTeacher = request.auth != null && exists(teacherPath) && (
+        get(teacherPath).data.isVerified == true ||
+        get(teacherPath).data.isApproved == true
+      );
       
-      return teacherByClaim || teacherInCollection;
+      return teacherByClaim || isApprovedTeacher;
     }
     
     // Check if user is a Parent
@@ -59,6 +60,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Allow authenticated users to read their own UID document
+    function canReadOwnDocument(collection, userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
     // =========================================================
     // 2. GLOBAL RULES
     // =========================================================
@@ -72,7 +78,7 @@ service cloud.firestore {
     // 3. CHATS & MESSAGES
     // =========================================================
     match /chats/{chatId} {
-      allow read: if isAuthenticated() && (isAdmin() || isTeacher());
+      allow read: if isAuthenticated();
       allow create: if isAdmin() || isTeacher();
       allow update, delete: if isAdmin();
       
@@ -82,11 +88,12 @@ service cloud.firestore {
     }
     
     match /chats/{chatId}/messages/{messageId} {
-      allow read: if isAuthenticated() && (isAdmin() || isTeacher());
-      allow create: if isAuthenticated() && (isAdmin() || isTeacher());
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
       allow update: if isAuthenticated() && (
         resource.data.senderId == request.auth.uid || 
-        isAdmin()
+        isAdmin() || 
+        isTeacher()
       );
       allow delete: if isAdmin();
     }
@@ -105,7 +112,7 @@ service cloud.firestore {
     // 5. STUDENTS, TEACHERS, PARENTS & PROFILES
     // =========================================================
     
-    // STUDENTS
+    // STUDENTS - Allow admin and teachers full access, parents read-only
     match /students/{studentId} {
       allow read: if isAuthenticated(); 
       allow create: if isAdmin() || isTeacher();
@@ -113,17 +120,21 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // TEACHERS
+    // TEACHERS - Allow admin full access, teachers can read
     match /teachers/{teacherId} {
       allow read: if isAuthenticated();
-      allow create: if isAdmin();
-      allow update: if isAdmin() || isOwner(teacherId);
+      allow create: if isAdmin() || (isAuthenticated() && isOwner(teacherId));
+      // Teachers may update their own profile but cannot change approval fields (only admin can).
+      allow update: if isAdmin() || (isOwner(teacherId) && 
+        request.resource.data.isVerified == resource.data.isVerified &&
+        request.resource.data.isApproved == resource.data.isApproved &&
+        request.resource.data.approvalState == resource.data.approvalState);
       allow delete: if isAdmin();
     }
     
-    // PARENTS
+    // PARENTS - FIXED: Allow admin to read ALL parent documents
     match /parents/{parentId} {
-      // ✅ FIXED: Admin and Teachers can read ALL parents
+      // ✅ FIXED: Admin can read ALL parents
       allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isOwner(parentId));
       
       // ✅ Allow parents to create their own profile
@@ -214,13 +225,9 @@ service cloud.firestore {
     // 10. PARENT LOGINS
     // =========================================================
     match /parent_logins/{loginId} {
-      allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isOwner(resource.data.parentId));
-      
-      // ✅ FIX: Allow authenticated users to create their first login record
-      // Using isParent() here would fail for new signups.
+      allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isParent() || isOwner(resource.data.parentId));
       allow create: if isAuthenticated();
-      
-      allow update: if isAuthenticated() && (isAdmin() || isOwner(resource.data.parentId));
+      allow update: if isAuthenticated() && (isAdmin() || isParent() || isOwner(resource.data.parentId));
       allow delete: if isAdmin();
     }
 

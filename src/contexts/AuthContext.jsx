@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -10,6 +10,7 @@ import {
 import { doc, getDoc, setDoc, query, where, getDocs, collection } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { UserRole } from '../types';
+import { mapTeacherDocToCurrentUser } from '../utils/teacherVerification';
 
 const AuthContext = createContext(undefined);
 
@@ -51,14 +52,7 @@ export const AuthProvider = ({ children }) => {
           const teacherDoc = await getDoc(doc(db, 'teachers', user.uid));
           if (teacherDoc.exists()) {
             const teacherData = teacherDoc.data();
-            const userData = { 
-              ...teacherData, 
-              uid: user.uid,
-              role: teacherData.role || UserRole.TEACHER,
-              email: teacherData.email || user.email || '',
-              name: teacherData.name || user.displayName || 'Teacher'
-            };
-            setCurrentUser(userData);
+            setCurrentUser(mapTeacherDocToCurrentUser(teacherData, user));
             setLoading(false);
             return;
           }
@@ -79,10 +73,17 @@ export const AuthProvider = ({ children }) => {
             return;
           }
 
-          // User not found in Firestore - don't sign out immediately, allow retry
+          // User not found in Firestore - allow retry
           console.warn('User not found in Firestore, will retry...');
-          setCurrentUser(null);
-          setLoading(false);
+          // Only set to null if this is not a brand new signup (to avoid race conditions)
+          const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
+          if (!isNewUser) {
+            setCurrentUser(null);
+          }
+          // We don't set loading to false yet if it's a new user, to prevent UI flicker
+          if (!isNewUser) {
+            setLoading(false);
+          }
         } catch (err) {
           console.error('Error fetching user:', err);
           // On network error, retry after a delay
@@ -93,11 +94,7 @@ export const AuthProvider = ({ children }) => {
                 const teacherDoc = await getDoc(doc(db, 'teachers', user.uid));
                 if (teacherDoc.exists()) {
                   const teacherData = teacherDoc.data();
-                  setCurrentUser({ 
-                    ...teacherData, 
-                    uid: user.uid,
-                    role: teacherData.role || UserRole.TEACHER
-                  });
+                  setCurrentUser(mapTeacherDocToCurrentUser(teacherData, user));
                   setLoading(false);
                   return;
                 }
@@ -179,10 +176,28 @@ export const AuthProvider = ({ children }) => {
         userData.studentId = studentRollNumber.trim();
       }
 
+      if (role === UserRole.TEACHER) {
+        userData.isVerified = false;
+        userData.isApproved = false;
+        userData.approvalState = 'pending';
+      }
+
       const collectionName = role === UserRole.TEACHER ? 'teachers' : 'parents';
       await setDoc(doc(db, collectionName, user.uid), userData);
 
-      // User will be set by auth state listener
+      if (role === UserRole.TEACHER) {
+        const created = await getDoc(doc(db, 'teachers', user.uid));
+        if (!created.exists()) {
+          throw new Error('Could not save teacher profile. Check Firestore rules and network.');
+        }
+      }
+
+      // Manually set currentUser to trigger immediate routing
+      setCurrentUser(
+        role === UserRole.TEACHER ? mapTeacherDocToCurrentUser(userData, user) : userData
+      );
+
+      return { status: 'success' };
     } catch (err) {
       setError(err.message || 'Sign up failed');
       throw err;
@@ -222,6 +237,44 @@ export const AuthProvider = ({ children }) => {
 
   const clearError = () => setError(null);
 
+  /** Re-load teachers/parents profile from Firestore (e.g. after admin verification). */
+  const refreshUserProfile = useCallback(async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    if (user.email === 'gop1@gmail.com' || user.email === 'premkumartenali@gmail.com') {
+      setCurrentUser({
+        uid: user.uid,
+        name: 'Admin',
+        email: user.email || '',
+        phone: '',
+        role: UserRole.ADMIN
+      });
+      return;
+    }
+
+    try {
+      const teacherDoc = await getDoc(doc(db, 'teachers', user.uid));
+      if (teacherDoc.exists()) {
+        setCurrentUser(mapTeacherDocToCurrentUser(teacherDoc.data(), user));
+        return;
+      }
+      const parentDoc = await getDoc(doc(db, 'parents', user.uid));
+      if (parentDoc.exists()) {
+        const parentData = parentDoc.data();
+        setCurrentUser({
+          ...parentData,
+          uid: user.uid,
+          role: parentData.role || UserRole.PARENT,
+          email: parentData.email || user.email || '',
+          name: parentData.name || user.displayName || 'Parent'
+        });
+      }
+    } catch (e) {
+      console.error('refreshUserProfile:', e);
+    }
+  }, []);
+
   const value = {
     currentUser,
     firebaseUser,
@@ -230,6 +283,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     resetPassword,
+    refreshUserProfile,
     error,
     clearError
   };

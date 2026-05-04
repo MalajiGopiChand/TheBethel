@@ -41,6 +41,7 @@ import {
 import { db } from '../../../config/firebase';
 import { format } from 'date-fns';
 import { handleBackNavigation } from '../../../utils/navigation';
+import { isTeacherVerifiedProfile } from '../../../utils/teacherVerification';
 
 const TeacherProgressPage = () => {
   const navigate = useNavigate();
@@ -65,7 +66,7 @@ const TeacherProgressPage = () => {
       
       // Calculate stats
       const total = teachersData.length;
-      const verified = teachersData.filter(t => t.isVerified).length;
+      const verified = teachersData.filter((t) => isTeacherVerifiedProfile(t)).length;
       setStats({
         total,
         verified,
@@ -267,7 +268,7 @@ const TeacherProgressPage = () => {
                     >
                       <TableCell>
                         <Stack direction="row" spacing={2} alignItems="center">
-                          <Avatar sx={{ bgcolor: teacher.isVerified ? '#2e7d32' : '#ed6c02' }}>
+                          <Avatar sx={{ bgcolor: isTeacherVerifiedProfile(teacher) ? '#2e7d32' : '#ed6c02' }}>
                             {getInitials(teacher.name)}
                           </Avatar>
                           <Box>
@@ -302,10 +303,10 @@ const TeacherProgressPage = () => {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={teacher.isVerified ? 'Verified' : 'Pending'}
-                          color={teacher.isVerified ? 'success' : 'warning'}
+                          label={isTeacherVerifiedProfile(teacher) ? 'Verified' : 'Pending'}
+                          color={isTeacherVerifiedProfile(teacher) ? 'success' : 'warning'}
                           size="medium"
-                          variant={teacher.isVerified ? 'filled' : 'outlined'}
+                          variant={isTeacherVerifiedProfile(teacher) ? 'filled' : 'outlined'}
                           sx={{ minWidth: 80 }}
                         />
                       </TableCell>

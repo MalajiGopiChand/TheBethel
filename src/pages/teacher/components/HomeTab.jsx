@@ -86,6 +86,29 @@ const HomeTab = () => {
             
             // Show announcements for Teachers, All, or targeted directly to this teacher
             if (audience === 'Teachers' || audience === 'All' || audience === currentUser?.name) {
+              
+              if (data.type === 'SCHEDULE') {
+                 const today = new Date();
+                 today.setHours(0, 0, 0, 0);
+                 
+                 let isExpired = false;
+                 if (data.scheduleDate) {
+                    let sDate = 0;
+                    if (typeof data.scheduleDate === 'number') sDate = data.scheduleDate;
+                    else if (data.scheduleDate.toDate) sDate = data.scheduleDate.toDate().getTime();
+                    
+                    if (sDate < today.getTime()) isExpired = true;
+                 } else {
+                    // Fallback for old notifications: hide if older than 6 days
+                    let created = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
+                    if ((today.getTime() - created.getTime()) > 6 * 24 * 60 * 60 * 1000) {
+                       isExpired = true;
+                    }
+                 }
+                 
+                 if (isExpired) return; // skip
+              }
+
               let createdAt;
               if (data.createdAt) {
                 if (typeof data.createdAt.toDate === 'function') {
@@ -105,7 +128,9 @@ const HomeTab = () => {
                 message: data.message || '',
                 date: format(createdAt, 'MMM dd, yyyy'),
                 audience: audience,
-                isImportant: data.isImportant || false
+                isImportant: data.isImportant || false,
+                type: data.type || 'GENERAL',
+                createdAt: createdAt
               });
             }
           });

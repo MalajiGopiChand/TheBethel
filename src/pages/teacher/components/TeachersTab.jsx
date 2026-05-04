@@ -13,6 +13,7 @@ import {
   AssignmentTurnedIn as ReportIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../../contexts/AuthContext';
+import { isTeacherVerifiedProfile } from '../../../utils/teacherVerification';
 
 const TeachersTab = () => {
   const { currentUser } = useAuth();
@@ -21,7 +22,7 @@ const TeachersTab = () => {
   const isAdmin = currentUser?.role === 'ADMIN' || 
     currentUser?.email === 'gop1@gmail.com' || 
     currentUser?.email === 'premkumartenali@gmail.com';
-  const isVerified = currentUser?.isVerified !== false || isAdmin;
+  const isVerified = isTeacherVerifiedProfile(currentUser) || isAdmin;
 
   if (!isVerified && !isAdmin) {
     return (

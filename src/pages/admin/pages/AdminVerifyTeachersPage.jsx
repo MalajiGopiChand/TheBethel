@@ -27,15 +27,22 @@ import {
 } from '@mui/icons-material';
 import {
   collection,
-  getDocs,
   doc,
   updateDoc,
   query,
-  orderBy,
   onSnapshot
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';
+import { isTeacherVerifiedProfile } from '../../../utils/teacherVerification';
+
+/** Pending review: explicit state or legacy docs without approval. */
+function isPendingTeacher(teacher) {
+  const state = teacher?.approvalState;
+  if (state === 'approved') return false;
+  if (state === 'pending' || state === 'rejected') return true;
+  return !isTeacherVerifiedProfile(teacher);
+}
 
 const AdminVerifyTeachersPage = () => {
   const navigate = useNavigate();
@@ -45,30 +52,49 @@ const AdminVerifyTeachersPage = () => {
   };
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [selectedTab, setSelectedTab] = useState(0);
   const [verifyDialog, setVerifyDialog] = useState({ open: false, teacher: null, verify: true });
 
   useEffect(() => {
-    const teachersQuery = query(collection(db, 'teachers'), orderBy('name'));
-    const unsubscribe = onSnapshot(teachersQuery, (snapshot) => {
+    setLoadError(null);
+    const teachersQuery = query(collection(db, 'teachers'));
+    const unsubscribe = onSnapshot(
+      teachersQuery,
+      (snapshot) => {
       const teachersData = snapshot.docs.map(doc => ({
         uid: doc.id,
         ...doc.data()
       }));
+      
+      // Sort on client side
+      teachersData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      
       setTeachers(teachersData);
       setLoading(false);
-    });
+      setLoadError(null);
+      },
+      (error) => {
+        console.error('AdminVerifyTeachersPage:', error);
+        setLoadError(error.message || 'Could not load teachers');
+        setTeachers([]);
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
 
-  const pendingTeachers = teachers.filter(t => !t.isVerified);
-  const verifiedTeachers = teachers.filter(t => t.isVerified);
+  const isPending = (teacher) => isPendingTeacher(teacher);
+  const pendingTeachers = teachers.filter(t => isPending(t));
+  const verifiedTeachers = teachers.filter(t => !isPending(t));
 
   const handleVerify = async (teacher, verify) => {
     try {
       await updateDoc(doc(db, 'teachers', teacher.uid), {
-        isVerified: verify
+        isVerified: verify,
+        isApproved: verify,
+        approvalState: verify ? 'approved' : 'pending'
       });
       setVerifyDialog({ open: false, teacher: null, verify: true });
     } catch (error) {
@@ -77,7 +103,7 @@ const AdminVerifyTeachersPage = () => {
     }
   };
 
-  const displayTeachers = selectedTab === 0 ? pendingTeachers : verifiedTeachers;
+  const displayTeachers = selectedTab === 0 ? pendingTeachers : selectedTab === 1 ? verifiedTeachers : teachers;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -95,7 +121,13 @@ const AdminVerifyTeachersPage = () => {
         <Tabs value={selectedTab} onChange={(e, newValue) => setSelectedTab(newValue)}>
           <Tab label={`Pending (${pendingTeachers.length})`} />
           <Tab label={`Verified (${verifiedTeachers.length})`} />
+          <Tab label={`All (${teachers.length})`} />
         </Tabs>
+        {loadError && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {loadError}. If you see permission errors, sign in as admin and deploy Firestore rules.
+          </Alert>
+        )}
       </Paper>
 
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
@@ -105,7 +137,7 @@ const AdminVerifyTeachersPage = () => {
           </Box>
         ) : displayTeachers.length === 0 ? (
           <Alert severity="info">
-            {selectedTab === 0 ? 'No pending teachers to verify.' : 'No verified teachers yet.'}
+            {selectedTab === 0 ? 'No pending teachers to verify.' : selectedTab === 1 ? 'No verified teachers yet.' : 'No teachers found at all.'}
           </Alert>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -128,25 +160,25 @@ const AdminVerifyTeachersPage = () => {
                       )}
                     </Box>
                     <Chip
-                      icon={teacher.isVerified ? <VerifiedIcon /> : <UnverifiedIcon />}
-                      label={teacher.isVerified ? 'Verified' : 'Pending'}
-                      color={teacher.isVerified ? 'success' : 'warning'}
+                      icon={isPending(teacher) ? <UnverifiedIcon /> : <VerifiedIcon />}
+                      label={isPending(teacher) ? 'Pending' : 'Verified'}
+                      color={isPending(teacher) ? 'warning' : 'success'}
                       sx={{ ml: 2 }}
                     />
                   </Box>
                 </CardContent>
                 <CardActions>
                   <Button
-                    variant={teacher.isVerified ? 'outlined' : 'contained'}
-                    color={teacher.isVerified ? 'error' : 'success'}
+                    variant={isPending(teacher) ? 'contained' : 'outlined'}
+                    color={isPending(teacher) ? 'success' : 'error'}
                     startIcon={<VerifyIcon />}
                     onClick={() => setVerifyDialog({ 
                       open: true, 
                       teacher, 
-                      verify: !teacher.isVerified 
+                      verify: isPending(teacher)
                     })}
                   >
-                    {teacher.isVerified ? 'Unverify' : 'Verify'}
+                    {isPending(teacher) ? 'Verify' : 'Unverify'}
                   </Button>
                 </CardActions>
               </Card>
