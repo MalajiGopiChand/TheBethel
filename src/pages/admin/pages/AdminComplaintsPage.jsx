@@ -111,6 +111,9 @@ const AdminComplaintsPage = () => {
                         </Typography>
                       )}
                       <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {item.issueType && (
+                          <Chip size="small" color="info" variant="outlined" label={`Issue: ${item.issueType}`} />
+                        )}
                         <Chip size="small" label={item.languageHint || 'unknown'} />
                         <Chip size="small" color="warning" label={item.status || 'open'} />
                       </Box>
@@ -136,13 +139,6 @@ const AdminComplaintsPage = () => {
                   <Paper variant="outlined" sx={{ p: 2, mt: 2, bgcolor: 'background.default' }}>
                     <Typography whiteSpace="pre-wrap">{item.description || '-'}</Typography>
                   </Paper>
-
-                  {item.voiceNoteUrl && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>Voice note</Typography>
-                      <audio controls src={item.voiceNoteUrl} style={{ width: '100%' }} />
-                    </Box>
-                  )}
                 </CardContent>
               </Card>
             ))}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -12,19 +12,14 @@ import {
   Button,
   Alert,
   Stack,
-  Chip,
   CircularProgress,
   MenuItem
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
-  Mic as MicIcon,
-  Stop as StopIcon,
-  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { addDoc, collection, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { db, storage } from '../../../config/firebase';
+import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';
 import { UserRole } from '../../../types';
@@ -33,14 +28,9 @@ import { getParentLang } from '../../../utils/parentI18n';
 const ParentComplaintsPage = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const mediaRecorderRef = useRef(null);
-  const streamRef = useRef(null);
-  const chunksRef = useRef([]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -88,49 +78,6 @@ const ParentComplaintsPage = () => {
     fetchStudent().catch((e) => console.error('fetch student for complaint', e));
   }, [currentUser]);
 
-  useEffect(() => () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-    }
-  }, []);
-
-  const startRecording = async () => {
-    setError('');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      chunksRef.current = [];
-
-      const recorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(blob);
-        stream.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      };
-
-      recorder.start();
-      setIsRecording(true);
-    } catch (err) {
-      setError('Microphone permission denied or unavailable.');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    setIsRecording(false);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -148,13 +95,6 @@ const ParentComplaintsPage = () => {
 
     try {
       setSubmitting(true);
-      let voiceNoteUrl = '';
-
-      if (audioBlob) {
-        const fileRef = ref(storage, `complaints_voice_notes/${currentUser.uid}_${Date.now()}.webm`);
-        await uploadBytes(fileRef, audioBlob);
-        voiceNoteUrl = await getDownloadURL(fileRef);
-      }
 
       await addDoc(collection(db, 'complaints'), {
         title: title.trim(),
@@ -167,14 +107,12 @@ const ParentComplaintsPage = () => {
         parentPhone: parentPhone || '',
         studentId: currentUser.studentId || '',
         studentName: studentName || '',
-        voiceNoteUrl,
         status: 'open',
         createdAt: serverTimestamp()
       });
 
       setTitle('');
       setDescription('');
-      setAudioBlob(null);
       setIssueType('homework');
       setSuccess('Complaint/issue submitted successfully.');
     } catch (err) {
@@ -250,42 +188,6 @@ const ParentComplaintsPage = () => {
                 multiline
                 minRows={4}
               />
-
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-                {!isRecording ? (
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    startIcon={<MicIcon />}
-                    onClick={startRecording}
-                  >
-                    {parentLang === 'te' ? 'వాయిస్ నోట్ రికార్డ్ చేయండి' : 'Record Voice Note'}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<StopIcon />}
-                    onClick={stopRecording}
-                  >
-                    {parentLang === 'te' ? 'రికార్డ్ ఆపు' : 'Stop Recording'}
-                  </Button>
-                )}
-
-                {audioBlob && (
-                  <>
-                    <Chip label={parentLang === 'te' ? 'వాయిస్ నోట్ జత అయింది' : 'Voice note attached'} color="success" />
-                    <Button
-                      size="small"
-                      color="inherit"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => setAudioBlob(null)}
-                    >
-                      {parentLang === 'te' ? 'తొలగించు' : 'Remove'}
-                    </Button>
-                  </>
-                )}
-              </Box>
 
               <Button type="submit" variant="contained" disabled={submitting}>
                 {submitting ? <CircularProgress size={20} color="inherit" /> : (parentLang === 'te' ? 'ఫిర్యాదు పంపు' : 'Submit Complaint')}
