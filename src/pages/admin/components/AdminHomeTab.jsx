@@ -14,7 +14,8 @@ import {
   VerifiedUser as VerifyIcon,
   WhatsApp as ChatIcon,
   CalendarToday as ScheduleIcon,
-  AttachMoney as DollarIcon
+  AttachMoney as DollarIcon,
+  Feedback as FeedbackIcon
 } from '@mui/icons-material';
 import {
   collection,
@@ -145,6 +146,15 @@ const AdminHomeTab = () => {
       colorEnd: '#FBC2EB',
       isEnabled: true,
       onClick: () => navigate('/admin/notifications')
+    },
+    {
+      title: 'Complaints',
+      subtitle: 'Parents',
+      icon: <FeedbackIcon />,
+      colorStart: '#7F7FD5',
+      colorEnd: '#86A8E7',
+      isEnabled: true,
+      onClick: () => navigate('/admin/complaints')
     },
     {
       title: 'Verify Teachers',

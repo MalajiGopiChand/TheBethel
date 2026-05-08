@@ -23,7 +23,8 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Chip
+  Chip,
+  Button
 } from '@mui/material';
 import {
   AttachMoney as DollarIcon,
@@ -44,8 +45,9 @@ import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import AnnouncementsSection from '../../../components/AnnouncementsSection';
 import InstallBanner from '../../../components/InstallBanner';
+import { tParent } from '../../../utils/parentI18n';
 
-const HomeTab = ({ student }) => {
+const HomeTab = ({ student, parentLang = 'te' }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const [announcements, setAnnouncements] = useState([]);
@@ -341,6 +343,31 @@ const HomeTab = ({ student }) => {
 
       {/* 3. Announcements Section */}
       <Box>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
+            mb: 2,
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2
+          }}
+        >
+          <Box>
+            <Typography variant="subtitle1" fontWeight="bold">Complaints & Issues</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {parentLang === 'te' ? 'ఇంగ్లీష్/తెలుగు లో ఫిర్యాదు పంపండి, వాయిస్ నోట్ జోడించండి.' : 'Raise complaints in English/Telugu and add voice notes.'}
+            </Typography>
+          </Box>
+          <Button variant="contained" onClick={() => navigate('/parent/complaints')}>
+            {tParent(parentLang, 'raiseNow')}
+          </Button>
+        </Paper>
+
         <Box display="flex" alignItems="center" gap={1} mb={2}>
             <Typography variant="h6" fontWeight="bold">
                 📢 Latest Updates

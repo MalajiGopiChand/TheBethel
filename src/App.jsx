@@ -31,6 +31,7 @@ import DownloadRecordsPage from './pages/teacher/pages/DownloadRecordsPage';
 import TeacherSchedulePage from './pages/teacher/pages/TeacherSchedulePage';
 import OfferingsPage from './pages/teacher/pages/OfferingsPage';
 import ParentNotificationPage from './pages/parent/pages/ParentNotificationPage';
+import ParentComplaintsPage from './pages/parent/pages/ParentComplaintsPage';
 import DollarHistoryPage from './pages/teacher/pages/DollarHistoryPage';
 import ViewStudentsPage from './pages/teacher/pages/ViewStudentsPage';
 import TeacherProgressPage from './pages/teacher/pages/TeacherProgressPage';
@@ -38,6 +39,8 @@ import TeacherLeaderboardPage from './pages/teacher/pages/TeacherLeaderboardPage
 import TeacherAttendancePage from './pages/teacher/pages/TeacherAttendancePage';
 import TeacherProfilePage from './pages/teacher/pages/TeacherProfilePage';
 import PendingApprovalPage from './pages/auth/PendingApprovalPage';
+import AdminComplaintsPage from './pages/admin/pages/AdminComplaintsPage';
+import AdminDownloadStudentsPage from './pages/admin/pages/AdminDownloadStudentsPage';
 import { Box, CircularProgress } from '@mui/material';
 import GlobalNotificationListener from './components/GlobalNotificationListener';
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -484,6 +487,40 @@ function App() {
         element={
           currentUser && currentUser.role === UserRole.PARENT ? (
             <ParentNotificationPage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/parent/complaints"
+        element={
+          currentUser && currentUser.role === UserRole.PARENT ? (
+            <ParentComplaintsPage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/admin/complaints"
+        element={
+          currentUser && (currentUser.role === UserRole.ADMIN || 
+            currentUser.email === 'gop1@gmail.com' || 
+            currentUser.email === 'premkumartenali@gmail.com') ? (
+            <AdminComplaintsPage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/admin/download-students"
+        element={
+          currentUser && (currentUser.role === UserRole.ADMIN || 
+            currentUser.email === 'gop1@gmail.com' || 
+            currentUser.email === 'premkumartenali@gmail.com') ? (
+            <AdminDownloadStudentsPage />
           ) : (
             <Navigate to="/" replace />
           )

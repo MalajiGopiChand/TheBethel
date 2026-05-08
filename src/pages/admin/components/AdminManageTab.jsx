@@ -7,8 +7,8 @@ import {
   Person as StudentDetailsIcon,
   AttachMoney as DollarsIcon,
   History as HistoryIcon,
-  Download as DownloadIcon,
-  List as RecordsIcon
+  List as RecordsIcon,
+  Assignment as HomeworkIcon
 } from '@mui/icons-material';
 
 const AdminManageTab = () => {
@@ -33,20 +33,20 @@ const AdminManageTab = () => {
       onClick: () => navigate('/teacher/dollars-giving')
     },
     {
+      title: 'Homework',
+      icon: <HomeworkIcon />,
+      colorStart: '#4FACFE',
+      colorEnd: '#00F2FE',
+      isEnabled: true,
+      onClick: () => navigate('/teacher/homework')
+    },
+    {
       title: 'View Dollar History',
       icon: <HistoryIcon />,
       colorStart: '#FFECD2',
       colorEnd: '#FCB69F',
       isEnabled: true,
       onClick: () => navigate('/teacher/dollar-history')
-    },
-    {
-      title: 'Download Records',
-      icon: <DownloadIcon />,
-      colorStart: '#80CBC4',
-      colorEnd: '#B2DFDB',
-      isEnabled: true,
-      onClick: () => navigate('/teacher/download-records')
     },
     {
       title: 'View Records',

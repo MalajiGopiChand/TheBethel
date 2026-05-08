@@ -19,8 +19,9 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
+import { tParent } from '../../../utils/parentI18n';
 
-const LeaderboardTab = ({ student }) => {
+const LeaderboardTab = ({ student, parentLang = 'te' }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -121,14 +122,14 @@ const LeaderboardTab = ({ student }) => {
   return (
     <Box>
       <Typography variant="h5" gutterBottom fontWeight="bold">
-        Area Leaderboard
+        {tParent(parentLang, 'areaLeaderboard')}
       </Typography>
 
       {/* Hero Widget for the Parent's Child */}
       {childData && childRank && (
          <Box sx={{ mb: 4, mt: 1 }}>
             <Typography variant="subtitle2" color="primary" fontWeight="bold" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1 }}>
-               Your Child's Current Rank
+               {tParent(parentLang, 'childRank')}
             </Typography>
             <Card sx={{ 
                 borderRadius: 4, 
@@ -172,7 +173,7 @@ const LeaderboardTab = ({ student }) => {
       )}
 
       <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" sx={{ mb: 2 }}>
-           Top Students
+           {tParent(parentLang, 'topStudents')}
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {students

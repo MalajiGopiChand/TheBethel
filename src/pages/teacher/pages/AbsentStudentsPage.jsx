@@ -55,10 +55,35 @@ const AbsentStudentsPage = () => {
   const [selectedPlace, setSelectedPlace] = useState('All');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
+  const getStudentDocPhone = (student) => {
+    const value =
+      student.parentPhone ||
+      student.mobileNumber ||
+      student.phone ||
+      student.phoneNumber ||
+      student.contactNumber ||
+      student.parentContact ||
+      student.fatherPhone ||
+      student.motherPhone ||
+      '';
+    return String(value).trim();
+  };
+
+  const getParentPhone = (student) => {
+    const fromStudent = getStudentDocPhone(student);
+    const value = fromStudent || '';
+    return String(value).trim();
+  };
+
+  const openDialer = (rawPhone) => {
+    const sanitized = rawPhone.replace(/[^\d+]/g, '');
+    if (!sanitized) return;
+    window.open(`tel:${sanitized}`, '_self');
+  };
+
   const classOptions = ['All', 'Beginner', 'Primary', 'Secondary'];
   const placeOptions = ['All', 'Kandrika', 'Krishna Lanka', 'Gandhiji Conly', 'Other'];
 
-  // --- DATABASE LOGIC (Unchanged) ---
   useEffect(() => {
     // Real-time listener for students
     const studentsQuery = query(collection(db, 'students'), orderBy('studentId'));
@@ -265,24 +290,37 @@ const AbsentStudentsPage = () => {
                             <AbsentIcon fontSize="small" sx={{ mr: 0.5 }} /> ABSENT
                         </Typography>
                         
-                        {/* Action Button */}
-                        <Button 
-                            variant="outlined" 
-                            color="error" 
-                            size="small" 
-                            startIcon={<PhoneIcon />}
-                            onClick={() => {
-                                const phoneNum = student.parentPhone || student.phone || student.contactNumber || student.parentContact;
-                                if (phoneNum) {
-                                    window.location.href = `tel:${phoneNum}`;
-                                } else {
-                                    alert(`No phone number recorded for ${student.name}'s parent.`);
-                                }
-                            }}
-                            sx={{ borderRadius: 2, textTransform: 'none' }}
-                        >
-                            Call Parent
-                        </Button>
+                        <Box sx={{ textAlign: 'right' }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                            Parent Number
+                          </Typography>
+                          <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>
+                            {getParentPhone(student) || 'Not available'}
+                          </Typography>
+                          {getStudentDocPhone(student) && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              Student record: {getStudentDocPhone(student)}
+                            </Typography>
+                          )}
+                          <Button 
+                              variant="outlined" 
+                              color="error" 
+                              size="small" 
+                              startIcon={<PhoneIcon />}
+                              disabled={!getParentPhone(student)}
+                              onClick={() => {
+                                  const phoneNum = getParentPhone(student);
+                                  if (phoneNum) {
+                                      openDialer(phoneNum);
+                                  } else {
+                                      alert(`No phone number recorded for ${student.name}'s parent.`);
+                                  }
+                              }}
+                              sx={{ borderRadius: 2, textTransform: 'none' }}
+                          >
+                              Call Parent
+                          </Button>
+                        </Box>
                       </Box>
                     </CardContent>
                   </Card>

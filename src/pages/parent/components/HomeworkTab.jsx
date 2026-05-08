@@ -32,8 +32,10 @@ import {
 } from '@mui/icons-material';
 import { format, isPast, isToday, isTomorrow } from 'date-fns';
 import { db } from '../../../config/firebase';
+import { tParent } from '../../../utils/parentI18n';
+import { startOfWeek } from 'date-fns';
 
-const HomeworkTab = ({ student }) => {
+const HomeworkTab = ({ student, parentLang = 'te' }) => {
   const [homeworks, setHomeworks] = useState([]);
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
@@ -44,6 +46,30 @@ const HomeworkTab = ({ student }) => {
     if (isToday(dateObj)) return 'Today';
     if (isTomorrow(dateObj)) return 'Tomorrow';
     return format(dateObj, 'MMM dd, yyyy');
+  };
+
+  const getWeekStartSunday = () => startOfWeek(new Date(), { weekStartsOn: 0 });
+
+  const isOldWeekHomework = (hw) => {
+    const weekStart = getWeekStartSunday();
+
+    // Prefer dueDate if present
+    if (hw?.dueDate) {
+      let dueDateObj = null;
+      if (typeof hw.dueDate.toDate === 'function') dueDateObj = hw.dueDate.toDate();
+      else if (hw.dueDate instanceof Date) dueDateObj = hw.dueDate;
+      if (dueDateObj) return dueDateObj < weekStart;
+    }
+
+    // Fallback to createdAt if dueDate missing
+    const createdAt = hw?.createdAt;
+    let createdDate = null;
+    if (createdAt && typeof createdAt.toDate === 'function') createdDate = createdAt.toDate();
+    else if (createdAt instanceof Date) createdDate = createdAt;
+    else if (typeof createdAt === 'number') createdDate = new Date(createdAt);
+    if (createdDate) return createdDate < weekStart;
+
+    return false;
   };
 
   useEffect(() => {
@@ -68,6 +94,9 @@ const HomeworkTab = ({ student }) => {
           ...data
         };
       });
+
+      // Hide previous-week homework after Sunday (only show current week onwards)
+      homeworksData = homeworksData.filter((hw) => !isOldWeekHomework(hw));
 
       if (student?.studentId) {
         homeworksData = homeworksData.filter(hw => {
@@ -199,10 +228,10 @@ const HomeworkTab = ({ student }) => {
             </Box>
             <Box>
                 <Typography variant="h5" fontWeight="800" sx={{ letterSpacing: '-0.5px' }}>
-                    Homework
+                    {tParent(parentLang, 'homework')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                    {homeworks.length} assignments found
+                    {homeworks.length} {tParent(parentLang, 'assignmentsFound')}
                 </Typography>
             </Box>
         </Box>
@@ -212,8 +241,8 @@ const HomeworkTab = ({ student }) => {
         <Fade in={true} timeout={800}>
             <Box textAlign="center" py={6} sx={{ opacity: 0.6 }}>
                 <AssignmentIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-                <Typography variant="h6" color="text.secondary">No homework assigned</Typography>
-                <Typography variant="body2" color="text.secondary">Enjoy your free time!</Typography>
+                <Typography variant="h6" color="text.secondary">{tParent(parentLang, 'noHomework')}</Typography>
+                <Typography variant="body2" color="text.secondary">{tParent(parentLang, 'enjoyFree')}</Typography>
             </Box>
         </Fade>
       ) : (

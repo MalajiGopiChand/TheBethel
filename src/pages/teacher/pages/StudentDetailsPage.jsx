@@ -10,7 +10,8 @@ import {
   Person as PersonIcon,
   AttachMoney as DollarIcon,
   CalendarToday as CalendarIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Phone as PhoneIcon
 } from '@mui/icons-material';
 import {
   doc, onSnapshot, collection, query, where
@@ -30,6 +31,18 @@ const StudentDetailsPage = () => {
   const [loading, setLoading] = useState(false);
   const [rewards, setRewards] = useState([]);
   const [searchInput, setSearchInput] = useState('');
+  const studentDocPhone = String(
+    student?.parentPhone ||
+    student?.mobileNumber ||
+    student?.phone ||
+    student?.phoneNumber ||
+    student?.contactNumber ||
+    student?.parentContact ||
+    student?.fatherPhone ||
+    student?.motherPhone ||
+    ''
+  ).trim();
+  const resolvedPhone = studentDocPhone || '';
 
   // 1. Helper: Calculate Points
   const calculateDollarPoints = (studentData) => {
@@ -219,6 +232,32 @@ const StudentDetailsPage = () => {
                   <Grid item xs={6}><Typography variant="caption" color="text.secondary">Location</Typography><Typography variant="body1">{student.location || student.place || '-'}</Typography></Grid>
                   <Grid item xs={6}><Typography variant="caption" color="text.secondary">Father</Typography><Typography variant="body1">{student.fatherName || '-'}</Typography></Grid>
                   <Grid item xs={6}><Typography variant="caption" color="text.secondary">Mother</Typography><Typography variant="body1">{student.motherName || '-'}</Typography></Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary">Parent Phone</Typography>
+                    <Typography variant="body1" fontWeight="bold">
+                      {resolvedPhone || '-'}
+                    </Typography>
+                    {studentDocPhone && (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Student record: {studentDocPhone}
+                      </Typography>
+                    )}
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button
+                      size="small"
+                      startIcon={<PhoneIcon />}
+                      disabled={!resolvedPhone}
+                      onClick={() => {
+                        const raw = String(resolvedPhone).trim();
+                        const phone = raw.replace(/[^\d+]/g, '');
+                        if (phone) window.open(`tel:${phone}`, '_self');
+                      }}
+                      sx={{ mt: 2 }}
+                    >
+                      Call Parent
+                    </Button>
+                  </Grid>
                 </Grid>
               </CardContent>
             </Card>

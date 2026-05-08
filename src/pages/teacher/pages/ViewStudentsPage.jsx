@@ -5,12 +5,6 @@ import {
   Paper,
   Typography,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   FormControl,
   InputLabel,
@@ -22,7 +16,8 @@ import {
   IconButton,
   Card,
   CardContent,
-  Grid
+  Grid,
+  Avatar
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -39,6 +34,7 @@ import {
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';
+import { alpha } from '@mui/material/styles';
 
 const ViewStudentsPage = () => {
   const navigate = useNavigate();
@@ -121,10 +117,10 @@ const ViewStudentsPage = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+    <Box className="page-shell page-glow-background" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Paper elevation={0} sx={{ p: 2, mb: 2, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'transparent' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Button startIcon={<BackIcon />} onClick={handleBack}>
+          <Button startIcon={<BackIcon />} onClick={handleBack} sx={{ borderRadius: 999 }}>
             Back
           </Button>
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
@@ -133,9 +129,9 @@ const ViewStudentsPage = () => {
           <Box sx={{ width: 100 }} />
         </Box>
 
-        <Card sx={{ mb: 2, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+        <Card sx={{ mb: 2, bgcolor: alpha('#1976d2', 0.12), border: '1px solid', borderColor: alpha('#1976d2', 0.25) }}>
           <CardContent>
-            <Typography variant="h6">Total Students: {filteredStudents.length}</Typography>
+            <Typography variant="h6" fontWeight="bold" color="primary.main">Total Students: {filteredStudents.length}</Typography>
           </CardContent>
         </Card>
 
@@ -187,52 +183,23 @@ const ViewStudentsPage = () => {
         ) : filteredStudents.length === 0 ? (
           <Alert severity="info">No students found matching your criteria.</Alert>
         ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell><strong>Roll No</strong></TableCell>
-                  <TableCell><strong>Name</strong></TableCell>
-                  <TableCell><strong>Father Name</strong></TableCell>
-                  <TableCell><strong>Class</strong></TableCell>
-                  <TableCell><strong>Location</strong></TableCell>
-                  <TableCell><strong>Attendance</strong></TableCell>
-                  <TableCell><strong>Dollar Points</strong></TableCell>
-                  <TableCell><strong>Streak</strong></TableCell>
-                  <TableCell><strong>Actions</strong></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredStudents.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell>{student.studentId}</TableCell>
-                    <TableCell>{student.name}</TableCell>
-                    <TableCell>{student.fatherName || '-'}</TableCell>
-                    <TableCell>
-                      <Chip label={student.classType} size="small" />
-                    </TableCell>
-                    <TableCell>{student.location || student.place || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {attendanceList(student).length} days ({getAttendancePercentage(student)}%)
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        icon={<DollarIcon />}
-                        label={`$${student.dollarPoints || 0}`}
-                        color="success"
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={`${student.currentStreak || 0} days`}
-                        color="primary"
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
+          <Grid container spacing={2}>
+            {filteredStudents.map((student) => (
+              <Grid item xs={12} md={6} key={student.id}>
+                <Card sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', height: '100%' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main', fontSize: 15 }}>
+                          {(student.name || '?').charAt(0).toUpperCase()}
+                        </Avatar>
+                        <Box>
+                          <Typography fontWeight={700}>{student.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Roll No: {student.studentId}
+                          </Typography>
+                        </Box>
+                      </Box>
                       <IconButton
                         size="small"
                         onClick={() => handleViewDetails(student.studentId)}
@@ -240,12 +207,64 @@ const ViewStudentsPage = () => {
                       >
                         <ViewIcon />
                       </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                    </Box>
+
+                    <Grid container spacing={1.2}>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Father Name</Typography>
+                        <Typography variant="body2" fontWeight={600}>{student.fatherName || '-'}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Class</Typography>
+                        <Box><Chip label={student.classType} size="small" /></Box>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Location</Typography>
+                        <Typography variant="body2" fontWeight={600}>{student.location || student.place || 'N/A'}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Attendance</Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {attendanceList(student).length} days ({getAttendancePercentage(student)}%)
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Dollar Points</Typography>
+                        <Box>
+                          <Chip
+                            icon={<DollarIcon />}
+                            label={`$${student.dollarPoints || 0}`}
+                            color="success"
+                            size="small"
+                          />
+                        </Box>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Streak</Typography>
+                        <Box>
+                          <Chip
+                            label={`${student.currentStreak || 0} days`}
+                            color="primary"
+                            size="small"
+                          />
+                        </Box>
+                      </Grid>
+                    </Grid>
+                    <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<ViewIcon />}
+                        onClick={() => handleViewDetails(student.studentId)}
+                      >
+                        View Details
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         )}
       </Box>
     </Box>

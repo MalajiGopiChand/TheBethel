@@ -19,7 +19,17 @@ import {
   Slide,
   Chip,
   Snackbar,
-  Button
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Stepper,
+  Step,
+  StepLabel
 } from '@mui/material';
 import {
   HomeRounded as HomeIcon,
@@ -44,6 +54,9 @@ import HomeTab from './components/HomeTab';
 import HomeworkTab from './components/HomeworkTab';
 import LeaderboardTab from './components/LeaderboardTab';
 import ProfileTab from './components/ProfileTab';
+import { ParentLang, getParentLang, setParentLang, tParent } from '../../utils/parentI18n';
+
+const PARENT_TOUR_KEY = 'parent_tour_seen_v1';
 
 const ParentDashboard = () => {
   const { currentUser, logout } = useAuth();
@@ -60,6 +73,9 @@ const ParentDashboard = () => {
     sessionStorage.setItem('ParentDashboard_currentTab', currentTab.toString());
   }, [currentTab]);
   const [loadingLogout, setLoadingLogout] = useState(false);
+  const [parentLang, setParentLangState] = useState(() => getParentLang());
+  const [showTour, setShowTour] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
   
   // Student Data State
   const [student, setStudent] = useState(null);
@@ -143,10 +159,10 @@ const ParentDashboard = () => {
     }
 
     const tabs = [
-        <HomeTab student={student} />,
-        <HomeworkTab student={student} />,
-        <LeaderboardTab student={student} />,
-        <ProfileTab student={student} parentUser={currentUser} />
+        <HomeTab student={student} parentLang={parentLang} />,
+        <HomeworkTab student={student} parentLang={parentLang} />,
+        <LeaderboardTab student={student} parentLang={parentLang} />,
+        <ProfileTab student={student} parentUser={currentUser} parentLang={parentLang} />
     ];
 
     return (
@@ -156,6 +172,29 @@ const ParentDashboard = () => {
             </Box>
         </Fade>
     );
+  };
+
+  const handleLangChange = (lang) => {
+    setParentLangState(lang);
+    setParentLang(lang);
+  };
+
+  useEffect(() => {
+    const seen = localStorage.getItem(PARENT_TOUR_KEY);
+    if (!seen) setShowTour(true);
+  }, []);
+
+  const tourSteps = [
+    parentLang === ParentLang.TE ? 'హోమ్' : 'Home',
+    parentLang === ParentLang.TE ? 'హోమ్‌వర్క్' : 'Homework',
+    parentLang === ParentLang.TE ? 'లీడర్‌బోర్డ్' : 'Leaderboard',
+    parentLang === ParentLang.TE ? 'ప్రొఫైల్' : 'Profile'
+  ];
+
+  const closeTour = () => {
+    localStorage.setItem(PARENT_TOUR_KEY, '1');
+    setShowTour(false);
+    setTourStep(0);
   };
 
   return (
@@ -202,7 +241,7 @@ const ParentDashboard = () => {
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: '-0.03em', color: '#000' }}>
-                Parent Dashboard
+                {tParent(parentLang, 'dashboardTitle')}
               </Typography>
               <Typography variant="caption" sx={{ fontWeight: 800, color: '#000' }}>
                 {student?.name || currentUser?.name || 'Guest'}
@@ -210,57 +249,51 @@ const ParentDashboard = () => {
             </Box>
           </Box>
 
-          {!isMobile && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Chip
-                size="small"
-                color="primary"
-                variant="outlined"
-                label="Parent Portal • Live"
-                sx={{ borderRadius: 999 }}
-              />
-              <InstallButton size="small" />
+          {/* Mobile-first header actions (used for all screen sizes) */}
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <FormControl size="small" sx={{ minWidth: 95 }}>
+              <Select
+                value={parentLang}
+                onChange={(e) => handleLangChange(e.target.value)}
+                sx={{ borderRadius: 2, bgcolor: '#fff' }}
+              >
+                <MenuItem value={ParentLang.TE}>తెలుగు</MenuItem>
+                <MenuItem value={ParentLang.EN}>English</MenuItem>
+              </Select>
+            </FormControl>
+            <InstallButton size="small" />
+            <Tooltip title={`Logout (${currentUser?.name || 'User'})`}>
               <Button
-                color="inherit"
                 onClick={handleLogout}
                 disabled={loadingLogout}
-                startIcon={!loadingLogout && <LogoutIcon />}
-                sx={{ borderRadius: 999, px: 2.5, color: '#000', fontWeight: 'bold' }}
+                sx={{
+                  minWidth: 'auto',
+                  p: '6px 12px',
+                  color: '#d32f2f',
+                  borderRadius: 2,
+                  bgcolor: 'rgba(211,47,47,0.08)',
+                  fontWeight: 'bold',
+                  fontSize: '0.8rem'
+                }}
+                startIcon={!loadingLogout && <LogoutIcon sx={{ width: 18, height: 18 }} />}
               >
-                {loadingLogout ? <CircularProgress size={18} color="inherit" /> : 'Logout'}
+                {loadingLogout ? <CircularProgress size={16} color="inherit" /> : 'Logout'}
               </Button>
-            </Box>
-          )}
-
-          {isMobile && (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <InstallButton size="small" />
-              <Tooltip title={`Logout (${currentUser?.name || 'User'})`}>
-                <Button
-                  onClick={handleLogout}
-                  disabled={loadingLogout}
-                  sx={{
-                    minWidth: 'auto',
-                    p: '6px 12px',
-                    color: '#d32f2f',
-                    borderRadius: 2,
-                    bgcolor: 'rgba(211,47,47,0.08)',
-                    fontWeight: 'bold',
-                    fontSize: '0.8rem'
-                  }}
-                  startIcon={!loadingLogout && <LogoutIcon sx={{ width: 18, height: 18 }} />}
-                >
-                  {loadingLogout ? <CircularProgress size={16} color="inherit" /> : 'Logout'}
-                </Button>
-              </Tooltip>
-            </Box>
-          )}
+            </Tooltip>
+          </Box>
         </Toolbar>
       </AppBar>
 
       {/* Main Content Area */}
-      <Box sx={{ flexGrow: 1, pb: 12, position: 'relative', zIndex: 1 }}> {/* Extra padding for floating nav */}
-        <Container maxWidth="md" sx={{ py: 3, px: isMobile ? 2 : 3 }}>
+      <Box sx={{ flexGrow: 1, pb: 12, position: 'relative', zIndex: 1 }}>
+        <Container maxWidth="sm" sx={{ py: 2.5, px: 2 }}>
+          <Paper sx={{ p: 1.5, mb: 2, borderRadius: 2, bgcolor: 'info.50' }}>
+            <Typography variant="caption" color="text.secondary">
+              {parentLang === ParentLang.TE
+                ? 'యాప్ ఇన్‌స్టాల్ చేయడానికి ముందు భాషను ఎంచుకోండి. హోమ్‌వర్క్/మెసేజ్ కంటెంట్ మాత్రం టీచర్ పంపిన అసలు భాషలో ఉంటుంది.'
+                : 'Choose language before installing app. Homework/message content remains in teacher/admin original language.'}
+            </Typography>
+          </Paper>
           {renderTabContent()}
         </Container>
       </Box>
@@ -322,6 +355,76 @@ const ParentDashboard = () => {
 
       {/* PWA Install Prompt - Cross Platform */}
       <PWAInstallPrompt />
+
+      <Dialog open={showTour} onClose={closeTour} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 900 }}>
+          {parentLang === ParentLang.TE ? 'యాప్ టూర్' : 'App Tour'}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stepper activeStep={tourStep} alternativeLabel sx={{ mb: 2 }}>
+            {tourSteps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+            {tourStep === 0 && (
+              <Typography variant="body2">
+                {parentLang === ParentLang.TE
+                  ? 'ఇక్కడ మీ పిల్లవాడి హాజరు, పాయింట్లు, ముఖ్య సమాచారం చూస్తారు.'
+                  : 'See your child attendance, points and important updates here.'}
+              </Typography>
+            )}
+            {tourStep === 1 && (
+              <Typography variant="body2">
+                {parentLang === ParentLang.TE
+                  ? 'హోమ్‌వర్క్ ట్యాబ్‌లో తాజా అసైన్‌మెంట్లు ఉంటాయి. పాత వారపు హోమ్‌వర్క్ ఆదివారం తర్వాత కనిపించదు.'
+                  : 'Homework tab shows current assignments. Previous-week homework is hidden after Sunday.'}
+              </Typography>
+            )}
+            {tourStep === 2 && (
+              <Typography variant="body2">
+                {parentLang === ParentLang.TE
+                  ? 'లీడర్‌బోర్డ్‌లో మీ ప్రాంతంలోని ర్యాంక్ చూడండి.'
+                  : 'See your area rank in the leaderboard.'}
+              </Typography>
+            )}
+            {tourStep === 3 && (
+              <Typography variant="body2">
+                {parentLang === ParentLang.TE
+                  ? 'ప్రొఫైల్‌లో వివరాలు చూడండి. భాషను పైభాగంలో మార్చవచ్చు.'
+                  : 'Check profile and switch language from the top.'}
+              </Typography>
+            )}
+          </Paper>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeTour} color="inherit">
+            {parentLang === ParentLang.TE ? 'దాటవేయి' : 'Skip'}
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          <Button
+            onClick={() => setTourStep((s) => Math.max(0, s - 1))}
+            disabled={tourStep === 0}
+            color="inherit"
+          >
+            {parentLang === ParentLang.TE ? 'వెనుక' : 'Back'}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (tourStep >= tourSteps.length - 1) closeTour();
+              else setTourStep((s) => s + 1);
+            }}
+          >
+            {tourStep >= tourSteps.length - 1
+              ? (parentLang === ParentLang.TE ? 'ముగింపు' : 'Finish')
+              : (parentLang === ParentLang.TE ? 'తదుపరి' : 'Next')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

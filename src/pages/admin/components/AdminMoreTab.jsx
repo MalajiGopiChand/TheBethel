@@ -45,6 +45,15 @@ const AdminMoreTab = () => {
       isEnabled: true,
       onClick: () => navigate('/teacher/download-records'),
     },
+    {
+      title: 'Download Students',
+      subtitle: 'CSV by Place',
+      icon: <DownloadIcon />,
+      colorStart: '#4FACFE',
+      colorEnd: '#00F2FE',
+      isEnabled: true,
+      onClick: () => navigate('/admin/download-students'),
+    },
   ];
 
   return (

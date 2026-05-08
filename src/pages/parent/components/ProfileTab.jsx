@@ -30,8 +30,9 @@ import {
   InstallMobile as InstallIcon
 } from '@mui/icons-material';
 import { Button } from '@mui/material';
+import { tParent } from '../../../utils/parentI18n';
 
-const ProfileTab = ({ student, parentUser }) => {
+const ProfileTab = ({ student, parentUser, parentLang = 'te' }) => {
   const theme = useTheme();
 
   if (!student) {
@@ -241,7 +242,7 @@ const ProfileTab = ({ student, parentUser }) => {
               >
                   <Box sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'primary.50', borderRadius: '16px 16px 0 0' }}>
                       <Typography variant="subtitle1" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'primary.main' }}>
-                          <SchoolIcon /> Academic Details
+                          <SchoolIcon /> {tParent(parentLang, 'academicDetails')}
                       </Typography>
                   </Box>
                   <List sx={{ px: 2, py: 1 }}>
@@ -272,7 +273,7 @@ const ProfileTab = ({ student, parentUser }) => {
               >
                   <Box sx={{ p: 2.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'primary.50', borderRadius: '16px 16px 0 0' }}>
                       <Typography variant="subtitle1" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'primary.main' }}>
-                          <FamilyIcon /> Family Information
+                          <FamilyIcon /> {tParent(parentLang, 'familyInfo')}
                       </Typography>
                   </Box>
                   <List sx={{ px: 2, py: 1 }}>
