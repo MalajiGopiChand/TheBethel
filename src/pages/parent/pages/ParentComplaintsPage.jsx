@@ -172,11 +172,9 @@ const ParentComplaintsPage = () => {
                 onChange={(e) => setIssueType(e.target.value)}
                 fullWidth
               >
-                <MenuItem value="homework">{parentLang === 'te' ? 'హోమ్‌వర్క్' : 'Homework'}</MenuItem>
                 <MenuItem value="attendance">{parentLang === 'te' ? 'హాజరు' : 'Attendance'}</MenuItem>
-                <MenuItem value="fees">{parentLang === 'te' ? 'ఫీజులు' : 'Fees'}</MenuItem>
-                <MenuItem value="behaviour">{parentLang === 'te' ? 'ప్రవర్తన' : 'Behaviour'}</MenuItem>
-                <MenuItem value="transport">{parentLang === 'te' ? 'రవాణా' : 'Transport'}</MenuItem>
+                <MenuItem value="dollars">{parentLang === 'te' ? 'డాలర్లు' : 'Dollars'}</MenuItem>
+                <MenuItem value="homework">{parentLang === 'te' ? 'హోమ్‌వర్క్' : 'Homework'}</MenuItem>
                 <MenuItem value="other">{parentLang === 'te' ? 'ఇతర' : 'Other'}</MenuItem>
               </TextField>
               <TextField
