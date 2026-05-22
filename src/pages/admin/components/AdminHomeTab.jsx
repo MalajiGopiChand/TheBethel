@@ -23,11 +23,10 @@ import {
   orderBy,
   onSnapshot
 } from 'firebase/firestore';
-import { format } from 'date-fns';
-
 // --- UPDATED IMPORTS (Fixed Paths) ---
 import { db } from '../../../config/firebase';
 import AttendanceCard from '../../../components/AttendanceCard';
+import { getDashboardAttendanceStats } from '../../../utils/dashboardAttendance';
 import PodiumSection from '../../../components/PodiumSection';
 import ActionGrid from '../../../components/ActionGrid';
 import InstallBanner from '../../../components/InstallBanner';
@@ -94,18 +93,7 @@ const AdminHomeTab = () => {
       }));
 
       const totalStudents = studentsWithPoints.length || 0;
-      const today = format(new Date(), 'yyyy-MM-dd'); // Matches Android format
-      
-      // 2. Calculate Attendance
-      const todayPresentCount = studentsWithPoints.filter(student => {
-        const attendance = student?.attendance || [];
-        // Check if any attendance string starts with today's date
-        return attendance.some((dateStr) => dateStr && dateStr.startsWith && dateStr.startsWith(today));
-      }).length;
-      
-      const attendancePercentage = totalStudents > 0
-        ? Math.round((todayPresentCount / totalStudents) * 100)
-        : 0;
+      const attendanceStats = getDashboardAttendanceStats(studentsWithPoints);
 
       // 3. Calculate Global Dollar Stats
       const totalDollarsGiven = studentsWithPoints.reduce((sum, student) => 
@@ -123,10 +111,11 @@ const AdminHomeTab = () => {
 
       setOverview({
         totalStudents,
-        attendancePercentage,
+        attendancePercentage: attendanceStats.attendancePercentage,
+        attendanceDateLabel: attendanceStats.dateLabel,
         totalDollarsGiven,
-        todayPresentCount,
-        todayAbsentCount: Math.max(0, totalStudents - todayPresentCount),
+        todayPresentCount: attendanceStats.todayPresentCount,
+        todayAbsentCount: attendanceStats.todayAbsentCount,
         topStudents: topStudents
       });
 

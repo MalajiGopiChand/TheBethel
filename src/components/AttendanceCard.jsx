@@ -10,6 +10,7 @@ const AttendanceCard = ({ data, canEdit }) => {
   const todayPresentCount = data.todayPresentCount || 0;
   const todayAbsentCount = data.todayAbsentCount || 0;
   const attendancePercentage = data.attendancePercentage || 0;
+  const attendanceDateLabel = data.attendanceDateLabel || '';
 
   const progress = totalStudents > 0 
     ? todayPresentCount / totalStudents 
@@ -65,8 +66,13 @@ const AttendanceCard = ({ data, canEdit }) => {
               mb: 1
             }}
           >
-            Today's Attendance
+            Sunday Attendance
           </Typography>
+          {attendanceDateLabel && (
+            <Typography variant="caption" sx={{ color: alpha('#fff', 0.75), display: 'block', mb: 0.5 }}>
+              {attendanceDateLabel}
+            </Typography>
+          )}
           <Typography
             variant="h3"
             sx={{

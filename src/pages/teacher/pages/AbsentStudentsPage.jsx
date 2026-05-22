@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -30,7 +30,8 @@ import {
   LocationOn as PlaceIcon,
   Class as ClassIcon,
   Event as DateIcon,
-  Phone as PhoneIcon
+  Phone as PhoneIcon,
+  PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
 import {
   collection,
@@ -41,6 +42,7 @@ import {
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';
+import { generateAbsentStudentsPdf } from '../../../utils/generateAbsentStudentsPdf';
 
 const AbsentStudentsPage = () => {
   const navigate = useNavigate();
@@ -49,8 +51,9 @@ const AbsentStudentsPage = () => {
     handleBackNavigation(navigate);
   };
   
-  const [students, setStudents] = useState([]);
+  const [allStudents, setAllStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [selectedClass, setSelectedClass] = useState('All');
   const [selectedPlace, setSelectedPlace] = useState('All');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -85,42 +88,9 @@ const AbsentStudentsPage = () => {
   const placeOptions = ['All', 'Kandrika', 'Krishna Lanka', 'Gandhiji Conly', 'Other'];
 
   useEffect(() => {
-    // Real-time listener for students
     const studentsQuery = query(collection(db, 'students'), orderBy('studentId'));
     const unsubscribe = onSnapshot(studentsQuery, (snapshot) => {
-      let studentsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      // Filter by class
-      if (selectedClass !== 'All') {
-        studentsData = studentsData.filter(s => s.classType === selectedClass);
-      }
-
-      // Filter by place
-      if (selectedPlace !== 'All') {
-        if (selectedPlace === 'Other') {
-          studentsData = studentsData.filter(s => {
-            const loc = s.location || s.place || '';
-            return !['Kandrika', 'Krishna Lanka', 'Gandhiji Conly'].includes(loc);
-          });
-        } else {
-          studentsData = studentsData.filter(s => {
-            const loc = s.location || s.place || '';
-            return loc === selectedPlace;
-          });
-        }
-      }
-
-      // Filter by absent dates
-      studentsData = studentsData.filter(student => {
-        const absentDates = student.absentDates || [];
-        // Robust check for date string presence
-        return absentDates.some(date => date && date.startsWith(selectedDate));
-      });
-
-      setStudents(studentsData);
+      setAllStudents(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     }, (error) => {
       console.error('Error fetching absent students:', error);
@@ -128,7 +98,51 @@ const AbsentStudentsPage = () => {
     });
 
     return () => unsubscribe();
-  }, [selectedClass, selectedPlace, selectedDate]);
+  }, []);
+
+  const students = useMemo(() => {
+    let studentsData = [...allStudents];
+
+    if (selectedClass !== 'All') {
+      studentsData = studentsData.filter((s) => s.classType === selectedClass);
+    }
+
+    if (selectedPlace !== 'All') {
+      if (selectedPlace === 'Other') {
+        studentsData = studentsData.filter((s) => {
+          const loc = s.location || s.place || '';
+          return !['Kandrika', 'Krishna Lanka', 'Gandhiji Conly'].includes(loc);
+        });
+      } else {
+        studentsData = studentsData.filter((s) => {
+          const loc = s.location || s.place || '';
+          return loc === selectedPlace;
+        });
+      }
+    }
+
+    return studentsData.filter((student) => {
+      const absentDates = student.absentDates || [];
+      return absentDates.some((date) => date && date.startsWith(selectedDate));
+    });
+  }, [allStudents, selectedClass, selectedPlace, selectedDate]);
+
+  const handleDownloadPdf = () => {
+    setPdfLoading(true);
+    try {
+      generateAbsentStudentsPdf({
+        students: allStudents,
+        selectedDate,
+        selectedClass,
+        selectedPlace
+      });
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('Could not generate PDF. Please try again.');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   return (
     <Box 
@@ -209,6 +223,18 @@ const AbsentStudentsPage = () => {
             >
               {placeOptions.map(opt => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
             </TextField>
+
+            <Button
+              variant="contained"
+              color="error"
+              size="small"
+              startIcon={pdfLoading ? <CircularProgress size={16} color="inherit" /> : <PdfIcon />}
+              onClick={handleDownloadPdf}
+              disabled={pdfLoading || loading}
+              sx={{ flexShrink: 0, borderRadius: 1, textTransform: 'none', fontWeight: 'bold', px: 2 }}
+            >
+              Download PDF
+            </Button>
           </Box>
 
       {/* 2. Content Grid */}

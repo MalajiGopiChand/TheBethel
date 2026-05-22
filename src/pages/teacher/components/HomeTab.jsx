@@ -32,6 +32,7 @@ import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import AttendanceCard from '../../../components/AttendanceCard';
+import { getDashboardAttendanceStats } from '../../../utils/dashboardAttendance';
 import PodiumSection from '../../../components/PodiumSection';
 import ActionGrid from '../../../components/ActionGrid';
 import AnnouncementsSection from '../../../components/AnnouncementsSection';
@@ -230,25 +231,7 @@ const HomeTab = () => {
       });
 
       const totalStudents = students.length;
-      const today = format(new Date(), 'yyyy-MM-dd');
-      
-      // Calculate today's attendance
-      const todayPresentCount = students.filter(student => {
-        const byDate = student.attendanceByDate || {};
-        if (byDate[today]?.status === 'present') return true;
-
-        return (student.attendance || []).some(date => {
-          if (typeof date === 'string') {
-            return date.startsWith(today);
-          }
-          return false;
-        });
-      }).length;
-      
-      const todayAbsentCount = totalStudents - todayPresentCount;
-      const attendancePercentage = totalStudents > 0
-        ? Math.round((todayPresentCount / totalStudents) * 100)
-        : 0;
+      const attendanceStats = getDashboardAttendanceStats(students);
 
       // Calculate total dollars
       const totalDollarsGiven = students.reduce((sum, student) => 
@@ -276,11 +259,12 @@ const HomeTab = () => {
 
       setOverview({
         totalStudents,
-        attendancePercentage,
+        attendancePercentage: attendanceStats.attendancePercentage,
+        attendanceDateLabel: attendanceStats.dateLabel,
         totalDollarsGiven,
         totalRewards,
-        todayPresentCount,
-        todayAbsentCount,
+        todayPresentCount: attendanceStats.todayPresentCount,
+        todayAbsentCount: attendanceStats.todayAbsentCount,
         topStudents
       });
       
