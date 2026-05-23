@@ -31,7 +31,8 @@ import {
   Class as ClassIcon,
   Event as DateIcon,
   Phone as PhoneIcon,
-  PictureAsPdf as PdfIcon
+  PictureAsPdf as PdfIcon,
+  Image as ImageIcon
 } from '@mui/icons-material';
 import {
   collection,
@@ -42,7 +43,11 @@ import {
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';
-import { generateAbsentStudentsPdf } from '../../../utils/generateAbsentStudentsPdf';
+import {
+  downloadAbsentStudentsPdf,
+  downloadAbsentStudentsImageAll,
+  downloadAbsentStudentsImagesByPlace
+} from '../../../utils/absentStudentsExport';
 
 const AbsentStudentsPage = () => {
   const navigate = useNavigate();
@@ -53,7 +58,7 @@ const AbsentStudentsPage = () => {
   
   const [allStudents, setAllStudents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(null);
   const [selectedClass, setSelectedClass] = useState('All');
   const [selectedPlace, setSelectedPlace] = useState('All');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -127,22 +132,29 @@ const AbsentStudentsPage = () => {
     });
   }, [allStudents, selectedClass, selectedPlace, selectedDate]);
 
-  const handleDownloadPdf = () => {
-    setPdfLoading(true);
+  const exportParams = {
+    students: allStudents,
+    selectedDate,
+    selectedClass,
+    selectedPlace
+  };
+
+  const runExport = async (type, fn) => {
+    setExportLoading(type);
     try {
-      generateAbsentStudentsPdf({
-        students: allStudents,
-        selectedDate,
-        selectedClass,
-        selectedPlace
-      });
+      await fn(exportParams);
     } catch (err) {
-      console.error('PDF export failed:', err);
-      alert('Could not generate PDF. Please try again.');
+      console.error(`${type} export failed:`, err);
+      alert(`Could not download ${type}. Please try again.`);
     } finally {
-      setPdfLoading(false);
+      setExportLoading(null);
     }
   };
+
+  const handleDownloadPdf = () => runExport('pdf', async (p) => downloadAbsentStudentsPdf(p));
+  const handleDownloadImage = () => runExport('image', async (p) => downloadAbsentStudentsImageAll(p));
+  const handleDownloadImagesByPlace = () =>
+    runExport('images', async (p) => downloadAbsentStudentsImagesByPlace(p));
 
   return (
     <Box 
@@ -228,12 +240,34 @@ const AbsentStudentsPage = () => {
               variant="contained"
               color="error"
               size="small"
-              startIcon={pdfLoading ? <CircularProgress size={16} color="inherit" /> : <PdfIcon />}
+              startIcon={exportLoading === 'pdf' ? <CircularProgress size={16} color="inherit" /> : <PdfIcon />}
               onClick={handleDownloadPdf}
-              disabled={pdfLoading || loading}
-              sx={{ flexShrink: 0, borderRadius: 1, textTransform: 'none', fontWeight: 'bold', px: 2 }}
+              disabled={!!exportLoading || loading}
+              sx={{ flexShrink: 0, borderRadius: 1, textTransform: 'none', fontWeight: 'bold', px: 1.5 }}
             >
-              Download PDF
+              PDF
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={exportLoading === 'image' ? <CircularProgress size={16} color="error" /> : <ImageIcon />}
+              onClick={handleDownloadImage}
+              disabled={!!exportLoading || loading}
+              sx={{ flexShrink: 0, borderRadius: 1, textTransform: 'none', fontWeight: 'bold', px: 1.5, bgcolor: 'white' }}
+            >
+              Image
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={exportLoading === 'images' ? <CircularProgress size={16} color="error" /> : <ImageIcon />}
+              onClick={handleDownloadImagesByPlace}
+              disabled={!!exportLoading || loading}
+              sx={{ flexShrink: 0, borderRadius: 1, textTransform: 'none', fontWeight: 'bold', px: 1.5, bgcolor: 'white' }}
+            >
+              Images (by place)
             </Button>
           </Box>
 
