@@ -1,7 +1,13 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import html2canvas from 'html2canvas';
 import { format, parseISO } from 'date-fns';
+import {
+  escapeHtml,
+  slugify,
+  paginateSections,
+  renderTableSection,
+  downloadA4Images
+} from './a4ImageExport';
 
 const KNOWN_PLACES = ['Kandrika', 'Krishna Lanka', 'Gandhiji Conly'];
 const PLACE_SECTION_ORDER = [...KNOWN_PLACES, 'Other', 'Unknown'];
@@ -180,134 +186,79 @@ export function downloadAbsentStudentsPdf(params) {
   return fileName;
 };
 
-const escapeHtml = (value) =>
-  String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-
-const buildReportHtml = (report, { sections = 'all' } = {}) => {
-  const { dateLabel, selectedClass, selectedPlace, totalAbsent, placeSections } = report;
-  const sectionsToRender =
-    sections === 'all' ? placeSections : placeSections.filter((s) => s.place === sections);
-
+const buildAbsentHeaderHtml = (report, { showMeta = true } = {}) => {
+  const { dateLabel, selectedClass, selectedPlace, totalAbsent } = report;
   const filterLine =
     selectedClass !== 'All' || selectedPlace !== 'All'
-      ? `<p style="margin:4px 0;font-size:13px;color:#555;">Filters — Class: ${escapeHtml(selectedClass)} | Place: ${escapeHtml(selectedPlace)}</p>`
+      ? `<p style="margin:4px 0;font-size:12px;color:#555;">Class: ${escapeHtml(selectedClass)} | Place: ${escapeHtml(selectedPlace)}</p>`
       : '';
 
-  const sectionHtml = sectionsToRender
-    .map(({ place, rows }) => {
-      const bodyRows = rows
-        .map(
-          (row) =>
-            `<tr>${row
-              .map(
-                (cell, colIndex) =>
-                  `<td style="border:1px solid #ddd;padding:6px 8px;font-size:12px;${colIndex === 0 ? 'text-align:center;width:40px;' : ''}">${escapeHtml(cell)}</td>`
-              )
-              .join('')}</tr>`
-        )
-        .join('');
-
-      return `
-        <div style="margin-bottom:20px;">
-          <h3 style="margin:0 0 8px;color:#c62828;font-size:15px;">Place: ${escapeHtml(place)} (${rows.length})</h3>
-          <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;">
-            <thead>
-              <tr>
-                ${ABSENT_EXPORT_COLUMNS.map(
-                  (col) =>
-                    `<th style="border:1px solid #c62828;background:#d32f2f;color:#fff;padding:8px;font-size:12px;text-align:left;">${escapeHtml(col)}</th>`
-                ).join('')}
-              </tr>
-            </thead>
-            <tbody>${bodyRows}</tbody>
-          </table>
-        </div>`;
-    })
-    .join('');
-
-  const emptyHtml =
-    sectionsToRender.length === 0
-      ? `<p style="text-align:center;color:#666;padding:24px;">No absent students for this date.</p>`
-      : '';
+  if (!showMeta) return '';
 
   return `
-    <div style="background:#fff;padding:24px;max-width:1100px;color:#111;">
-      <h2 style="margin:0 0 6px;text-align:center;color:#c62828;font-size:22px;">Absent Students Report</h2>
-      <p style="margin:0;text-align:center;font-size:14px;color:#333;">Date: ${escapeHtml(dateLabel)}</p>
-      ${filterLine}
-      <p style="margin:8px 0 16px;text-align:center;font-size:14px;font-weight:bold;">Total absent: ${totalAbsent}</p>
-      ${sectionHtml || emptyHtml}
-    </div>`;
+    <h2 style="margin:0 0 4px;text-align:center;color:#c62828;font-size:20px;">Absent Students Report</h2>
+    <p style="margin:0;text-align:center;font-size:12px;color:#333;">Date: ${escapeHtml(dateLabel)}</p>
+    ${filterLine}
+    <p style="margin:6px 0 12px;text-align:center;font-size:12px;font-weight:bold;">Total absent: ${totalAbsent}</p>`;
 };
 
-const renderReportToCanvas = async (html) => {
-  const host = document.createElement('div');
-  host.style.cssText =
-    'position:fixed;left:-10000px;top:0;z-index:-1;pointer-events:none;';
-  host.innerHTML = html;
-  document.body.appendChild(host);
-
-  try {
-    const target = host.firstElementChild;
-    const canvas = await html2canvas(target, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false
-    });
-    return canvas;
-  } finally {
-    document.body.removeChild(host);
+const renderAbsentPageContent = (report, page) => {
+  if (page.empty) {
+    return `
+      ${buildAbsentHeaderHtml(report)}
+      <p style="text-align:center;color:#666;padding:40px 0;">No absent students for this date.</p>`;
   }
+
+  const header = page.showReportHeader ? buildAbsentHeaderHtml(report) : '';
+  const table = renderTableSection({
+    columns: ABSENT_EXPORT_COLUMNS,
+    rows: page.rows,
+    place: page.place,
+    showPlaceHeader: page.showPlaceHeader,
+    headerColor: '#d32f2f',
+    borderColor: '#c62828',
+    rowNumberStart: page.rowNumberStart,
+    renumberSerial: true
+  });
+
+  return `${header}${table}`;
 };
 
-const triggerDownload = (dataUrl, fileName) => {
-  const link = document.createElement('a');
-  link.href = dataUrl;
-  link.download = fileName;
-  link.click();
+const exportAbsentA4Pages = async (report, sections, fileBaseName) => {
+  const pages = paginateSections(
+    sections.map((s) => ({ place: s.place, rows: s.rows })),
+    { rowsOnFirstPage: 16, rowsOnNextPage: 20 }
+  );
+
+  return downloadA4Images({
+    pages: pages.length ? pages : [],
+    fileBaseName,
+    renderPage: (page) => renderAbsentPageContent(report, page)
+  });
 };
 
-const slugify = (text) =>
-  String(text)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-
-/** One PNG with all places */
+/** A4-sized PNG pages (not one long image) */
 export async function downloadAbsentStudentsImageAll(params) {
   const report = buildAbsentStudentsReport(params);
-  const html = buildReportHtml(report, { sections: 'all' });
-  const canvas = await renderReportToCanvas(html);
-  const fileName = `absent-students-${report.selectedDate}.png`;
-  triggerDownload(canvas.toDataURL('image/png'), fileName);
-  return fileName;
+  return exportAbsentA4Pages(report, report.placeSections, `absent-students-${report.selectedDate}`);
 }
 
-/** One PNG per place section */
+/** A4 pages per place */
 export async function downloadAbsentStudentsImagesByPlace(params) {
   const report = buildAbsentStudentsReport(params);
   const downloaded = [];
 
   if (report.placeSections.length === 0) {
-    const html = buildReportHtml(report, { sections: 'all' });
-    const canvas = await renderReportToCanvas(html);
-    const fileName = `absent-students-${report.selectedDate}.png`;
-    triggerDownload(canvas.toDataURL('image/png'), fileName);
-    return [fileName];
+    return exportAbsentA4Pages(report, [], `absent-students-${report.selectedDate}`);
   }
 
   for (const section of report.placeSections) {
-    const html = buildReportHtml(report, { sections: section.place });
-    const canvas = await renderReportToCanvas(html);
-    const fileName = `absent-students-${report.selectedDate}-${slugify(section.place)}.png`;
-    triggerDownload(canvas.toDataURL('image/png'), fileName);
-    downloaded.push(fileName);
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    const files = await exportAbsentA4Pages(
+      report,
+      [section],
+      `absent-students-${report.selectedDate}-${slugify(section.place)}`
+    );
+    downloaded.push(...files);
   }
 
   return downloaded;

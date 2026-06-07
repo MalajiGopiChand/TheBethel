@@ -59,6 +59,26 @@ const StudentDetailsPage = () => {
     return calculatedPoints > 0 ? calculatedPoints : (studentData.dollarPoints || 0);
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/teacher/students');
+    }
+  };
+
+  const renderPageHeader = (title, rightAction = null) => (
+    <Paper elevation={2} sx={{ p: 2, mb: 2, display: 'flex', alignItems: 'center' }}>
+      <Button startIcon={<BackIcon />} onClick={handleBack}>
+        Back
+      </Button>
+      <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
+        {title}
+      </Typography>
+      <Box sx={{ minWidth: 90, textAlign: 'right' }}>{rightAction}</Box>
+    </Paper>
+  );
+
   // 2. Fetch Data Effect
   useEffect(() => {
     if (!studentId) {
@@ -166,13 +186,7 @@ const StudentDetailsPage = () => {
   if (!studentId) {
       return (
         <Box sx={{ p: 2 }}>
-            <Button startIcon={<BackIcon />} onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate('/teacher/students');
-              }
-            }}>Back</Button>
+            {renderPageHeader('Student Details')}
             {renderSearchBar()}
         </Box>
       );
@@ -182,8 +196,12 @@ const StudentDetailsPage = () => {
   if (studentId && !student) {
     return (
       <Box sx={{ p: 2 }}>
-        <Button startIcon={<BackIcon />} onClick={() => setSearchParams({})}>Back to Search</Button>
-        <Alert severity="error" sx={{ mt: 2 }}>Student with ID "{studentId}" not found.</Alert>
+        {renderPageHeader('Student Details', (
+          <Button size="small" startIcon={<SearchIcon />} onClick={() => setSearchParams({})}>
+            Search
+          </Button>
+        ))}
+        <Alert severity="error">Student with ID "{studentId}" not found.</Alert>
       </Box>
     );
   }
@@ -196,24 +214,11 @@ const StudentDetailsPage = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', p: 2 }}>
-      {/* Header */}
-      <Paper elevation={2} sx={{ p: 2, mb: 2, display: 'flex', alignItems: 'center' }}>
-        <Button startIcon={<BackIcon />} onClick={() => {
-          if (window.history.length > 1) {
-            navigate(-1);
-          } else {
-            navigate('/teacher/students');
-          }
-        }}>
-          Back
+      {renderPageHeader('Student Profile', (
+        <Button size="small" startIcon={<SearchIcon />} onClick={() => setSearchParams({})}>
+          Search
         </Button>
-        <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
-          Student Profile
-        </Typography>
-        <Button startIcon={<SearchIcon />} onClick={() => setSearchParams({})}>
-            Search
-        </Button>
-      </Paper>
+      ))}
 
       {/* Content Grid */}
       <Grid container spacing={2}>

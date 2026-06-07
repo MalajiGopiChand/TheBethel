@@ -23,7 +23,9 @@ import {
   ArrowBack as BackIcon,
   Search as SearchIcon,
   Visibility as ViewIcon,
-  AttachMoney as DollarIcon
+  AttachMoney as DollarIcon,
+  Image as ImageIcon,
+  CloudDownload as DownloadIcon
 } from '@mui/icons-material';
 import {
   collection,
@@ -35,6 +37,10 @@ import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';
 import { alpha } from '@mui/material/styles';
+import {
+  downloadStudentListImageAll,
+  downloadStudentListImagesByPlace
+} from '../../../utils/studentListExport';
 
 const ViewStudentsPage = () => {
   const navigate = useNavigate();
@@ -48,6 +54,7 @@ const ViewStudentsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('All');
   const [selectedPlace, setSelectedPlace] = useState('All');
+  const [exportLoading, setExportLoading] = useState(null);
 
   // Helper function to calculate dollar points from rewards array
   const calculateDollarPoints = (studentData) => {
@@ -105,6 +112,24 @@ const ViewStudentsPage = () => {
 
   const handleViewDetails = (studentId) => {
     navigate(`/teacher/student-details?id=${studentId}`);
+  };
+
+  const exportParams = {
+    students,
+    selectedClass,
+    selectedPlace
+  };
+
+  const runExport = async (type, fn) => {
+    setExportLoading(type);
+    try {
+      await fn(exportParams);
+    } catch (err) {
+      console.error(`${type} export failed:`, err);
+      alert('Could not download student data. Please try again.');
+    } finally {
+      setExportLoading(null);
+    }
   };
 
   const attendanceList = (student) => student.attendance || [];
@@ -172,6 +197,26 @@ const ViewStudentsPage = () => {
               <MenuItem value="Other">Other</MenuItem>
             </Select>
           </FormControl>
+          <Button
+            variant="contained"
+            size="medium"
+            startIcon={exportLoading === 'image' ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />}
+            onClick={() => runExport('image', downloadStudentListImageAll)}
+            disabled={!!exportLoading || loading || students.length === 0}
+            sx={{ textTransform: 'none', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+          >
+            Download
+          </Button>
+          <Button
+            variant="outlined"
+            size="medium"
+            startIcon={exportLoading === 'byPlace' ? <CircularProgress size={16} color="primary" /> : <ImageIcon />}
+            onClick={() => runExport('byPlace', downloadStudentListImagesByPlace)}
+            disabled={!!exportLoading || loading || students.length === 0}
+            sx={{ textTransform: 'none', fontWeight: 'bold', whiteSpace: 'nowrap', bgcolor: 'background.paper' }}
+          >
+            By Place
+          </Button>
         </Box>
       </Paper>
 
