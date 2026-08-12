@@ -205,12 +205,13 @@ const AttendancePage = () => {
         }
 
         // Always store the canonical one-record-per-day structure:
-        // attendanceByDate[yyyy-MM-dd] = { status, teacherName, updatedAt }
+        // attendanceByDate[yyyy-MM-dd] = { status, teacherName, teacherId, updatedAt }
         if (status === 'present' || status === 'absent') {
           batch.update(studentRef, {
             [`attendanceByDate.${dateStr}`]: {
               status,
               teacherName: finalTeacherName,
+              teacherId: currentUser?.uid || 'Unknown',
               updatedAt: serverTimestamp()
             }
           });
