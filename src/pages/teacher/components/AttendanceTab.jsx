@@ -6,7 +6,8 @@ import {
   EventNote as MarkAttendanceIcon,
   ListAlt as SummaryIcon,
   PersonAdd as AddStudentIcon,
-  PersonOff as AbsentIcon
+  PersonOff as AbsentIcon,
+  Search as SearchIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -51,6 +52,15 @@ const AttendanceTab = () => {
       colorEnd: '#F5576C',
       isEnabled: true,
       onClick: () => navigate('/teacher/absent-students')
+    },
+    {
+      title: 'Student Profile',
+      description: 'Search & View Details',
+      icon: <SearchIcon />, // Need to import SearchIcon
+      colorStart: '#4facfe',
+      colorEnd: '#00f2fe',
+      isEnabled: true,
+      onClick: () => navigate('/teacher/student-details')
     }
   ].filter((action) => action.isEnabled);
 

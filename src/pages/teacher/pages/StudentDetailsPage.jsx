@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box, Paper, Typography, Button, Card, CardContent, CircularProgress,
   TextField, Grid, Chip, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Alert, InputAdornment, IconButton, useTheme, useMediaQuery, Stack
+  TableHead, TableRow, Alert, InputAdornment, IconButton, useTheme, useMediaQuery, Stack,
+  Dialog, DialogTitle, DialogContent, DialogActions, MenuItem
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -11,12 +12,16 @@ import {
   AttachMoney as DollarIcon,
   CalendarToday as CalendarIcon,
   Search as SearchIcon,
-  Phone as PhoneIcon
+  Phone as PhoneIcon,
+  Edit as EditIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
 import {
-  doc, onSnapshot, collection, query, where
+  doc, onSnapshot, collection, query, where, updateDoc
 } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
+import { useAuth } from '../../../contexts/AuthContext';
+import { UserRole } from '../../../types';
 
 const StudentDetailsPage = () => {
   const navigate = useNavigate();
@@ -31,6 +36,13 @@ const StudentDetailsPage = () => {
   const [loading, setLoading] = useState(false);
   const [rewards, setRewards] = useState([]);
   const [searchInput, setSearchInput] = useState('');
+  
+  const { currentUser } = useAuth();
+  const isAdmin = currentUser?.role === UserRole.ADMIN || currentUser?.email === 'gop1@gmail.com' || currentUser?.email === 'premkumartenali@gmail.com';
+  
+  const [editOpen, setEditOpen] = useState(false);
+  const [editData, setEditData] = useState({});
+  const [saving, setSaving] = useState(false);
   const studentDocPhone = String(
     student?.parentPhone ||
     student?.mobileNumber ||
@@ -134,6 +146,43 @@ const StudentDetailsPage = () => {
     }
   };
 
+  const handleEditClick = () => {
+    setEditData({
+      name: student.name || '',
+      studentId: student.studentId || '',
+      classType: student.classType || '',
+      location: student.location || student.place || '',
+      fatherName: student.fatherName || '',
+      motherName: student.motherName || '',
+      parentPhone: resolvedPhone || '',
+    });
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      const docRef = doc(db, 'students', student.id);
+      await updateDoc(docRef, {
+        name: editData.name,
+        studentId: editData.studentId,
+        classType: editData.classType,
+        location: editData.location,
+        place: editData.location,
+        fatherName: editData.fatherName,
+        motherName: editData.motherName,
+        parentPhone: editData.parentPhone,
+        mobileNumber: editData.parentPhone
+      });
+      setEditOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert('Error updating student: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // --- RENDER HELPERS ---
   
   const renderSearchBar = () => (
@@ -215,9 +264,16 @@ const StudentDetailsPage = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', p: 2 }}>
       {renderPageHeader('Student Profile', (
-        <Button size="small" startIcon={<SearchIcon />} onClick={() => setSearchParams({})}>
-          Search
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+          {isAdmin && (
+            <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={handleEditClick}>
+              Edit
+            </Button>
+          )}
+          <Button size="small" startIcon={<SearchIcon />} onClick={() => setSearchParams({})}>
+            Search
+          </Button>
+        </Box>
       ))}
 
       {/* Content Grid */}
@@ -364,6 +420,93 @@ const StudentDetailsPage = () => {
         </Grid>
 
       </Grid>
+
+      {/* Edit Dialog for Admins */}
+      <Dialog open={editOpen} onClose={() => !saving && setEditOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Student Details</DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField 
+                label="Full Name" 
+                fullWidth 
+                value={editData.name || ''} 
+                onChange={(e) => setEditData({...editData, name: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField 
+                label="Student ID" 
+                fullWidth 
+                value={editData.studentId || ''} 
+                onChange={(e) => setEditData({...editData, studentId: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField 
+                label="Class" 
+                fullWidth 
+                select
+                value={editData.classType || ''} 
+                onChange={(e) => setEditData({...editData, classType: e.target.value})}
+              >
+                {['Beginner', 'Primary', 'Secondary'].map(opt => (
+                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField 
+                label="Location" 
+                fullWidth 
+                select
+                value={editData.location || ''} 
+                onChange={(e) => setEditData({...editData, location: e.target.value})}
+              >
+                {['Kandrika', 'Krishna Lanka', 'Gandhiji Conly', 'Other'].map(opt => (
+                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField 
+                label="Father's Name" 
+                fullWidth 
+                value={editData.fatherName || ''} 
+                onChange={(e) => setEditData({...editData, fatherName: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField 
+                label="Mother's Name" 
+                fullWidth 
+                value={editData.motherName || ''} 
+                onChange={(e) => setEditData({...editData, motherName: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField 
+                label="Parent Phone Number" 
+                fullWidth 
+                type="tel"
+                value={editData.parentPhone || ''} 
+                onChange={(e) => setEditData({...editData, parentPhone: e.target.value})}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditOpen(false)} disabled={saving}>Cancel</Button>
+          <Button 
+            onClick={handleSaveEdit} 
+            variant="contained" 
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

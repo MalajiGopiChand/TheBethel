@@ -30,6 +30,8 @@ import {
   BoltRounded as BoltIcon,
   People as PeopleIcon,
   PeopleOutlined as PeopleOutlinedIcon,
+  SchoolRounded as SchoolIcon,
+  SchoolOutlined as SchoolOutlinedIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types';
@@ -41,6 +43,7 @@ import HomeTab from './components/HomeTab';
 import AttendanceTab from './components/AttendanceTab';
 import RewardsTab from './components/RewardsTab';
 import TeachersTab from './components/TeachersTab';
+import StudentsTab from './components/StudentsTab';
 
 const TeacherDashboard = () => {
   const { currentUser, logout, loading: authLoading } = useAuth();
@@ -155,6 +158,7 @@ const TeacherDashboard = () => {
         case 1: return <AttendanceTab />;
         case 2: return <RewardsTab />;
         case 3: return <TeachersTab />;
+        case 4: return <StudentsTab />;
         default: return <HomeTab />;
       }
     })();
@@ -335,6 +339,10 @@ const TeacherDashboard = () => {
           <BottomNavigationAction
             label="Teachers"
             icon={currentTab === 3 ? <PeopleIcon /> : <PeopleOutlinedIcon />}
+          />
+          <BottomNavigationAction
+            label="Students"
+            icon={currentTab === 4 ? <SchoolIcon /> : <SchoolOutlinedIcon />}
           />
         </BottomNavigation>
       </Paper>
