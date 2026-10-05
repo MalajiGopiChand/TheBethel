@@ -46,6 +46,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';
 import { handleBackNavigation } from '../../../utils/navigation';
