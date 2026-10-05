@@ -6,13 +6,23 @@ import {
   Person as StudentIcon,
   PersonOff as AbsentIcon,
   CloudDownload as DownloadIcon,
-  Badge as ProfileIcon // Icon for the new button
+  Badge as ProfileIcon,
+  EmojiEvents as LeaderboardIcon
 } from '@mui/icons-material';
 
 const StudentsTab = () => {
   const navigate = useNavigate();
 
   const actions = [
+    {
+      title: 'Student Leaderboard',
+      description: 'View Rankings & Points',
+      icon: <LeaderboardIcon />,
+      colorStart: '#FFE53B',
+      colorEnd: '#FF8E53',
+      isEnabled: true,
+      onClick: () => navigate('/teacher/leaderboard')
+    },
     {
       title: 'Manage Students',
       description: 'Add, Edit, View List',

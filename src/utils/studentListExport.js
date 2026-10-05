@@ -68,7 +68,7 @@ export function buildStudentListReport({ students, selectedClass = 'All', select
     totalStudents: filtered.length,
     placeSections
   };
-};
+}
 
 const buildReportHeaderHtml = (report, { showMeta = true } = {}) => {
   const { generatedLabel, selectedClass, selectedPlace, totalStudents } = report;

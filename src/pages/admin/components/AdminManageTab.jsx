@@ -8,14 +8,23 @@ import {
   AttachMoney as DollarsIcon,
   History as HistoryIcon,
   List as RecordsIcon,
-  Assignment as HomeworkIcon
+  Assignment as HomeworkIcon,
+  EmojiEvents as LeaderboardIcon
 } from '@mui/icons-material';
 
 const AdminManageTab = () => {
   const navigate = useNavigate();
 
   const actions = [
-   
+    {
+      title: 'Student Leaderboard',
+      subtitle: 'Rankings & Dollars',
+      icon: <LeaderboardIcon />,
+      colorStart: '#FFE53B',
+      colorEnd: '#FF8E53',
+      isEnabled: true,
+      onClick: () => navigate('/teacher/leaderboard')
+    },
     {
       title: 'Student Details',
       icon: <StudentDetailsIcon />,

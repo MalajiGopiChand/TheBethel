@@ -46,10 +46,17 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { format } from 'date-fns';
-import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
+import { UserRole } from '../../../types';
 import { handleBackNavigation } from '../../../utils/navigation';
 import { notifySuccess, notifyError, requestNotificationPermission } from '../../../services/notificationService';
+
+const ADMIN_EMAILS = [
+  'gop1@gmail.com',
+  'premkumartenali@gmail.com',
+  'admin@example.com',
+  'admin@gmail.com'
+];
 
 const DollarsGivingPage = () => {
   const { currentUser, logout } = useAuth();
@@ -58,6 +65,9 @@ const DollarsGivingPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
+  const isAdmin = currentUser?.role === UserRole.ADMIN || 
+    ADMIN_EMAILS.includes(currentUser?.email);
+
   const handleBack = () => {
     handleBackNavigation(navigate, currentUser);
   };
@@ -83,6 +93,7 @@ const DollarsGivingPage = () => {
 
   // Check if today is Sunday (0 = Sunday)
   const isSunday = new Date().getDay() === 0;
+  const canGiveDollars = isSunday || isAdmin;
   const todayFormatted = format(new Date(), 'EEEE, MMM dd, yyyy');
 
   // Fetch Students
@@ -133,8 +144,8 @@ const DollarsGivingPage = () => {
 
   // Handle Save Reward
   const handleSave = async () => {
-    if (!isSunday) {
-      alert('Rewards can only be given on Sundays. Today is ' + todayFormatted + '.');
+    if (!canGiveDollars) {
+      alert('Rewards can only be given on Sundays for teachers. Today is ' + todayFormatted + '.');
       return;
     }
 
@@ -163,7 +174,7 @@ const DollarsGivingPage = () => {
           date: format(new Date(), 'yyyy-MM-dd'),
           dollars: amount,
           reason: rewardReason.trim(),
-          teacher: currentUser?.name || currentUser?.email || 'Unknown'
+          teacher: currentUser?.name || (isAdmin ? 'Admin' : (currentUser?.email || 'Teacher'))
         };
         
         rewards.push(newReward);
@@ -197,8 +208,8 @@ const DollarsGivingPage = () => {
   };
 
   const handleOpenDialog = (student) => {
-    if (!isSunday) {
-      alert('Rewards can only be given on Sundays. Today is ' + todayFormatted + '.');
+    if (!canGiveDollars) {
+      alert('Rewards can only be given on Sundays for teachers. Today is ' + todayFormatted + '.');
       return;
     }
     setSelectedStudent(student);
@@ -256,10 +267,17 @@ const DollarsGivingPage = () => {
             />
           </Box>
           
-          {/* Warning Alert for Non-Sunday */}
-          {!isSunday && (
+          {/* Warning Alert for Non-Sunday (only shown for teachers) */}
+          {!isSunday && !isAdmin && (
             <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
-              Rewards can only be given on Sundays. Today is {todayFormatted}.
+              Rewards can only be given on Sundays by teachers. Today is {todayFormatted}.
+            </Alert>
+          )}
+
+          {/* Info Banner for Admin (every day enabled) */}
+          {isAdmin && !isSunday && (
+            <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+              🌟 Admin Privilege: You can award dollars on any day of the week. (Today is {todayFormatted}).
             </Alert>
           )}
 
@@ -317,7 +335,7 @@ const DollarsGivingPage = () => {
                         variant="contained"
                         startIcon={<DollarIcon />}
                         onClick={() => handleOpenDialog(student)}
-                        disabled={!isSunday}
+                        disabled={!canGiveDollars}
                         size={isMobile ? "medium" : "small"}
                         fullWidth={isMobile}
                         sx={{
@@ -336,7 +354,7 @@ const DollarsGivingPage = () => {
                           }
                         }}
                       >
-                        {isSunday ? 'Give Reward' : 'Only on Sundays'}
+                        {canGiveDollars ? 'Give Reward' : 'Only on Sundays'}
                       </Button>
                     </ListItem>
                     {index < filteredStudents.length - 1 && <Divider component="li" />}
@@ -373,7 +391,7 @@ const DollarsGivingPage = () => {
               value={rewardAmount}
               onChange={(e) => setRewardAmount(e.target.value)}
               fullWidth
-              disabled={!isSunday || saving}
+              disabled={!canGiveDollars || saving}
               InputProps={{
                 startAdornment: <DollarIcon sx={{ mr: 1, color: 'text.secondary' }} />
               }}
@@ -385,12 +403,12 @@ const DollarsGivingPage = () => {
               value={rewardReason}
               onChange={(e) => setRewardReason(e.target.value)}
               fullWidth
-              disabled={!isSunday || saving}
+              disabled={!canGiveDollars || saving}
               placeholder="Enter the reason for this reward..."
             />
-            {!isSunday && (
+            {!canGiveDollars && (
               <Alert severity="warning">
-                Rewards can only be given on Sundays. Today is {todayFormatted}.
+                Rewards can only be given on Sundays for teachers. Today is {todayFormatted}.
               </Alert>
             )}
           </Box>
@@ -410,7 +428,7 @@ const DollarsGivingPage = () => {
           <Button 
             onClick={handleSave} 
             variant="contained"
-            disabled={!isSunday || saving || !rewardAmount || !rewardReason.trim()}
+            disabled={!canGiveDollars || saving || !rewardAmount || !rewardReason.trim()}
             startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <DollarIcon />}
           >
             {saving ? 'Saving...' : 'Save Reward'}

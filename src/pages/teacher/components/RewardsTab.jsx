@@ -5,6 +5,7 @@ import ActionGrid from '../../../components/ActionGrid';
 import {
   AttachMoney as GiveDollarsIcon,
   History as HistoryIcon,
+  EmojiEvents as LeaderboardIcon,
   AccountBalanceWallet as OfferingsIcon,
 } from '@mui/icons-material';
 
@@ -12,6 +13,15 @@ const RewardsTab = () => {
   const navigate = useNavigate();
 
   const actions = [
+    {
+      title: 'Student Leaderboard',
+      subtitle: 'Rankings & Dollars',
+      icon: <LeaderboardIcon />,
+      colorStart: '#FFE53B',
+      colorEnd: '#FF8E53',
+      isEnabled: true,
+      onClick: () => navigate('/teacher/leaderboard')
+    },
     {
       title: 'Give Dollars',
       icon: <GiveDollarsIcon />,
@@ -28,7 +38,6 @@ const RewardsTab = () => {
       isEnabled: true,
       onClick: () => navigate('/teacher/dollar-history')
     },
-    
   ];
 
   return (

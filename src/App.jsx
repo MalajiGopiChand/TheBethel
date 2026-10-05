@@ -363,6 +363,26 @@ function App() {
         }
       />
       <Route
+        path="/admin/leaderboard"
+        element={
+          currentUser ? (
+            <LeaderboardPage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/teacher/student-leaderboard"
+        element={
+          currentUser ? (
+            <LeaderboardPage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
         path="/teacher/absent-students"
         element={
           currentUser && (currentUser.role === UserRole.TEACHER || currentUser.role === UserRole.ADMIN) ? (

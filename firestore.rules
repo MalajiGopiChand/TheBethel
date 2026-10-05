@@ -13,7 +13,8 @@ service cloud.firestore {
         request.auth.token.email in [
           "gop1@gmail.com", 
           "premkumartenali@gmail.com",
-          "admin@example.com"
+          "admin@example.com",
+          "admin@gmail.com"
         ];
       
       // Check by custom claim (more secure)

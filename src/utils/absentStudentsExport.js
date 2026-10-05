@@ -106,7 +106,7 @@ export function buildAbsentStudentsReport({ students, selectedDate, selectedClas
     totalAbsent: filtered.length,
     placeSections
   };
-};
+}
 
 const PDF_COLUMN_STYLES = {
   0: { cellWidth: 10, halign: 'center' },
@@ -184,7 +184,7 @@ export function downloadAbsentStudentsPdf(params) {
   const fileName = `absent-students-${selectedDate}.pdf`;
   doc.save(fileName);
   return fileName;
-};
+}
 
 const buildAbsentHeaderHtml = (report, { showMeta = true } = {}) => {
   const { dateLabel, selectedClass, selectedPlace, totalAbsent } = report;
