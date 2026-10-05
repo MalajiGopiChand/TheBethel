@@ -271,21 +271,18 @@ service cloud.firestore {
         isAdmin() ||
         (isParent() && resource.data.parentId == request.auth.uid)
       );
-
       // Only parent can create and only for own uid
       allow create: if isAuthenticated() && isParent() &&
         request.resource.data.parentId == request.auth.uid;
-
       // Parents can update only own complaint (optional), admin can update any
       allow update: if isAuthenticated() && (
         isAdmin() ||
         (isParent() && resource.data.parentId == request.auth.uid)
       );
-
       // Admin can delete complaints
       allow delete: if isAdmin();
     }
-
+   
     // =========================================================
     // 14. LEGACY DATA (for backward compatibility)
     // =========================================================
