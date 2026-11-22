@@ -31,7 +31,7 @@ import {
   updateDoc,
   query,
   onSnapshot
-} from 'firebase/firestore';
+} from "../../../services/notifyingFirestore";
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';
 import { isTeacherVerifiedProfile } from '../../../utils/teacherVerification';

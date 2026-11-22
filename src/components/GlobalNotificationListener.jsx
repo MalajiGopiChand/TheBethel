@@ -1,97 +1,68 @@
-import React, { useEffect, useRef } from 'react';
-import { collection, query, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { collection, query, onSnapshot, orderBy, limit, updateDoc, doc } from "../services/notifyingFirestore";
+import { Box, IconButton, Badge, Drawer, Typography, Button, Alert, Stack, List, ListItemButton, ListItemText, Divider, CircularProgress, Tooltip } from '@mui/material';
+import NotificationsIcon from '@mui/icons-material/NotificationsOutlined';
+import CloseIcon from '@mui/icons-material/Close';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { showAppNotification, requestNotificationPermission } from '../services/notificationService';
+import { registerPushTokenForUser } from '../services/notificationService';
 
-const GLOBAL_CHAT_ID = 'chat_global_room';
-
-const GlobalNotificationListener = () => {
+export default function GlobalNotificationListener() {
   const { currentUser } = useAuth();
-  
-  // Track if initial snapshot payload has arrived to avoid spamming past messages
-  const initialLoadRef = useRef({
-    messages: true,
-    timetables: true,
-    announcements: true
-  });
-
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [enabling, setEnabling] = useState(false);
+  const [pushMessage, setPushMessage] = useState('');
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [deliveryWarning, setDeliveryWarning] = useState('');
   useEffect(() => {
-    // Attempt to request permission silently if not already granted
-    requestNotificationPermission();
+    const receive = event => setDeliveryWarning(event.detail);
+    window.addEventListener('notification-delivery-warning', receive);
+    return () => window.removeEventListener('notification-delivery-warning', receive);
   }, []);
-
   useEffect(() => {
-    if (!currentUser) return;
-
-    // 1. Listen for new MESSAGES
-    const qMessages = query(collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'), orderBy('timestamp', 'desc'), limit(1));
-    const unsubMessages = onSnapshot(qMessages, (snapshot) => {
-      if (initialLoadRef.current.messages) {
-        initialLoadRef.current.messages = false;
-        return; // Ignore the first massive chunk of old messages
-      }
-      
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const docData = change.doc.data();
-          // Ensure we don't notify the user of their own message
-          if (docData.senderId !== currentUser.uid) {
-             const sender = docData.senderName || 'Someone';
-             const preview = docData.content ? docData.content : (docData.imageUrl ? 'Sent an image' : (docData.audioUrl ? 'Sent a voice message' : 'New message'));
-             showAppNotification(`Bethel Chat: ${sender}`, preview, { tag: 'chat-message', data: { url: '/teacher/messaging' } });
-          }
-        }
-      });
-    });
-
-    // 2. Listen for new SCHEDULES (timetables)
-    const qSchedules = query(collection(db, 'timetables'), orderBy('createdAt', 'desc'), limit(1));
-    const unsubSchedules = onSnapshot(qSchedules, (snapshot) => {
-      if (initialLoadRef.current.timetables) {
-        initialLoadRef.current.timetables = false;
-        return;
-      }
-      
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const docData = change.doc.data();
-          const target = docData.teacherName || 'Everyone';
-          // Filter if schedule is explicitly targeted
-          if (target === 'Everyone' || target === currentUser.name) {
-             showAppNotification(`New Schedule Created`, `A new schedule was published for ${target}.`, { tag: 'schedule-update', data: { url: '/teacher/schedule' } });
-          }
-        }
-      });
-    });
-
-    // 3. Listen for new ANNOUNCEMENTS
-    const qAnnouncements = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'), limit(1));
-    const unsubAnnouncements = onSnapshot(qAnnouncements, (snapshot) => {
-      if (initialLoadRef.current.announcements) {
-        initialLoadRef.current.announcements = false;
-        return;
-      }
-      
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const docData = change.doc.data();
-          const title = docData.title || 'New Announcement';
-          const body = docData.message || docData.content || (docData.targetType === 'specific' ? `For ${docData.targetName}` : 'For everyone');
-          
-          showAppNotification(`Announcement: ${title}`, body, { tag: 'announcement-notice', data: { url: '/teacher/dashboard' } });
-        }
-      });
-    });
-
-    return () => {
-      unsubMessages();
-      unsubSchedules();
-      unsubAnnouncements();
-    };
-  }, [currentUser]);
-
-  return null; // Silent background component
-};
-
-export default GlobalNotificationListener;
+    setItems([]); setPushEnabled(false); setPushMessage('');
+    if (!currentUser?.uid) return;
+    setLoading(true);
+    return onSnapshot(query(collection(db, 'user_notifications', currentUser.uid, 'items'), orderBy('createdAt', 'desc'), limit(50)), snapshot => {
+      setItems(snapshot.docs.map(item => ({ id: item.id, ...item.data() })));
+      setLoading(false); setError('');
+    }, () => { setLoading(false); setError('Could not load notifications. Check your connection or contact the administrator.'); });
+  }, [currentUser?.uid]);
+  if (!currentUser) return null;
+  const enablePush = async () => {
+    setEnabling(true); setPushMessage('');
+    try {
+      const token = await registerPushTokenForUser(currentUser, { requestPermission: true });
+      if (!token) throw new Error('Device registration did not finish. Please sign in again and retry.');
+      setPushEnabled(true); setPushMessage('Device registered. Automatic alerts also require the notification server to be deployed and running.');
+    } catch (error) { setPushEnabled(false); setPushMessage(error.message); }
+    finally { setEnabling(false); }
+  };
+  const openNotification = async item => {
+    try { await updateDoc(doc(db, 'user_notifications', currentUser.uid, 'items', item.id), { read: true }); }
+    catch { setError('Could not mark this notification as read.'); }
+    if (item.url?.startsWith('/') && !item.url.startsWith('//')) { navigate(item.url); setOpen(false); }
+  };
+  return <>
+    {deliveryWarning && <Alert severity="warning" onClose={() => setDeliveryWarning('')} sx={{ position: 'fixed', bottom: 155, right: 16, left: { xs: 16, sm: 'auto' }, maxWidth: 420, zIndex: 1400 }}>{deliveryWarning}</Alert>}
+    <Tooltip title="Notifications"><IconButton onClick={() => setOpen(true)} aria-label="Open notifications" sx={{ position: 'fixed', right: 16, bottom: 'calc(96px + env(safe-area-inset-bottom))', zIndex: 1200, bgcolor: 'background.paper', boxShadow: 3, width: 48, height: 48, '&:hover': { bgcolor: 'background.paper' } }}>
+      <Badge badgeContent={items.filter(item => !item.read).length} color="error"><NotificationsIcon /></Badge>
+    </IconButton></Tooltip>
+    <Drawer anchor="right" open={open} onClose={() => setOpen(false)} PaperProps={{ sx: { width: { xs: '100%', sm: 400 }, maxWidth: '100%', borderRadius: 0 } }}>
+      <Box sx={{ p: 2 }}><Stack direction="row" alignItems="center" justifyContent="space-between"><Typography variant="h6">Notifications</Typography><IconButton aria-label="Close notifications" onClick={() => setOpen(false)}><CloseIcon /></IconButton></Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ my: 2 }}>Your latest 50 updates. Enable device notifications to receive updates when this app is closed.</Typography>
+        <Button fullWidth variant="contained" disabled={enabling} onClick={enablePush}>{enabling ? 'Enabling…' : 'Enable device notifications'}</Button>
+        {pushMessage && <Alert sx={{ mt: 2 }} severity={pushEnabled ? 'success' : 'warning'}>{pushMessage}</Alert>}
+        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+      </Box><Divider />
+      {loading ? <CircularProgress sx={{ m: 3 }} /> : !items.length && !error ? <Typography sx={{ p: 3 }} color="text.secondary">No updates yet. New activity will appear here.</Typography> : <List>{items.map(item => <ListItemButton key={item.id} onClick={() => openNotification(item)} sx={{ alignItems: 'flex-start', bgcolor: item.read ? 'transparent' : 'action.hover' }}>
+        <ListItemText primary={item.title} secondary={<>{item.body}<br />{item.createdAt?.toDate?.().toLocaleString() || 'Just now'}</>} primaryTypographyProps={{ fontWeight: item.read ? 400 : 700 }} secondaryTypographyProps={{ sx: { overflowWrap: 'anywhere' } }} />
+      </ListItemButton>)}</List>}
+    </Drawer>
+  </>;
+}

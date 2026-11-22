@@ -24,7 +24,7 @@ import {
 } from '@mui/icons-material';
 import {
   doc, onSnapshot, collection, query, where, updateDoc
-} from 'firebase/firestore';
+} from '../../../services/studentData';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';

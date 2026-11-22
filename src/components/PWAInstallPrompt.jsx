@@ -1,406 +1,86 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Snackbar,
-  Paper,
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  useTheme,
-  useMediaQuery,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent
-} from '@mui/material';
-import {
-  InstallMobile as InstallIcon,
-  Close as CloseIcon,
-  Share as ShareIcon,
-  AddToHomeScreen as AddIcon,
-  ArrowForward as ArrowIcon
-} from '@mui/icons-material';
+import React, { useEffect, useState } from 'react';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Typography } from '@mui/material';
 
+// One manual install dialog for the entire app; the dashboard banner is the reminder.
 const PWAInstallPrompt = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [showIOSDialog, setShowIOSDialog] = useState(false);
-  const deferredPromptRef = useRef(null);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [canInstall, setCanInstall] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [prompt, setPrompt] = useState(() => window.deferredPrompt || null);
+  const [installing, setInstalling] = useState(false);
+  const [error, setError] = useState('');
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /android/i.test(navigator.userAgent);
 
   useEffect(() => {
-    // Check if already installed
-    const standalone = window.matchMedia('(display-mode: standalone)').matches ||
-                      window.navigator.standalone === true ||
-                      document.referrer.includes('android-app://');
-    
-    setIsStandalone(standalone);
-    
-    // Detect platform
-    const ua = navigator.userAgent || navigator.vendor || window.opera;
-    const iOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-    const android = /android/i.test(ua);
-    
-    setIsIOS(iOS);
-    setIsAndroid(android);
-
-    // For Android/Chrome - listen for beforeinstallprompt
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      deferredPromptRef.current = e;
-      window.deferredPrompt = e;
-      setCanInstall(true);
-      
-      // Show after delay if not already installed and not dismissed
-      if (!standalone && !localStorage.getItem('pwa-prompt-dismissed') && !sessionStorage.getItem('pwa-prompt-dismissed')) {
-        setTimeout(() => setShowPrompt(true), 2000);
-      }
+    const requestInstall = () => {
+      if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) return;
+      setPrompt(window.deferredPrompt || null);
+      setError('');
+      setOpen(true);
     };
-
-    // For iOS - show instructions after delay (only if not dismissed)
-    if (iOS && !standalone && !localStorage.getItem('pwa-prompt-dismissed') && !sessionStorage.getItem('pwa-prompt-dismissed')) {
-      setTimeout(() => setShowPrompt(true), 2000);
-    }
-
-    // Listen for manual install request
-    const handleInstallRequest = () => {
-      // Only show if not dismissed
-      const isDismissed = localStorage.getItem('pwa-prompt-dismissed') || sessionStorage.getItem('pwa-prompt-dismissed');
-      if (!isDismissed) {
-        if (iOS) {
-          setShowIOSDialog(true);
-        } else {
-          setShowPrompt(true);
-        }
-      }
+    const capturePrompt = (event) => {
+      event.preventDefault();
+      window.deferredPrompt = event;
+      setPrompt(event);
     };
-    window.addEventListener('pwa-install-request', handleInstallRequest);
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // Check if app is installable (for Android)
-    if (!standalone && !iOS && 'serviceWorker' in navigator) {
-      // Check if we can install - wait a bit for beforeinstallprompt event
-      const checkInstallable = setInterval(() => {
-        if (deferredPromptRef.current || window.deferredPrompt) {
-          setCanInstall(true);
-          clearInterval(checkInstallable);
-        }
-      }, 500);
-      
-      // Stop checking after 5 seconds
-      setTimeout(() => clearInterval(checkInstallable), 5000);
-    }
-
+    const installed = () => {
+      setOpen(false);
+      setPrompt(null);
+      window.deferredPrompt = null;
+    };
+    window.addEventListener('pwa-install-request', requestInstall);
+    window.addEventListener('beforeinstallprompt', capturePrompt);
+    window.addEventListener('appinstalled', installed);
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('pwa-install-request', handleInstallRequest);
+      window.removeEventListener('pwa-install-request', requestInstall);
+      window.removeEventListener('beforeinstallprompt', capturePrompt);
+      window.removeEventListener('appinstalled', installed);
     };
   }, []);
 
-  const handleInstallClick = async () => {
-    const prompt = deferredPromptRef.current || window.deferredPrompt;
-    
-    if (prompt) {
-      try {
-        // Show the install prompt
-        prompt.prompt();
-        
-        // Wait for the user to respond
-        const choiceResult = await prompt.userChoice;
-        
-        console.log(`User ${choiceResult.outcome} the install prompt`);
-        
-        // Clear the deferred prompt
-        deferredPromptRef.current = null;
-        window.deferredPrompt = null;
-        setCanInstall(false);
-        setShowPrompt(false);
-        
-        if (choiceResult.outcome === 'accepted') {
-          sessionStorage.setItem('pwa-installed', 'true');
-          // The browser will handle the installation
-          console.log('User accepted the install prompt');
-        } else {
-          console.log('User dismissed the install prompt');
-        }
-      } catch (error) {
-        console.error('Error showing install prompt:', error);
-        // Fallback: Show browser menu instructions
-        showBrowserMenuInstructions();
-      }
-    } else {
-      // Fallback: Show browser menu instructions
-      showBrowserMenuInstructions();
-    }
-  };
-
-  const showBrowserMenuInstructions = () => {
-    if (isAndroid) {
-      alert('To install:\n1. Tap the menu (3 dots) in your browser\n2. Select "Install app" or "Add to Home screen"\n3. Tap "Install"');
-    } else if (isIOS) {
-      setShowIOSDialog(true);
-    } else {
-      alert('To install this app:\n1. Look for the install icon in your browser address bar\n2. Or check the browser menu for "Install" option');
-    }
-  };
-
-  const handleClose = () => {
-    setShowPrompt(false);
-    setShowIOSDialog(false);
+  const close = () => {
+    if (installing) return;
+    setOpen(false);
     window.showPWAInstall = false;
-    // Don't show again - use localStorage so it persists across sessions
-    localStorage.setItem('pwa-prompt-dismissed', 'true');
-    sessionStorage.setItem('pwa-prompt-dismissed', 'true');
+  };
+  const install = async () => {
+    if (!prompt) return;
+    setInstalling(true);
+    setError('');
+    try {
+      await prompt.prompt();
+      const result = await prompt.userChoice;
+      if (result.outcome === 'accepted') setOpen(false);
+    } catch {
+      setError('The install prompt could not open. Use the browser instructions below.');
+    } finally {
+      window.deferredPrompt = null;
+      setPrompt(null);
+      setInstalling(false);
+    }
   };
 
-  // Listen for manual show requests
-  useEffect(() => {
-    const handleManualShow = () => {
-      // Only show if not dismissed
-      const isDismissed = localStorage.getItem('pwa-prompt-dismissed') || sessionStorage.getItem('pwa-prompt-dismissed');
-      if (!isDismissed) {
-        if (isIOS) {
-          setShowIOSDialog(true);
-        } else {
-          setShowPrompt(true);
-        }
-      }
-    };
-    window.addEventListener('pwa-install-request', handleManualShow);
-    return () => window.removeEventListener('pwa-install-request', handleManualShow);
-  }, [isIOS]);
-
-  // Don't show if already dismissed this session or already installed
-  if (isStandalone) {
-    return null;
-  }
-
-  // Don't show if dismissed (check both localStorage and sessionStorage)
-  const isDismissed = localStorage.getItem('pwa-prompt-dismissed') || sessionStorage.getItem('pwa-prompt-dismissed');
-  if (!showPrompt && !window.showPWAInstall && !showIOSDialog && isDismissed && !window.showPWAInstall) {
-    return null;
-  }
+  const steps = isIOS
+    ? ['Open this website in Safari and tap Share.', 'Choose Add to Home Screen.', 'Tap Add to confirm.']
+    : isAndroid
+      ? ['Open the browser menu (three dots).', 'Choose Install app or Add to Home screen, if available.', 'Confirm to add Bethel AMS to your device.']
+      : ['Open the install icon in the address bar or the browser menu.', 'Choose Install app, if available.', 'Confirm to add Bethel AMS to your device.'];
 
   return (
-    <>
-      {/* Android/Chrome Install Prompt */}
-      {!isIOS && (showPrompt || window.showPWAInstall) && (
-        <Snackbar
-          open={true}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          sx={{ bottom: { xs: 90, sm: 24 }, zIndex: 1400 }}
-          onClose={handleClose}
-        >
-          <Paper
-            elevation={8}
-            sx={{
-              p: 2.5,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: '#fff',
-              borderRadius: 3,
-              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
-              maxWidth: { xs: 'calc(100vw - 32px)', sm: 400 },
-              width: '100%'
-            }}
-          >
-            <InstallIcon sx={{ fontSize: 28 }} />
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                Install Bethel AMS
-              </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.95, display: 'block', lineHeight: 1.4 }}>
-                Add to home screen for quick access
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={handleInstallClick}
-              disabled={!canInstall}
-              sx={{
-                bgcolor: 'rgba(255, 255, 255, 0.25)',
-                color: '#fff',
-                fontWeight: 'bold',
-                px: 2,
-                minWidth: 80,
-                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.35)' },
-                '&:disabled': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
-              }}
-            >
-              {canInstall ? 'Install' : 'Menu'}
-            </Button>
-            <IconButton
-              size="small"
-              onClick={handleClose}
-              sx={{ 
-                color: '#fff',
-                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.2)' }
-              }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Paper>
-        </Snackbar>
-      )}
-
-      {/* iOS Install Instructions Dialog */}
-      <Dialog
-        open={showIOSDialog}
-        onClose={handleClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: '#fff'
-          }
-        }}
-      >
-        <DialogTitle sx={{ color: '#fff', pb: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6" fontWeight="bold">
-              Install Bethel AMS
-            </Typography>
-            <IconButton onClick={handleClose} sx={{ color: '#fff' }}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ color: '#fff', pt: 2 }}>
-          <Stepper orientation="vertical" activeStep={-1}>
-            <Step>
-              <StepLabel 
-                StepIconProps={{ sx: { color: '#fff' } }}
-                sx={{ '& .MuiStepLabel-label': { color: '#fff', fontWeight: 'bold' } }}
-              >
-                Tap the Share Button
-              </StepLabel>
-              <StepContent>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)', mb: 2 }}>
-                  Look for the <ShareIcon sx={{ fontSize: 16, verticalAlign: 'middle', mx: 0.5 }} /> share icon 
-                  at the bottom of your Safari browser
-                </Typography>
-              </StepContent>
-            </Step>
-            <Step>
-              <StepLabel 
-                StepIconProps={{ sx: { color: '#fff' } }}
-                sx={{ '& .MuiStepLabel-label': { color: '#fff', fontWeight: 'bold' } }}
-              >
-                Select "Add to Home Screen"
-              </StepLabel>
-              <StepContent>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)', mb: 2 }}>
-                  Scroll down in the share menu and tap <AddIcon sx={{ fontSize: 16, verticalAlign: 'middle', mx: 0.5 }} /> 
-                  "Add to Home Screen"
-                </Typography>
-              </StepContent>
-            </Step>
-            <Step>
-              <StepLabel 
-                StepIconProps={{ sx: { color: '#fff' } }}
-                sx={{ '& .MuiStepLabel-label': { color: '#fff', fontWeight: 'bold' } }}
-              >
-                Tap "Add"
-              </StepLabel>
-              <StepContent>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                  Confirm by tapping "Add" in the top right corner. The app will appear on your home screen!
-                </Typography>
-              </StepContent>
-            </Step>
-          </Stepper>
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-            <Button
-              variant="contained"
-              onClick={handleClose}
-              sx={{
-                bgcolor: 'rgba(255, 255, 255, 0.25)',
-                color: '#fff',
-                fontWeight: 'bold',
-                px: 3,
-                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.35)' }
-              }}
-            >
-              Got it!
-            </Button>
-          </Box>
-        </DialogContent>
-      </Dialog>
-
-      {/* iOS Quick Prompt (Alternative) */}
-      {isIOS && !showIOSDialog && (showPrompt || window.showPWAInstall) && !localStorage.getItem('pwa-prompt-dismissed') && (
-        <Snackbar
-          open={true}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          sx={{ bottom: { xs: 90, sm: 24 }, zIndex: 1400 }}
-          onClose={handleClose}
-        >
-          <Paper
-            elevation={8}
-            sx={{
-              p: 2.5,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: '#fff',
-              borderRadius: 3,
-              boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
-              maxWidth: { xs: 'calc(100vw - 32px)', sm: 400 },
-              width: '100%'
-            }}
-          >
-            <ShareIcon sx={{ fontSize: 28 }} />
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                Install App
-              </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.95, display: 'block', lineHeight: 1.4 }}>
-                Tap Share <ArrowIcon sx={{ fontSize: 12, verticalAlign: 'middle', mx: 0.5 }} /> 
-                then "Add to Home Screen"
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => setShowIOSDialog(true)}
-              sx={{
-                bgcolor: 'rgba(255, 255, 255, 0.25)',
-                color: '#fff',
-                fontWeight: 'bold',
-                px: 2,
-                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.35)' }
-              }}
-            >
-              How?
-            </Button>
-            <IconButton
-              size="small"
-              onClick={handleClose}
-              sx={{ 
-                color: '#fff',
-                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.2)' }
-              }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Paper>
-        </Snackbar>
-      )}
-    </>
+    <Dialog open={open} onClose={close} maxWidth="xs" fullWidth aria-labelledby="install-title">
+      <DialogTitle id="install-title">Install Bethel AMS</DialogTitle>
+      <DialogContent>
+        <DialogContentText>Keep attendance, homework, and updates one tap away.</DialogContentText>
+        {error && <Alert severity="warning" sx={{ mt: 2 }}>{error}</Alert>}
+        <Box component="ol" sx={{ pl: 2.5, mb: 0 }}>
+          {steps.map((step) => <Typography component="li" variant="body2" key={step} sx={{ mb: 1.5 }}>{step}</Typography>)}
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={close} disabled={installing}>{prompt ? 'Not now' : 'Got it'}</Button>
+        {prompt && <Button variant="contained" onClick={install} disabled={installing}>{installing ? 'Installing…' : 'Install app'}</Button>}
+      </DialogActions>
+    </Dialog>
   );
 };
 

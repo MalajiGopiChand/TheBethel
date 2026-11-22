@@ -35,7 +35,6 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types';
-import PWAInstallPrompt from '../../components/PWAInstallPrompt';
 import InstallButton from '../../components/InstallButton';
 
 // Components
@@ -348,7 +347,6 @@ const TeacherDashboard = () => {
       </Paper>
 
       {/* PWA Install Prompt */}
-      <PWAInstallPrompt />
     </Box>
   );
 };

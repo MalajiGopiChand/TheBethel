@@ -41,7 +41,7 @@ import {
   query,
   orderBy,
   onSnapshot
-} from 'firebase/firestore';
+} from "../../../services/notifyingFirestore";
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';

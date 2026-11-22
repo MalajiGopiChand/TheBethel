@@ -22,7 +22,7 @@ import {
   query,
   orderBy,
   onSnapshot
-} from 'firebase/firestore';
+} from '../../../services/studentData';
 // --- UPDATED IMPORTS (Fixed Paths) ---
 import { db } from '../../../config/firebase';
 import AttendanceCard from '../../../components/AttendanceCard';

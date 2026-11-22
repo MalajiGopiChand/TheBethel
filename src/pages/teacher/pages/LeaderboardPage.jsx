@@ -11,7 +11,7 @@ import {
   EmojiEvents as TrophyIcon,
   Place as PlaceIcon
 } from '@mui/icons-material';
-import { collection, query, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot } from '../../../services/studentData';
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';
 

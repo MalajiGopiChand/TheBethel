@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { IconButton, Tooltip, Badge, useMediaQuery, useTheme } from '@mui/material';
+import { IconButton, Tooltip, Badge } from '@mui/material';
 import { InstallMobile as InstallIcon } from '@mui/icons-material';
 
 const InstallButton = ({ size = 'medium', variant = 'icon' }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [canInstall, setCanInstall] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
@@ -34,14 +32,12 @@ const InstallButton = ({ size = 'medium', variant = 'icon' }) => {
     
     // Check immediately and periodically
     checkInstallable();
-    const interval = setInterval(checkInstallable, 1000);
-    
-    // Stop checking after 10 seconds
-    setTimeout(() => clearInterval(interval), 10000);
+    const installed = () => { setIsStandalone(true); setCanInstall(false); };
+    window.addEventListener('appinstalled', installed);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      clearInterval(interval);
+      window.removeEventListener('appinstalled', installed);
     };
   }, []);
 
@@ -61,6 +57,7 @@ const InstallButton = ({ size = 'medium', variant = 'icon' }) => {
       <Tooltip title={canInstall ? "Install App" : "Download App"}>
         <IconButton
           onClick={handleInstallClick}
+          aria-label="Install app"
           size={size}
           sx={{
             bgcolor: canInstall ? 'rgba(102, 126, 234, 0.1)' : 'rgba(102, 126, 234, 0.08)',

@@ -44,7 +44,7 @@ import {
   onSnapshot,
   query,
   orderBy
-} from 'firebase/firestore';
+} from '../../../services/studentData';
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';

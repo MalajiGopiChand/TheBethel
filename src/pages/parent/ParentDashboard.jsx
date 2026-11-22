@@ -44,9 +44,8 @@ import {
   Church as ChurchIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from '../../services/studentData';
 import { db } from '../../config/firebase';
-import PWAInstallPrompt from '../../components/PWAInstallPrompt';
 import InstallButton from '../../components/InstallButton';
 
 // Ensure these components exist in your project structure
@@ -354,7 +353,6 @@ const ParentDashboard = () => {
       </Paper>
 
       {/* PWA Install Prompt - Cross Platform */}
-      <PWAInstallPrompt />
 
       <Dialog open={showTour} onClose={closeTour} fullWidth maxWidth="sm">
         <DialogTitle sx={{ fontWeight: 900 }}>

@@ -48,7 +48,7 @@ import {
   writeBatch,
   deleteField,
   serverTimestamp
-} from 'firebase/firestore';
+} from '../../../services/studentData';
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -238,8 +238,7 @@ const AttendancePage = () => {
         batch.update(studentRef, {
           attendance: legacyAttendance,
           absentDates: legacyAbsent,
-          currentStreak: newStreak,
-          dollarPoints: student.dollarPoints || 0
+          currentStreak: newStreak
         });
       }
 

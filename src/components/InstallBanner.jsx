@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Box, Typography, Button, IconButton, useTheme } from '@mui/material';
+import { Paper, Box, Typography, Button, IconButton } from '@mui/material';
 import { InstallMobile as InstallIcon, Close as CloseIcon } from '@mui/icons-material';
 
 const InstallBanner = () => {
-  const theme = useTheme();
   const [show, setShow] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
@@ -15,9 +14,11 @@ const InstallBanner = () => {
     setIsStandalone(standalone);
     
     // Show banner if not installed and not dismissed
-    if (!standalone && !localStorage.getItem('install-banner-dismissed')) {
-      setTimeout(() => setShow(true), 3000);
-    }
+    const timer = !standalone && !localStorage.getItem('install-banner-dismissed') && !localStorage.getItem('pwa-prompt-dismissed')
+      ? setTimeout(() => setShow(true), 3000) : null;
+    const installed = () => { clearTimeout(timer); setIsStandalone(true); setShow(false); };
+    window.addEventListener('appinstalled', installed);
+    return () => { clearTimeout(timer); window.removeEventListener('appinstalled', installed); };
   }, []);
 
   const handleInstall = () => {
@@ -49,7 +50,8 @@ const InstallBanner = () => {
         borderRadius: 2,
         display: 'flex',
         alignItems: 'center',
-        gap: 2,
+        gap: { xs: 1, sm: 2 },
+        flexWrap: { xs: 'wrap', sm: 'nowrap' },
         position: 'relative',
         overflow: 'hidden'
       }}
@@ -67,9 +69,9 @@ const InstallBanner = () => {
         }}
       />
       <InstallIcon sx={{ fontSize: 32, zIndex: 1 }} />
-      <Box sx={{ flexGrow: 1, zIndex: 1 }}>
+      <Box sx={{ flexGrow: 1, flexBasis: { xs: '65%', sm: 'auto' }, minWidth: 0, zIndex: 1 }}>
         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          Download Bethel AMS App
+          Bethel AMS, one tap away
         </Typography>
         <Typography variant="body2" sx={{ opacity: 0.9 }}>
           Install on your device for quick access and better experience
@@ -92,6 +94,7 @@ const InstallBanner = () => {
       <IconButton
         size="small"
         onClick={handleDismiss}
+        aria-label="Dismiss install reminder"
         sx={{ color: '#fff', zIndex: 1 }}
       >
         <CloseIcon fontSize="small" />

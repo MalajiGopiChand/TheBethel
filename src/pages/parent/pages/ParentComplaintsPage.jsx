@@ -13,12 +13,13 @@ import {
   Alert,
   Stack,
   CircularProgress,
-  MenuItem
+  MenuItem,
+  Chip
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
-import { addDoc, collection, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, query, where, getDocs, getDoc, doc, onSnapshot } from '../../../services/studentData';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';
@@ -36,6 +37,9 @@ const ParentComplaintsPage = () => {
   const [success, setSuccess] = useState('');
   const [studentName, setStudentName] = useState('');
   const [parentPhone, setParentPhone] = useState('');
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState('');
   const [issueType, setIssueType] = useState('homework');
   const parentLang = getParentLang();
 
@@ -58,28 +62,32 @@ const ParentComplaintsPage = () => {
         setParentPhone(String(currentUser?.phone || '').trim());
       }
 
-      // Strong fallback: collect parent phone directly from parents collection too.
-      const parentByStudentQuery = query(collection(db, 'parents'), where('studentId', '==', currentUser.studentId));
-      const parentByStudentSnap = await getDocs(parentByStudentQuery);
-      if (!parentByStudentSnap.empty) {
-        const p = parentByStudentSnap.docs[0].data();
-        const parentDbPhone = String(p.phone || p.parentPhone || p.contactNumber || '').trim();
-        if (parentDbPhone) setParentPhone(parentDbPhone);
-      } else if (currentUser?.uid) {
-        const parentOwnQuery = query(collection(db, 'parents'), where('uid', '==', currentUser.uid));
-        const parentOwnSnap = await getDocs(parentOwnQuery);
-        if (!parentOwnSnap.empty) {
-          const p = parentOwnSnap.docs[0].data();
-          const parentDbPhone = String(p.phone || p.parentPhone || p.contactNumber || '').trim();
-          if (parentDbPhone) setParentPhone(parentDbPhone);
-        }
+      // Read only this parent's UID document; collection-wide queries are denied to parents.
+      const ownParent = await getDoc(doc(db, 'parents', currentUser.uid));
+      if (ownParent.exists()) {
+        const parent = ownParent.data();
+        const phone = String(parent.phone || parent.parentPhone || parent.contactNumber || '').trim();
+        if (phone) setParentPhone(phone);
       }
+
     };
+    setParentPhone(currentUser?.phone || '');
+    setStudentName(currentUser?.studentName || '');
     fetchStudent().catch((e) => console.error('fetch student for complaint', e));
   }, [currentUser]);
 
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    return onSnapshot(query(collection(db, 'complaints'), where('parentId', '==', currentUser.uid)), snap => {
+      setHistory(snap.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)));
+      setHistoryLoading(false);
+      setHistoryError('');
+    }, () => { setHistoryLoading(false); setHistoryError('Could not load your complaints. Please try again later.'); });
+  }, [currentUser?.uid]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     setError('');
     setSuccess('');
 
@@ -125,9 +133,9 @@ const ParentComplaintsPage = () => {
 
   return (
     <Box className="page-shell page-glow-background" sx={{ minHeight: '100vh' }}>
-      <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'transparent', color: '#111', borderBottom: '1px solid', borderColor: 'divider', backdropFilter: 'blur(22px)' }}>
+      <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'background.paper', backgroundImage: 'none', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider', backdropFilter: 'blur(22px)' }}>
         <Toolbar>
-          <IconButton onClick={() => handleBackNavigation(navigate, currentUser)} sx={{ mr: 1 }}>
+          <IconButton aria-label="Go back" onClick={() => handleBackNavigation(navigate, currentUser)} sx={{ mr: 1 }}>
             <BackIcon />
           </IconButton>
           <Typography variant="h6" fontWeight="bold">
@@ -140,8 +148,8 @@ const ParentComplaintsPage = () => {
         <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {parentLang === 'te'
-              ? 'మీరు తెలుగు లేదా ఇంగ్లీష్‌లో టైప్ చేయవచ్చు. వాయిస్ నోట్ కూడా జోడించవచ్చు.'
-              : 'You can type in English or Telugu. You can also attach a voice note.'}
+              ? 'మీరు తెలుగు లేదా ఇంగ్లీష్‌లో సమస్య వివరాలను రాయవచ్చు.'
+              : 'Describe the issue in English or Telugu. You can track its status below.'}
           </Typography>
 
           <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}>
@@ -160,6 +168,8 @@ const ParentComplaintsPage = () => {
             <Stack spacing={2}>
               <TextField
                 label={parentLang === 'te' ? 'శీర్షిక' : 'Title'}
+                disabled={submitting}
+                inputProps={{ maxLength: 150 }}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 fullWidth
@@ -168,6 +178,7 @@ const ParentComplaintsPage = () => {
               <TextField
                 select
                 label={parentLang === 'te' ? 'సమస్య రకం' : 'Issue Type'}
+                disabled={submitting}
                 value={issueType}
                 onChange={(e) => setIssueType(e.target.value)}
                 fullWidth
@@ -179,6 +190,8 @@ const ParentComplaintsPage = () => {
               </TextField>
               <TextField
                 label={parentLang === 'te' ? 'వివరణ (తెలుగు / ఇంగ్లీష్)' : 'Description (English / Telugu)'}
+                disabled={submitting}
+                inputProps={{ maxLength: 5000 }}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 fullWidth
@@ -192,6 +205,20 @@ const ParentComplaintsPage = () => {
               </Button>
             </Stack>
           </Box>
+        </Paper>
+        <Paper sx={{ p: { xs: 2, sm: 3 }, mt: 3 }}>
+          <Typography variant="h6" gutterBottom>Your complaints</Typography>
+          {historyError && <Alert severity="error">{historyError}</Alert>}
+          {historyLoading ? <CircularProgress size={24} /> : history.length === 0 && !historyError ? <Typography color="text.secondary">You have not submitted any complaints yet.</Typography> : (
+            <Stack spacing={2}>{history.map(item => <Paper key={item.id} variant="outlined" sx={{ p: 2 }}>
+              <Stack direction="row" justifyContent="space-between" gap={2}>
+                <Typography fontWeight="bold" sx={{ overflowWrap: 'anywhere' }}>{item.title}</Typography>
+                <Chip size="small" label={item.status || 'open'} color={item.status === 'resolved' ? 'success' : 'warning'} />
+              </Stack>
+              <Typography sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', mt: 1 }}>{item.description}</Typography>
+              <Typography variant="caption" color="text.secondary">{item.createdAt?.toDate?.().toLocaleString() || 'Saving…'}</Typography>
+            </Paper>)}</Stack>
+          )}
         </Paper>
       </Container>
     </Box>

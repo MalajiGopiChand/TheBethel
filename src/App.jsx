@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { UserRole } from './types';
 import RoleSelection from './pages/auth/RoleSelection';
@@ -43,11 +43,13 @@ import AdminComplaintsPage from './pages/admin/pages/AdminComplaintsPage';
 import AdminDownloadStudentsPage from './pages/admin/pages/AdminDownloadStudentsPage';
 import { Box, CircularProgress } from '@mui/material';
 import GlobalNotificationListener from './components/GlobalNotificationListener';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { isTeacherPendingAccess } from './utils/teacherVerification';
 
 function App() {
   const { currentUser, loading } = useAuth();
+  const location = useLocation();
 
   // Add error boundary for routing issues in PWA mode
   useEffect(() => {
@@ -76,9 +78,17 @@ function App() {
     );
   }
 
+  // Guard every teacher URL, including direct links and bookmarked pages.
+  if (isTeacherPendingAccess(currentUser) &&
+      location.pathname.startsWith('/teacher/') &&
+      location.pathname !== '/teacher/pending-approval') {
+    return <Navigate to="/teacher/pending-approval" replace />;
+  }
+
   return (
     <Box className="page-shell page-glow-background">
       <GlobalNotificationListener />
+      <PWAInstallPrompt />
       <Routes>
       <Route
         path="/"

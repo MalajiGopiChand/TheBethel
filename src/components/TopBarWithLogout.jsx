@@ -57,6 +57,7 @@ const TopBarWithLogout = ({ title, showInstall = false }) => {
             <Tooltip title="Install App">
               <IconButton
                 onClick={handleInstall}
+                aria-label="Install app"
                 sx={{
                   bgcolor: 'rgba(102, 126, 234, 0.1)',
                   color: '#667eea',
@@ -70,6 +71,7 @@ const TopBarWithLogout = ({ title, showInstall = false }) => {
           <Tooltip title="Logout">
             <IconButton
               onClick={handleLogout}
+              aria-label="Log out"
               disabled={loadingLogout}
               sx={{
                 bgcolor: 'rgba(244, 67, 54, 0.1)',

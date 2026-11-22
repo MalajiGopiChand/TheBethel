@@ -29,7 +29,7 @@ import {
   orderBy,
   limit,
   onSnapshot
-} from 'firebase/firestore';
+} from "../../../services/notifyingFirestore";
 import { format, formatDistanceToNow } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';

@@ -1,13 +1,15 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { unregisterPushTokenForUser } from '../services/notificationService';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
-  updateProfile
+  updateProfile,
+  deleteUser
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, query, where, getDocs, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, query, where, getDocs, collection } from "../services/notifyingFirestore";
 import { auth, db } from '../config/firebase';
 import { UserRole } from '../types';
 import { mapTeacherDocToCurrentUser } from '../utils/teacherVerification';
@@ -27,10 +29,13 @@ export const AuthProvider = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const signupInProgress = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
+      // Signup publishes the profile only after student validation and saving finish.
+      if (signupInProgress.current) return;
       
       if (user) {
         // Check if admin
@@ -139,12 +144,22 @@ export const AuthProvider = ({ children }) => {
     studentName,
     studentRollNumber
   ) => {
+    let createdUser = null;
+    let profileWriteStarted = false;
     try {
       setError(null);
+      if (![UserRole.PARENT, UserRole.TEACHER].includes(role)) {
+        throw new Error('Choose a parent or teacher account.');
+      }
+      if (role === UserRole.PARENT && (!studentName?.trim() || !studentRollNumber?.trim())) {
+        throw new Error('Enter the student name and roll number.');
+      }
+      signupInProgress.current = true;
       
       // Create auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      createdUser = user;
 
       // Update display name
       await updateProfile(user, { displayName: name });
@@ -183,6 +198,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       const collectionName = role === UserRole.TEACHER ? 'teachers' : 'parents';
+      profileWriteStarted = true;
       await setDoc(doc(db, collectionName, user.uid), userData);
 
       if (role === UserRole.TEACHER) {
@@ -199,8 +215,30 @@ export const AuthProvider = ({ children }) => {
 
       return { status: 'success' };
     } catch (err) {
-      setError(err.message || 'Sign up failed');
+      let message = err.message || 'Sign up failed';
+      // Only remove a newly created account before any profile write was attempted.
+      // A failed network response after setDoc may still represent a saved profile.
+      if (createdUser && !profileWriteStarted) {
+        try {
+          await deleteUser(createdUser);
+        } catch (cleanupError) {
+          console.error('Could not clean up incomplete signup:', cleanupError);
+          message += ' Account cleanup failed. Contact the administrator before registering again.';
+        }
+      }
+      if (createdUser) {
+        if (profileWriteStarted) {
+          message += ' Your account was created. Try signing in; if your profile is unavailable, contact the administrator.';
+        }
+        await firebaseSignOut(auth).catch(() => {});
+        setCurrentUser(null);
+        setFirebaseUser(null);
+      }
+      setError(message);
       throw err;
+    } finally {
+      signupInProgress.current = false;
+      setLoading(false);
     }
   };
 
@@ -217,6 +255,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
+      await unregisterPushTokenForUser().catch(error => console.warn('Could not unregister device notifications:', error.code));
       await firebaseSignOut(auth);
       setCurrentUser(null);
     } catch (err) {

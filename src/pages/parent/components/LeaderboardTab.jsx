@@ -17,7 +17,7 @@ import {
   query,
   orderBy,
   onSnapshot
-} from 'firebase/firestore';
+} from '../../../services/studentData';
 import { db } from '../../../config/firebase';
 import { tParent } from '../../../utils/parentI18n';
 

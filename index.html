@@ -48,7 +48,7 @@
           // So we unregister and clear caches to always show the latest code.
           if (isLocalhost) {
             navigator.serviceWorker.getRegistrations().then((regs) => {
-              regs.forEach((r) => r.unregister());
+              regs.filter((r) => !r.scope.includes('firebase-cloud-messaging-push-scope')).forEach((r) => r.unregister());
             });
             if (window.caches) {
               caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));

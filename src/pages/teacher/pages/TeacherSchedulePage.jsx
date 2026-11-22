@@ -47,7 +47,7 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp
-} from 'firebase/firestore';
+} from "../../../services/notifyingFirestore";
 import { format, addWeeks, subWeeks, isSameDay } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';

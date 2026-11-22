@@ -1,4 +1,4 @@
-import { UserRole } from '../types';
+import { UserRole } from '../types/index.js';
 
 /**
  * True for explicit "approved" values (handles legacy string/number storage).

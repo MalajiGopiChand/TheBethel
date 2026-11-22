@@ -31,7 +31,7 @@ import {
   doc, 
   updateDoc, 
   getDoc 
-} from 'firebase/firestore';
+} from '../../../services/studentData';
 import { db, auth } from '../../../config/firebase'; // Ensure path is correct
 import { handleBackNavigation } from '../../../utils/navigation';
 

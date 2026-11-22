@@ -1,117 +1,16 @@
-import admin from 'firebase-admin';
-import { onDocumentCreated } from 'firebase-functions/v2/firestore';
-import { logger } from 'firebase-functions';
-
-admin.initializeApp();
-
-const db = admin.firestore();
-
-function normalizeAudience(audience) {
-  const a = (audience || 'All').toLowerCase();
-  if (a.includes('teacher')) return 'TEACHER';
-  if (a.includes('parent')) return 'PARENT';
-  if (a.includes('admin')) return 'ADMIN';
-  if (a.includes('all')) return 'ALL';
-  return 'ALL';
-}
-
-async function getTokensForAudience({ audienceRole, excludeUid }) {
-  let q = db.collection('pushTokens');
-  if (audienceRole && audienceRole !== 'ALL') {
-    q = q.where('role', '==', audienceRole);
-  }
-  const snap = await q.get();
-  const tokens = [];
-  snap.forEach((d) => {
-    const data = d.data();
-    if (!data?.token) return;
-    if (excludeUid && data.uid === excludeUid) return;
-    tokens.push(data.token);
-  });
-  return tokens;
-}
-
-async function sendToTokens({ tokens, title, body, data }) {
-  if (!tokens.length) return { sent: 0 };
-
-  const chunks = [];
-  for (let i = 0; i < tokens.length; i += 500) chunks.push(tokens.slice(i, i + 500));
-
-  let sent = 0;
-  for (const chunk of chunks) {
-    const res = await admin.messaging().sendEachForMulticast({
-      tokens: chunk,
-      notification: { title, body },
-      data: Object.fromEntries(
-        Object.entries(data || {}).map(([k, v]) => [k, v == null ? '' : String(v)])
-      ),
-      webpush: {
-        notification: {
-          icon: '/image.png',
-          badge: '/image.png'
-        },
-        fcmOptions: data?.url ? { link: data.url } : undefined
-      },
-      android: { notification: { channelId: 'default' } }
-    });
-
-    sent += res.successCount || 0;
-    const failed = (res.responses || []).filter((r) => !r.success);
-    if (failed.length) logger.warn('Some tokens failed', { failed: failed.length });
-  }
-  return { sent };
-}
-
-// Admin announcements -> push to audience
-export const pushOnAnnouncementCreated = onDocumentCreated('notifications/{id}', async (event) => {
-  const note = event.data?.data();
-  if (!note) return;
-
-  const title = note.title || 'Announcement';
-  const body = note.message || '';
-  const audienceRole = normalizeAudience(note.audience);
-
-  const tokens = await getTokensForAudience({ audienceRole });
-  const result = await sendToTokens({
-    tokens,
-    title,
-    body,
-    data: {
-      tag: 'announcement',
-      url: '/parent/notifications'
-    }
-  });
-
-  logger.info('Announcement push sent', { audienceRole, sent: result.sent });
-});
-
-// Global chat messages -> push to everyone (except sender)
-export const pushOnChatMessageCreated = onDocumentCreated('chats/{chatId}/messages/{messageId}', async (event) => {
-  const msg = event.data?.data();
-  if (!msg) return;
-
-  const senderId = msg.senderId || null;
-  const senderName = msg.senderName || 'Someone';
-  const content = msg.content || '';
-  const imageUrl = msg.imageUrl || '';
-  if (!content && !imageUrl) return;
-
-  // Only for the global room (same ID used in your UI)
-  if (event.params.chatId !== 'chat_global_room') return;
-
-  const tokens = await getTokensForAudience({ audienceRole: 'ALL', excludeUid: senderId });
-  const result = await sendToTokens({
-    tokens,
-    title: `New message from ${senderName}`,
-    body: content
-      ? (content.length > 120 ? content.slice(0, 120) + '…' : content)
-      : 'Sent a photo',
-    data: {
-      tag: 'chat',
-      url: '/teacher/messaging'
-    }
-  });
-
-  logger.info('Chat push sent', { sent: result.sent });
-});
-
+import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore';
+import * as handlers from './notificationHandlers.js';
+export const pushOnInboxCreated = onDocumentCreated({ document: handlers.pushOnInboxCreated.pattern, retry: true }, handlers.pushOnInboxCreated.run);
+export const notifyStudentActivityUpdated = onDocumentWritten({ document: handlers.notifyStudentActivityUpdated.pattern, retry: true }, handlers.notifyStudentActivityUpdated.run);
+export const notifyWebsiteActivityUpdated = onDocumentWritten({ document: handlers.notifyWebsiteActivityUpdated.pattern, retry: true }, handlers.notifyWebsiteActivityUpdated.run);
+export const notifyHomeworkUpdated = onDocumentWritten({ document: handlers.notifyHomeworkUpdated.pattern, retry: true }, handlers.notifyHomeworkUpdated.run);
+export const notifyComplaintUpdated = onDocumentWritten({ document: handlers.notifyComplaintUpdated.pattern, retry: true }, handlers.notifyComplaintUpdated.run);
+export const pushOnChatMessageCreated = onDocumentCreated({ document: handlers.pushOnChatMessageCreated.pattern, retry: true }, handlers.pushOnChatMessageCreated.run);
+export const pushOnAnnouncementCreated = onDocumentCreated({ document: handlers.pushOnAnnouncementCreated.pattern, retry: true }, handlers.pushOnAnnouncementCreated.run);
+export const notifyTimetableUpdated = onDocumentWritten({ document: handlers.notifyTimetableUpdated.pattern, retry: true }, handlers.notifyTimetableUpdated.run);
+export const notifyAnnouncementUpdated = onDocumentWritten({ document: handlers.notifyAnnouncementUpdated.pattern, retry: true }, handlers.notifyAnnouncementUpdated.run);
+export const notifyStudentProfileUpdated = onDocumentWritten({ document: handlers.notifyStudentProfileUpdated.pattern, retry: true }, handlers.notifyStudentProfileUpdated.run);
+export const notifyTeacherReportUpdated = onDocumentWritten({ document: handlers.notifyTeacherReportUpdated.pattern, retry: true }, handlers.notifyTeacherReportUpdated.run);
+export const notifyTeacherApprovalUpdated = onDocumentWritten({ document: handlers.notifyTeacherApprovalUpdated.pattern, retry: true }, handlers.notifyTeacherApprovalUpdated.run);
+export const notifyOfferingUpdated = onDocumentWritten({ document: handlers.notifyOfferingUpdated.pattern, retry: true }, handlers.notifyOfferingUpdated.run);
+export const notifyExpenseUpdated = onDocumentWritten({ document: handlers.notifyExpenseUpdated.pattern, retry: true }, handlers.notifyExpenseUpdated.run);

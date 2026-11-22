@@ -19,7 +19,7 @@ import {
   Chip
 } from '@mui/material';
 import { ArrowBack as BackIcon, Download as DownloadIcon } from '@mui/icons-material';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query } from '../../../services/studentData';
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';

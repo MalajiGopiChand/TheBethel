@@ -20,7 +20,7 @@ import {
   query,
   orderBy,
   onSnapshot
-} from 'firebase/firestore';
+} from "../../../services/notifyingFirestore";
 import { 
   Assignment as AssignmentIcon,
   Subject as SubjectIcon,

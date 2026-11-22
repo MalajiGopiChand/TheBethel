@@ -36,6 +36,7 @@ const ParentSignUp = () => {
   const [studentName, setStudentName] = useState('');
   const [studentRollNumber, setStudentRollNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const [validationError, setValidationError] = useState('');
   const { signUp, error, clearError } = useAuth();
   const navigate = useNavigate();
 
@@ -46,8 +47,15 @@ const ParentSignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (password !== confirmPassword) return;
-    if (name.length < 2 || phone.length < 10 || !studentName || !studentRollNumber) return;
+    setValidationError('');
+    if (password !== confirmPassword) {
+      setValidationError('Passwords do not match. Please check both password fields.');
+      return;
+    }
+    if (name.trim().length < 2 || phone.replace(/\D/g, '').length < 10 || !studentName.trim() || !studentRollNumber.trim()) {
+      setValidationError('Enter your name, a valid phone number, and the student name and roll number.');
+      return;
+    }
 
     setLoading(true);
     clearError();
@@ -106,9 +114,9 @@ const ParentSignUp = () => {
               Connect with your child's progress
             </Typography>
 
-            {error && (
-              <Alert severity="error" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={clearError}>
-                {error}
+            {(validationError || error) && (
+              <Alert severity="error" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={() => { setValidationError(''); clearError(); }}>
+                {validationError || error}
               </Alert>
             )}
 

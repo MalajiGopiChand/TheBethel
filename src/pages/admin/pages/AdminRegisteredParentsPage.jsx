@@ -28,7 +28,7 @@ import {
   getDocs,
   query,
   orderBy
-} from 'firebase/firestore';
+} from "../../../services/notifyingFirestore";
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';
 

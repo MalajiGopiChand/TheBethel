@@ -17,9 +17,9 @@ npm install
 6. Register your app (you can use any app nickname)
 7. Copy the Firebase configuration object that appears
 
-8. Open `website/src/config/firebase.ts` and replace the `firebaseConfig` object with your configuration:
+8. Open `website/src/config/firebase.js` and replace the `firebaseConfig` object with your configuration:
 
-```typescript
+```javascript
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_AUTH_DOMAIN",

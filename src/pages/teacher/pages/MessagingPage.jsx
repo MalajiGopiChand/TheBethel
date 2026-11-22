@@ -13,7 +13,9 @@ import {
   AppBar,
   Toolbar,
   Fade,
-  Popover
+  Popover,
+  Alert,
+  Button
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -40,14 +42,12 @@ import {
   limit,
   setDoc,
   deleteField
-} from 'firebase/firestore';
-import { db, storage } from '../../../config/firebase';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+} from "../../../services/notifyingFirestore";
+import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { handleBackNavigation } from '../../../utils/navigation';
-import { sendNotificationToTeachers, requestNotificationPermission, showAppNotification, notifyError } from '../../../services/notificationService';
 import EmojiPicker from 'emoji-picker-react';
 
 const GLOBAL_CHAT_ID = 'chat_global_room';
@@ -76,7 +76,10 @@ const MessageItem = React.memo(({ message, isOwnMessage, formatMessageDate, rend
           sx={{
             p: 1,
             px: 2,
-            maxWidth: '75%',
+            maxWidth: { xs: '85%', sm: '75%' },
+            minWidth: 0,
+            backgroundImage: 'none',
+            color: '#172b32',
             borderRadius: 2,
             borderTopRightRadius: isOwnMessage ? 0 : 2,
             borderTopLeftRadius: !isOwnMessage ? 0 : 2,
@@ -92,7 +95,7 @@ const MessageItem = React.memo(({ message, isOwnMessage, formatMessageDate, rend
           )}
           
           {message.content && (
-            <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
+            <Typography variant="body1" sx={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap', pr: isOwnMessage ? 2 : 0 }}>
               {message.content}
             </Typography>
           )}
@@ -113,18 +116,18 @@ const MessageItem = React.memo(({ message, isOwnMessage, formatMessageDate, rend
             </Box>
           )}
           {message.audioUrl && (
-            <Box sx={{ mt: 1, minWidth: { xs: 200, sm: 250 } }}>
+            <Box sx={{ mt: 1, width: { xs: 200, sm: 250 }, maxWidth: '100%' }}>
                <audio controls src={message.audioUrl} style={{ width: '100%', height: 40, outline: 'none' }} />
             </Box>
           )}
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
             {message.isEdited && (
-              <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', fontStyle: 'italic' }}>
+              <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'text.secondary', fontStyle: 'italic' }}>
                 Edited
               </Typography>
             )}
-            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary' }}>
+            <Typography variant="caption" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
               {formatMessageDate(message.timestamp)}
             </Typography>
           </Box>
@@ -132,13 +135,14 @@ const MessageItem = React.memo(({ message, isOwnMessage, formatMessageDate, rend
           {isOwnMessage && (
             <IconButton
               className="menu-btn"
+              aria-label="Message options"
               size="small"
               onClick={(e) => handleMenuOpen(e, message)}
               sx={{
                 position: 'absolute',
                 top: 2,
                 right: 2,
-                opacity: 0,
+                opacity: 1,
                 transition: 'opacity 0.2s',
                 padding: 0.5,
                 bgcolor: 'rgba(255,255,255,0.5)'
@@ -150,14 +154,6 @@ const MessageItem = React.memo(({ message, isOwnMessage, formatMessageDate, rend
         </Paper>
       </Box>
     </React.Fragment>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison for better performance
-  return (
-    prevProps.message.id === nextProps.message.id &&
-    prevProps.message.content === nextProps.message.content &&
-    prevProps.message.isEdited === nextProps.message.isEdited &&
-    prevProps.isOwnMessage === nextProps.isOwnMessage
   );
 });
 
@@ -171,6 +167,12 @@ const MessagingPage = () => {
     handleBackNavigation(navigate, currentUser);
   };
   const [messages, setMessages] = useState([]);
+  const [chatError, setChatError] = useState('');
+  const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
+  const streamRef = useRef(null);
+  const mountedRef = useRef(true);
+  const nearBottomRef = useRef(true);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
   const [editingMessage, setEditingMessage] = useState(null);
@@ -198,6 +200,23 @@ const MessagingPage = () => {
   const inputContainerRef = useRef(null);
   const isRecordingRef = useRef(false);
   
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      isRecordingRef.current = false;
+      clearInterval(recordingTimerRef.current);
+      clearTimeout(typingTimeoutRef.current);
+      const recorder = mediaRecorderRef.current;
+      if (recorder) {
+        recorder.onstop = null;
+        if (recorder.state !== 'inactive') recorder.stop();
+      }
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      if (currentUser?.uid) updateDoc(doc(db, 'chats', GLOBAL_CHAT_ID, 'status', 'typing'), { [currentUser.uid]: deleteField() }).catch(() => {});
+    };
+  }, [currentUser?.uid]);
+
   // Track page focus state
   useEffect(() => {
     const handleFocus = () => {
@@ -216,46 +235,7 @@ const MessagingPage = () => {
     };
   }, []);
   
-  // Request notification permission on mount
-  useEffect(() => {
-    requestNotificationPermission();
-  }, []);
 
-  // Listen for new messages and show notifications (if not from current user)
-  useEffect(() => {
-    if (!currentUser) return;
-
-    const unsubscribe = onSnapshot(
-      query(
-        collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'),
-        orderBy('timestamp', 'desc'),
-        limit(1)
-      ),
-      (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
-            const message = change.doc.data();
-            const messageId = change.doc.id;
-            
-            // Avoid duplicate notifications
-            if (seenMessageIdsRef.current.has(messageId)) return;
-            seenMessageIdsRef.current.add(messageId);
-            
-            // Only show notification if message is from someone else and page is not focused
-            if (message.senderId !== currentUser.uid && message.content && !isPageFocusedRef.current) {
-              showAppNotification(
-                `New message from ${message.senderName || 'Someone'}`,
-                message.content.length > 100 ? message.content.substring(0, 100) + '...' : message.content,
-                { tag: `chat-${messageId}`, data: { url: '/teacher/messaging' } }
-              );
-            }
-          }
-        });
-      }
-    );
-
-    return () => unsubscribe();
-  }, [currentUser]);
 
   // Listen to Typing Status
   useEffect(() => {
@@ -270,13 +250,15 @@ const MessagingPage = () => {
        } else {
           setTypingUsers({});
        }
-    });
+    }, () => setTypingUsers({}));
 
     return () => unsubscribe();
   }, [currentUser]);
 
   // Optimized: Limit to last 100 messages and order by timestamp desc for better performance
   useEffect(() => {
+    if (!currentUser?.uid) return;
+    setLoading(true);
     const messagesQuery = query(
       collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'),
       orderBy('timestamp', 'desc'),
@@ -292,21 +274,21 @@ const MessagingPage = () => {
         });
       });
       // Reverse to show oldest first
+      setChatError('');
       setMessages(msgs.reverse());
       setLoading(false);
     }, (error) => {
       console.error('Error fetching messages:', error);
+      setChatError('Could not load chat. Check your connection and sign in again if access was denied.');
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser?.uid]);
 
   // Memoize scroll to bottom to avoid unnecessary re-renders
   const scrollToBottom = useCallback(() => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+    if (nearBottomRef.current) messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
   }, []);
 
   useEffect(() => {
@@ -341,12 +323,12 @@ const MessagingPage = () => {
 
   const startRecording = async () => {
     try {
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') throw new Error('Voice recording is not supported in this browser.');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      let options = { mimeType: 'audio/webm' };
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-         options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 16000 };
-      }
-      mediaRecorderRef.current = new MediaRecorder(stream, options);
+      streamRef.current = stream;
+      if (!mountedRef.current) { stream.getTracks().forEach(track => track.stop()); return; }
+      const mimeType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'].find(type => MediaRecorder.isTypeSupported(type));
+      mediaRecorderRef.current = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 16000 } : undefined);
       audioChunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (e) => {
@@ -354,12 +336,15 @@ const MessagingPage = () => {
       };
 
       mediaRecorderRef.current.onstop = () => {
-        if (!isRecordingRef.current) return;
+        stream.getTracks().forEach(track => track.stop());
+        if (!isRecordingRef.current || !mountedRef.current) return;
         isRecordingRef.current = false;
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current.mimeType });
         
+        if (audioBlob.size > 600000) { setChatError('Voice note is too large. Please record a shorter message.'); return; }
         const reader = new FileReader();
         reader.onloadend = async () => {
+           if (!mountedRef.current) return;
            try {
              const senderName = currentUser?.name || 'Anonymous';
              await addDoc(collection(db, 'chats', GLOBAL_CHAT_ID, 'messages'), {
@@ -372,10 +357,10 @@ const MessagingPage = () => {
                timestamp: serverTimestamp(),
                isEdited: false
            });
-             sendNotificationToTeachers(senderName, "Sent a voice message").catch(console.error);
+
            } catch (error) {
              console.error("Voice message error", error);
-             notifyError("Send Failed", "Could not send voice message.");
+             setChatError("Could not send voice message. Please check your connection and try again.");
            }
         };
         reader.readAsDataURL(audioBlob);
@@ -399,7 +384,8 @@ const MessagingPage = () => {
       }, 1000);
     } catch (err) {
       console.error("Microphone access error:", err);
-      notifyError("Microphone Error", "Could not access microphone.");
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      setChatError(err.message || "Could not access microphone.");
     }
   };
 
@@ -426,7 +412,15 @@ const MessagingPage = () => {
   };
 
   const handleSend = async () => {
-    if ((!messageText.trim() && !editingMessage && !selectedImageFile) || !currentUser) return;
+    if (sendingRef.current || isRecording || (!messageText.trim() && !selectedImageFile) || !currentUser) return;
+    if (messageText.length > 10000) { setChatError('Please keep messages under 10,000 characters.'); return; }
+    if (selectedImageFile && (!selectedImageFile.type.startsWith('image/') || selectedImageFile.size > 600000)) {
+      setChatError('Choose an image smaller than 600 KB.'); return;
+    }
+    sendingRef.current = true;
+    setSending(true);
+    setChatError('');
+    nearBottomRef.current = true;
 
     const messageContent = messageText.trim();
     const senderName = currentUser.name || 'Anonymous';
@@ -446,8 +440,7 @@ const MessagingPage = () => {
         if (selectedImageFile) {
           setUploadingImage(true);
           try {
-            // Bypass Firebase Storage completely using local Base64 conversion
-            // This guarantees images will send even if Storage rules are broken
+            // Keep the encoded attachment safely below Firestore's document size limit.
             imageUrl = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
@@ -457,7 +450,7 @@ const MessagingPage = () => {
           } catch (uploadError) {
             console.error('Image processing failed completely:', uploadError);
             setUploadingImage(false);
-            notifyError('Upload failed', 'Failed to process image.');
+            setChatError('Failed to process image. Please choose another file.');
             return; // Abort send if image failed
           }
         }
@@ -472,23 +465,18 @@ const MessagingPage = () => {
           isEdited: false
         });
         
-        // Send notifications to all teachers (async, don't wait)
-        if (messageContent) {
-           sendNotificationToTeachers(senderName, messageContent).catch(err => {
-             console.error('Error sending notification:', err);
-           });
-        } else if (imageUrl) {
-           sendNotificationToTeachers(senderName, "Sent an image").catch(console.error);
-        }
+
       }
       setMessageText('');
       setSelectedImageFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
       console.error('Error sending message:', error);
-      notifyError('Send failed', error.message || 'Failed to send message. Please try again.');
+      setChatError(error.message || 'Failed to send message. Please try again.');
     } finally {
       setUploadingImage(false);
+      setSending(false);
+      sendingRef.current = false;
     }
   };
 
@@ -510,6 +498,7 @@ const MessagingPage = () => {
       setAnchorEl(null);
     } catch (error) {
       console.error('Error deleting message:', error);
+      setChatError(error.message || 'Could not delete this message.');
     }
   };
 
@@ -590,12 +579,12 @@ const MessagingPage = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: '#e5ddd5' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: 0, bgcolor: '#e5ddd5' }}>
       
       {/* 1. Header */}
-      <AppBar position="static" elevation={2} sx={{ bgcolor: '#075E54', zIndex: 10 }}>
+      <AppBar position="static" elevation={2} sx={{ backgroundImage: 'none', flexShrink: 0, bgcolor: '#075E54', zIndex: 10 }}>
         <Toolbar sx={{ minHeight: '64px !important' }}>
-          <IconButton edge="start" color="inherit" onClick={handleBack} sx={{ mr: 1 }}>
+          <IconButton aria-label="Go back" edge="start" color="inherit" onClick={handleBack} sx={{ mr: 1 }}>
             <BackIcon />
           </IconButton>
           <Avatar sx={{ mr: 2, bgcolor: '#25D366', width: 40, height: 40, fontWeight: 'bold' }}>P</Avatar>
@@ -611,10 +600,13 @@ const MessagingPage = () => {
         </Toolbar>
       </AppBar>
 
+      {chatError && <Alert severity="error" onClose={() => setChatError('')} sx={{ borderRadius: 0 }}>{chatError}</Alert>}
       {/* 2. Messages Area */}
       <Box
+        onScroll={event => { const el = event.currentTarget; nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}
         sx={{
           flex: 1,
+          minHeight: 0,
           overflow: 'auto',
           p: { xs: 1.5, sm: 2 },
           backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', // Subtle chat pattern
@@ -622,7 +614,7 @@ const MessagingPage = () => {
           backgroundSize: '400px'
         }}
       >
-        {messages.length === 0 ? null : (
+        {messages.length === 0 && !chatError ? <Typography sx={{ textAlign: 'center', py: 4 }}>No messages yet. Start the conversation below.</Typography> : (
           messages.map((message, index) => {
             const isOwnMessage = message.senderId === currentUser?.uid;
             const prevMsg = index > 0 ? messages[index - 1] : null;
@@ -686,7 +678,7 @@ const MessagingPage = () => {
                          <Typography variant="caption" sx={{ color: '#00a884', fontWeight: 'bold' }}>Editing Message</Typography>
                          <Typography variant="body2" color="text.secondary" noWrap sx={{ fontStyle: 'italic' }}>{editingMessage.content}</Typography>
                      </Box>
-                     <IconButton size="small" onClick={handleCancelEdit} sx={{ bgcolor: 'rgba(0,0,0,0.04)' }}>
+                     <IconButton size="small" onClick={handleCancelEdit} disabled={sending} aria-label="Cancel editing" sx={{ bgcolor: 'rgba(0,0,0,0.04)' }}>
                          <CloseIcon fontSize="small" />
                      </IconButton>
                    </>
@@ -745,14 +737,16 @@ const MessagingPage = () => {
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (!f) return;
+              if (!f.type.startsWith('image/') || f.size > 600000) { setChatError('Choose an image smaller than 600 KB.'); e.target.value = ''; return; }
+              setChatError('');
               setSelectedImageFile(f);
             }}
           />
 
-          <Box sx={{ flexGrow: 1, position: 'relative', display: 'flex', alignItems: 'center' }} ref={inputContainerRef}>
+          <Box sx={{ flexGrow: 1, minWidth: 0, position: 'relative', display: 'flex', alignItems: 'center' }} ref={inputContainerRef}>
              <IconButton
                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-               disabled={isRecording}
+               disabled={isRecording || sending}
                sx={{ position: 'absolute', left: 8, bottom: 4, color: showEmojiPicker ? '#00a884' : '#8696a0', zIndex: 1 }}
                aria-label="Emoji"
              >
@@ -760,15 +754,16 @@ const MessagingPage = () => {
              </IconButton>
              <TextField
                fullWidth
-               disabled={isRecording}
                placeholder={isRecording ? "Recording..." : "Type a message"}
                variant="outlined"
                multiline
                maxRows={4}
                value={messageText}
+               disabled={sending || isRecording}
+               inputProps={{ 'aria-label': 'Message', maxLength: 10000 }}
                onChange={handleTyping}
-               onKeyPress={(e) => {
-                 if (e.key === 'Enter' && !e.shiftKey) {
+               onKeyDown={(e) => {
+                 if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                    e.preventDefault();
                    handleSend();
                  }
@@ -789,7 +784,7 @@ const MessagingPage = () => {
              />
              <IconButton
                onClick={() => fileInputRef.current?.click()}
-               disabled={uploadingImage || isRecording}
+               disabled={sending || uploadingImage || isRecording}
                sx={{ position: 'absolute', right: 8, bottom: 4, color: '#8696a0', zIndex: 1 }}
                aria-label="Attach image"
              >
@@ -800,7 +795,8 @@ const MessagingPage = () => {
           {(messageText.trim() || editingMessage || selectedImageFile) ? (
              <IconButton
                onClick={handleSend}
-               disabled={uploadingImage || isRecording}
+               aria-label={editingMessage ? "Save message" : "Send message"}
+               disabled={sending || uploadingImage || isRecording}
                sx={{
                  bgcolor: '#00a884',
                  color: 'white',
@@ -813,7 +809,7 @@ const MessagingPage = () => {
                  boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
                }}
              >
-               {editingMessage ? <EditIcon /> : <SendIcon sx={{ ml: 0.5 }} />}
+               {sending ? <CircularProgress size={22} color="inherit" /> : editingMessage ? <EditIcon /> : <SendIcon sx={{ ml: 0.5 }} />}
              </IconButton>
           ) : isRecording ? (
              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -830,7 +826,8 @@ const MessagingPage = () => {
           ) : (
              <IconButton
                onClick={startRecording}
-               disabled={uploadingImage}
+               aria-label="Record voice message"
+               disabled={sending || uploadingImage}
                sx={{
                  bgcolor: '#00a884',
                  color: 'white',
@@ -863,9 +860,9 @@ const MessagingPage = () => {
           <EditIcon fontSize="small" sx={{ mr: 1.5, color: 'text.secondary' }} />
           Edit
         </MenuItem>
-        <MenuItem onClick={() => handleDelete(selectedMessage?.id)} sx={{ color: 'error.main' }}>
+        <MenuItem disabled={!isAdmin} onClick={() => handleDelete(selectedMessage?.id)} sx={{ color: 'error.main' }}>
           <DeleteIcon fontSize="small" sx={{ mr: 1.5 }} />
-          Delete
+          {isAdmin ? 'Delete' : 'Only administrators can delete'}
         </MenuItem>
       </Menu>
     </Box>

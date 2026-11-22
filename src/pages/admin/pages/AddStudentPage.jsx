@@ -22,7 +22,7 @@ import {
   query,
   where,
   getDocs
-} from 'firebase/firestore';
+} from '../../../services/studentData';
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';
 

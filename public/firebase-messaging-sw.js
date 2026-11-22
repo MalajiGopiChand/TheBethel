@@ -1,3 +1,25 @@
+self.addEventListener('notificationclick', (event) => {
+  event.stopImmediatePropagation();
+  event.notification.close();
+  const requested = event.notification?.data?.url || event.notification?.data?.FCM_MSG?.data?.url || '/';
+  const target = new URL(requested, self.location.origin);
+  const url = target.origin === self.location.origin ? target.href : self.location.origin;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+      return undefined;
+    })
+  );
+});
+
+
 /* global self */
 // Firebase Messaging service worker for background push notifications.
 // This file must live in /public so it’s served from the site root.
@@ -19,11 +41,14 @@ const messaging = firebase.messaging();
 
 // Show notification when a push arrives while app is in background.
 messaging.onBackgroundMessage((payload) => {
+  // FCM already displays notification payloads in the background.
+  if (payload.notification) return;
   const title = payload?.notification?.title || payload?.data?.title || 'Bethel AMS';
   const body = payload?.notification?.body || payload?.data?.body || '';
 
   const notificationOptions = {
     body,
+    tag: payload?.data?.tag || 'bethel-ams',
     icon: '/image.png',
     badge: '/image.png',
     data: {
@@ -33,23 +58,5 @@ messaging.onBackgroundMessage((payload) => {
   };
 
   self.registration.showNotification(title, notificationOptions);
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const url = event.notification?.data?.url || '/';
-
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          client.navigate(url);
-          return client.focus();
-        }
-      }
-      if (self.clients.openWindow) return self.clients.openWindow(url);
-      return undefined;
-    })
-  );
 });
 

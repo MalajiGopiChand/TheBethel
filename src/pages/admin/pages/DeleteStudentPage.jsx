@@ -34,7 +34,7 @@ import {
   query,
   where,
   orderBy
-} from 'firebase/firestore';
+} from '../../../services/studentData';
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';
 

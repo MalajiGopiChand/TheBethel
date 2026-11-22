@@ -33,6 +33,7 @@ const TeacherSignUp = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [validationError, setValidationError] = useState('');
   const { signUp, error, clearError } = useAuth();
   const navigate = useNavigate();
 
@@ -45,9 +46,15 @@ const TeacherSignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (password !== confirmPassword) return;
-    if (name.length < 2) return;
-    if (phone.length < 10) return;
+    setValidationError('');
+    if (password !== confirmPassword) {
+      setValidationError('Passwords do not match. Please check both password fields.');
+      return;
+    }
+    if (name.trim().length < 2 || phone.replace(/\D/g, '').length < 10) {
+      setValidationError('Enter your name and a phone number with at least 10 digits.');
+      return;
+    }
 
     setLoading(true);
     clearError();
@@ -105,9 +112,9 @@ const TeacherSignUp = () => {
               Join The Bethel Church School System
             </Typography>
 
-            {error && (
-              <Alert severity="error" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={clearError}>
-                {error}
+            {(validationError || error) && (
+              <Alert severity="error" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={() => { setValidationError(''); clearError(); }}>
+                {validationError || error}
               </Alert>
             )}
 

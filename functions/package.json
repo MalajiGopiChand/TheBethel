@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "18"
+    "node": "22"
   },
   "main": "index.js",
   "dependencies": {
@@ -11,4 +11,3 @@
     "firebase-functions": "^5.1.0"
   }
 }
-

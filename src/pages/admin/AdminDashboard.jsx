@@ -45,7 +45,6 @@ import AdminAttendanceTab from './components/AdminAttendanceTab';
 import AdminManageTab from './components/AdminManageTab';
 import AdminTeachersTab from './components/AdminTeachersTab';
 import AdminMoreTab from './components/AdminMoreTab';
-import PWAInstallPrompt from '../../components/PWAInstallPrompt';
 import InstallButton from '../../components/InstallButton';
 
 // Define allowed admin emails here for easier maintenance
@@ -336,7 +335,6 @@ const AdminDashboard = () => {
       </Paper>
 
       {/* PWA Install Prompt - Cross Platform */}
-      <PWAInstallPrompt />
     </Box>
   );
 };

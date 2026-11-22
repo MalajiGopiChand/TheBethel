@@ -46,7 +46,7 @@ import {
   serverTimestamp,
   onSnapshot,
   writeBatch
-} from 'firebase/firestore';
+} from "../../../services/notifyingFirestore";
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { format, isPast, isToday } from 'date-fns';
@@ -193,7 +193,7 @@ const HomeworkPage = () => {
         ...formData,
         teacherId: currentUser?.uid,
         teacherName: currentUser?.displayName || currentUser?.name || currentUser?.email || 'Teacher',
-        createdAt: editingHomework ? undefined : serverTimestamp(),
+        ...(editingHomework ? { updatedAt: serverTimestamp() } : { createdAt: serverTimestamp() }),
         dueDate: formData.dueDate ? new Date(formData.dueDate) : null
       };
 

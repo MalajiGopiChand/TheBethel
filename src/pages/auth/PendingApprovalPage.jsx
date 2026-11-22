@@ -16,7 +16,7 @@ import {
   CheckCircle as ApprovedIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from "../../services/notifyingFirestore";
 import { db } from '../../config/firebase';
 import { UserRole } from '../../types';
 import { isTeacherPendingAccess, isTeacherVerifiedProfile } from '../../utils/teacherVerification';

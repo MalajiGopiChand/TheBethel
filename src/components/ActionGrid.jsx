@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Box,
   Card,
+  CardActionArea,
   CardContent,
   Typography,
   Avatar,
@@ -43,10 +44,10 @@ const ActionTile = ({ item }) => {
 
   return (
     <Card
-      onClick={enabled ? item.onClick : undefined}
       sx={{
         flex: 1,
-        height: 110,
+        minWidth: 0,
+        minHeight: 128,
         borderRadius: 2.5,
         cursor: enabled ? 'pointer' : 'default',
         boxShadow: enabled ? 4 : 0,
@@ -77,9 +78,15 @@ const ActionTile = ({ item }) => {
           : `linear-gradient(135deg, ${alpha(item.colorStart, 0.05)} 0%, ${alpha(item.colorEnd, 0.05)} 100%)`
       }}
     >
+      <CardActionArea
+        disabled={!enabled}
+        onClick={item.onClick}
+        aria-label={item.title}
+        sx={{ height: '100%', '&.Mui-focusVisible': { outline: '3px solid', outlineColor: 'primary.main', outlineOffset: -3 } }}
+      >
       <CardContent
         sx={{
-          height: '100%',
+          minHeight: 128,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -130,13 +137,14 @@ const ActionTile = ({ item }) => {
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             display: '-webkit-box',
-            WebkitLineClamp: 1,
+            WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical'
           }}
         >
           {item.title}
         </Typography>
       </CardContent>
+      </CardActionArea>
     </Card>
   );
 };

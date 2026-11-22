@@ -1,6 +1,6 @@
 # ProjectB - School Management Web Application
 
-A comprehensive school management web application built with **React**, **TypeScript**, and **Firebase**. This web app is a complete clone of the ProjectB Android app, providing the same functionality with a beautiful Material Design UI that matches the Android experience.
+A comprehensive school management web application built with **React**, **JavaScript**, and **Firebase**. This web app is a complete clone of the ProjectB Android app, providing the same functionality with a beautiful Material Design UI that matches the Android experience.
 
 ## 🎨 Features
 
@@ -65,7 +65,7 @@ This web application includes **ALL** features from the Android app:
 
 ## 🛠️ Tech Stack
 
-- **React 18** with TypeScript
+- **React 18** with JavaScript
 - **Material-UI (MUI)** - Material Design 3 components
 - **Firebase** - Authentication, Firestore, Storage
 - **React Router** - Client-side routing
@@ -97,7 +97,7 @@ npm install
 2. Select your project: **the-bethel-ams**
 3. Add a Web app (if not already added)
 4. Copy the Firebase configuration
-5. Update `website/src/config/firebase.ts` with your config
+5. Update `website/src/config/firebase.js` with your config
 
 ### 3. Run Development Server
 
@@ -125,10 +125,10 @@ This web app uses the **same Firebase Firestore database** as the Android app, e
 website/
 ├── src/
 │   ├── components/          # Reusable UI components
-│   │   ├── ActionGrid.tsx   # Action grid with gradients
-│   │   ├── AttendanceCard.tsx
-│   │   ├── PodiumSection.tsx
-│   │   └── AnnouncementsSection.tsx
+│   │   ├── ActionGrid.jsx   # Action grid with gradients
+│   │   ├── AttendanceCard.jsx
+│   │   ├── PodiumSection.jsx
+│   │   └── AnnouncementsSection.jsx
 │   ├── pages/
 │   │   ├── auth/            # Authentication pages
 │   │   ├── teacher/         # Teacher pages
@@ -136,7 +136,7 @@ website/
 │   │   │   └── pages/       # Full page components
 │   │   └── parent/          # Parent pages
 │   ├── contexts/            # React contexts
-│   ├── types/               # TypeScript types
+│   ├── types/               # User role constants
 │   ├── utils/               # Utilities
 │   └── config/              # Firebase config
 └── ...

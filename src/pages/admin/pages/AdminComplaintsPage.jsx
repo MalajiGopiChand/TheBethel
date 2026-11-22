@@ -17,7 +17,7 @@ import {
   Chip
 } from '@mui/material';
 import { ArrowBack as BackIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { collection, deleteDoc, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc, serverTimestamp } from "../../../services/notifyingFirestore";
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -32,6 +32,7 @@ const AdminComplaintsPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState(null);
 
   useEffect(() => {
     const isAdmin = currentUser?.role === UserRole.ADMIN || ADMIN_EMAILS.includes(currentUser?.email);
@@ -54,20 +55,30 @@ const AdminComplaintsPage = () => {
     return () => unsub();
   }, [currentUser, navigate]);
 
+  const toggleResolved = async (item) => {
+    setBusyId(item.id);
+    setError('');
+    try {
+      await updateDoc(doc(db, 'complaints', item.id), { status: item.status === 'resolved' ? 'open' : 'resolved', updatedAt: serverTimestamp() });
+    } catch (err) { setError('Could not update complaint status. Please try again.'); }
+    finally { setBusyId(null); }
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this complaint?')) return;
+    setBusyId(id);
     try {
       await deleteDoc(doc(db, 'complaints', id));
     } catch (err) {
       setError(err.message || 'Delete failed.');
-    }
+    } finally { setBusyId(null); }
   };
 
   return (
     <Box className="page-shell page-glow-background" sx={{ minHeight: '100vh' }}>
-      <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'transparent', color: '#111', borderBottom: '1px solid', borderColor: 'divider', backdropFilter: 'blur(22px)' }}>
+      <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'background.paper', backgroundImage: 'none', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider', backdropFilter: 'blur(22px)' }}>
         <Toolbar>
-          <IconButton onClick={() => handleBackNavigation(navigate, currentUser)} sx={{ mr: 1 }}>
+          <IconButton aria-label="Go back" onClick={() => handleBackNavigation(navigate, currentUser)} sx={{ mr: 1 }}>
             <BackIcon />
           </IconButton>
           <Typography variant="h6" fontWeight="bold">Parent Complaints & Issues</Typography>
@@ -90,7 +101,7 @@ const AdminComplaintsPage = () => {
               <Card key={item.id} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-                    <Box sx={{ minWidth: 250 }}>
+                    <Box sx={{ minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
                       <Typography variant="h6" fontWeight="bold">{item.title || 'No title'}</Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                         Parent: {item.parentName || '-'} ({item.parentEmail || '-'})
@@ -115,7 +126,7 @@ const AdminComplaintsPage = () => {
                           <Chip size="small" color="info" variant="outlined" label={`Issue: ${item.issueType}`} />
                         )}
                         <Chip size="small" label={item.languageHint || 'unknown'} />
-                        <Chip size="small" color="warning" label={item.status || 'open'} />
+                        <Chip size="small" color={item.status === 'resolved' ? 'success' : 'warning'} label={item.status || 'open'} />
                       </Box>
                     </Box>
 
@@ -123,8 +134,9 @@ const AdminComplaintsPage = () => {
                       <Typography variant="caption" color="text.secondary">
                         {item.createdAt?.toDate ? format(item.createdAt.toDate(), 'dd MMM yyyy, hh:mm a') : 'Date unavailable'}
                       </Typography>
-                      <Box sx={{ mt: 1 }}>
-                        <Button
+                      <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Button disabled={Boolean(busyId)} variant="contained" onClick={() => toggleResolved(item)}>{busyId === item.id ? 'Saving…' : item.status === 'resolved' ? 'Reopen' : 'Mark resolved'}</Button>
+                        <Button disabled={Boolean(busyId)}
                           color="error"
                           variant="outlined"
                           startIcon={<DeleteIcon />}
@@ -137,7 +149,7 @@ const AdminComplaintsPage = () => {
                   </Box>
 
                   <Paper variant="outlined" sx={{ p: 2, mt: 2, bgcolor: 'background.default' }}>
-                    <Typography whiteSpace="pre-wrap">{item.description || '-'}</Typography>
+                    <Typography whiteSpace="pre-wrap" sx={{ overflowWrap: 'anywhere' }}>{item.description || '-'}</Typography>
                   </Paper>
                 </CardContent>
               </Card>

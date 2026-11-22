@@ -12,14 +12,12 @@ service cloud.firestore {
       let adminByEmail = request.auth != null && 
         request.auth.token.email in [
           "gop1@gmail.com", 
-          "premkumartenali@gmail.com",
-          "admin@example.com",
-          "admin@gmail.com"
+          "premkumartenali@gmail.com"
         ];
       
       // Check by custom claim (more secure)
       let adminByClaim = request.auth != null && 
-        request.auth.token.get('admin') == true;
+        request.auth.token.get('admin', false) == true;
       
       return adminByEmail || adminByClaim;
     }
@@ -27,12 +25,15 @@ service cloud.firestore {
     // Check if user is a Teacher (custom claim or explicitly approved in Firestore)
     function isTeacher() {
       let teacherByClaim = request.auth != null && 
-        request.auth.token.get('teacher') == true;
+        request.auth.token.get('teacher', false) == true;
       
       let teacherPath = /databases/$(database)/documents/teachers/$(request.auth.uid);
       let isApprovedTeacher = request.auth != null && exists(teacherPath) && (
-        get(teacherPath).data.isVerified == true ||
-        get(teacherPath).data.isApproved == true
+        get(teacherPath).data.get('approvalState', '') == 'approved' ||
+        (!(get(teacherPath).data.get('approvalState', '') in ['pending', 'rejected']) && (
+          get(teacherPath).data.get('isVerified', false) == true ||
+          get(teacherPath).data.get('isApproved', false) == true
+        ))
       );
       
       return teacherByClaim || isApprovedTeacher;
@@ -42,7 +43,7 @@ service cloud.firestore {
     function isParent() {
       // Check by custom claim
       let parentByClaim = request.auth != null && 
-        request.auth.token.get('parent') == true;
+        request.auth.token.get('parent', false) == true;
       
       // OR check in parents collection
       let parentInCollection = request.auth != null && 
@@ -124,12 +125,16 @@ service cloud.firestore {
     // TEACHERS - Allow admin full access, teachers can read
     match /teachers/{teacherId} {
       allow read: if isAuthenticated();
-      allow create: if isAdmin() || (isAuthenticated() && isOwner(teacherId));
+      allow create: if isAdmin() || (isOwner(teacherId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.role == 'TEACHER' &&
+        request.resource.data.isVerified == false &&
+        request.resource.data.isApproved == false &&
+        request.resource.data.approvalState == 'pending');
       // Teachers may update their own profile but cannot change approval fields (only admin can).
-      allow update: if isAdmin() || (isOwner(teacherId) && 
-        request.resource.data.isVerified == resource.data.isVerified &&
-        request.resource.data.isApproved == resource.data.isApproved &&
-        request.resource.data.approvalState == resource.data.approvalState);
+      allow update: if isAdmin() || (isOwner(teacherId) &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['uid', 'role', 'isVerified', 'isApproved', 'approvalState', 'status']));
       allow delete: if isAdmin();
     }
     
@@ -139,10 +144,13 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isOwner(parentId));
       
       // ✅ Allow parents to create their own profile
-      allow create: if isAuthenticated() && isOwner(parentId);
+      allow create: if isOwner(parentId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.role == 'PARENT';
       
       // ✅ Allow parents to update their own profile, admin can update any
-      allow update: if isAuthenticated() && (isOwner(parentId) || isAdmin());
+      allow update: if isAdmin() || (isOwner(parentId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'role']));
       
       // ✅ Only admin can delete
       allow delete: if isAdmin();
@@ -283,6 +291,36 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
    
+    match /pushTokens/{tokenId} {
+      allow read, delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid && request.resource.data.token == tokenId;
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid && request.resource.data.token == tokenId;
+    }
+    match /user_notifications/{uid}/items/{id} {
+      allow read: if isOwner(uid);
+      allow update: if isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']) && request.resource.data.read is bool;
+    }
+
+    // Website-only periods preserve original student attendance and rewards.
+    match /app_settings/website_activity {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['activePeriod', 'resetAt', 'resetBy']) &&
+        request.resource.data.activePeriod is string &&
+        request.resource.data.resetBy == request.auth.uid &&
+        request.resource.data.resetAt == request.time;
+    }
+    match /website_activity/{periodId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.createdBy == request.auth.uid;
+      match /students/{studentId} {
+        allow read: if isAuthenticated();
+        allow create, update: if (isAdmin() || isTeacher()) &&
+          get(/databases/$(database)/documents/app_settings/website_activity).data.activePeriod == periodId &&
+          request.resource.data.keys().hasOnly(['attendance', 'absentDates', 'attendanceByDate', 'rewards', 'dollarPoints', 'currentStreak', 'activityUpdatedBy', 'activityUpdatedByName']);
+      }
+    }
+
     // =========================================================
     // 14. LEGACY DATA (for backward compatibility)
     // =========================================================

@@ -23,7 +23,7 @@ import {
   EmojiEvents as TrophyIcon,
   Star as StarIcon
 } from '@mui/icons-material';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs } from "../../../services/notifyingFirestore";
 import { db } from '../../../config/firebase'; // Adjust path based on your folder structure
 import { handleBackNavigation } from '../../../utils/navigation';
 

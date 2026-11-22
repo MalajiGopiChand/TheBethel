@@ -6,7 +6,17 @@
  * @param {string} fallbackPath - Optional fallback path (defaults to appropriate dashboard)
  */
 export const handleBackNavigation = (navigate, currentUser = null, fallbackPath = null) => {
-  // Use React Router's navigate(-1) which properly handles browser history
-  // This will go back to the previous page in the navigation stack
-  navigate(-1);
+  if (window.history.state?.idx > 0) {
+    navigate(-1);
+    return;
+  }
+
+  // A directly opened page has no in-app history. Stay in the application.
+  const role = currentUser?.role?.toLowerCase();
+  const section = window.location.pathname.split('/')[1];
+  const dashboardRole = role || section;
+  const dashboard = ['admin', 'teacher', 'parent'].includes(dashboardRole)
+    ? `/${dashboardRole}/dashboard`
+    : '/';
+  navigate(fallbackPath || dashboard, { replace: true });
 };

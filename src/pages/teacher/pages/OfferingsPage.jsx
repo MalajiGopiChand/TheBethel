@@ -41,7 +41,7 @@ import {
   orderBy,
   serverTimestamp,
   onSnapshot
-} from 'firebase/firestore';
+} from "../../../services/notifyingFirestore";
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
