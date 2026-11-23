@@ -1,27 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate, useOutletContext } from 'react-router-dom';
+import { Outlet, useMatch, useNavigate } from 'react-router-dom';
 import './parent.css';
-import { Alert, Box, Container, AppBar, Toolbar, Typography, IconButton, CircularProgress, Avatar, Tooltip, Select, MenuItem } from '@mui/material';
+import { Box, Container, AppBar, Toolbar, Typography, IconButton, CircularProgress, Avatar, Tooltip, Select, MenuItem } from '@mui/material';
 import { LogoutRounded as LogoutIcon } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { doc, collection, query, where, onSnapshot } from '../../services/studentData';
 import { db } from '../../config/firebase';
 
 
-import HomeTab from './components/HomeTab';
+export { default as ParentHome } from './ParentHome';
 import { ParentLang, getParentLang, setParentLang } from '../../utils/parentI18n';
 import { alpha } from '@mui/material/styles';
-
-export function ParentHome() {
-  const { student, studentError, loadingStudent, parentLang } = useOutletContext();
-  if (loadingStudent) return <Box sx={{ display: 'grid', placeItems: 'center', minHeight: 180 }}><CircularProgress /></Box>;
-  if (studentError) return <Alert severity="error">{parentLang === 'te' ? 'విద్యార్థి వివరాలు లోడ్ కాలేదు.' : 'Could not load student details.'}</Alert>;
-  return <HomeTab student={student} parentLang={parentLang} />;
-}
 
 const ParentDashboard = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const dashboard = useMatch("/parent/dashboard");
 
   
   const [loadingLogout, setLoadingLogout] = useState(false);
@@ -96,6 +90,9 @@ const ParentDashboard = () => {
     setParentLang(lang);
   };
 
+  const outlet = <Outlet context={{ student, studentError, loadingStudent, parentLang, handleLangChange, handleLogout, loadingLogout }} />;
+  if (dashboard) return outlet;
+
   return (
     <Box className="parent-shell" sx={{ bgcolor: 'background.default', color: 'text.primary' }}>
       <AppBar position="sticky" elevation={0} sx={theme => ({ bgcolor: alpha(theme.palette.background.paper, .78), backgroundImage: 'linear-gradient(180deg, #ffffff25, transparent)', color: 'text.primary', backdropFilter: 'saturate(150%) blur(22px)', borderBottom: '1px solid', borderColor: 'divider', boxShadow: '0 3px 16px #0f172a0c' })}>
@@ -107,7 +104,7 @@ const ParentDashboard = () => {
         </Toolbar>
       </AppBar>
       <Container maxWidth="md" sx={{ pt: { xs: 2.5, sm: 4 }, pb: 'calc(32px + env(safe-area-inset-bottom))', px: { xs: 2, sm: 3 } }}>
-        <Outlet context={{ student, studentError, loadingStudent, parentLang }} />
+        {outlet}
       </Container>
 
     </Box>

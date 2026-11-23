@@ -1,55 +1,518 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Alert, Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import { ArrowForwardRounded, ChatBubbleOutlineRounded, PersonOutlineRounded } from '@mui/icons-material';
-import { activityDate, parentAttendance } from '../../../utils/parentActivity';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  CircularProgress,
+  useTheme,
+  Paper,
+  Divider,
+  Avatar,
+  Container,
+  CardActionArea,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  Button
+} from '@mui/material';
+import {
+  AttachMoney as DollarIcon,
+  LocalFireDepartment as StreakIcon,
+  CalendarMonth as CalendarIcon,
+  School as SchoolIcon,
+  WavingHand as WaveIcon,
+  Close as CloseIcon
+} from '@mui/icons-material';
+import {
+  collection,
+  query,
+  orderBy,
+  limit, // Added limit
+  onSnapshot
+} from "../../../services/notifyingFirestore";
+import { parentAttendance, parentRewards, activityDate } from '../../../utils/parentActivity';
+import { format } from 'date-fns';
+import { db } from '../../../config/firebase';
+import AnnouncementsSection from '../../../components/AnnouncementsSection';
+import InstallBanner from '../../../components/InstallBanner';
+import { tParent } from '../../../utils/parentI18n';
 
-export default function HomeTab({ student, parentLang = 'te' }) {
-  const text = (english, telugu) => parentLang === 'te' ? telugu : english;
-  if (!student) return <Alert severity="info">{text('No child is linked to your account. Please contact the school.', 'మీ ఖాతాకు పిల్లవాడి వివరాలు లేవు. పాఠశాలను సంప్రదించండి.')}</Alert>;
+const HomeTab = ({ student, parentLang = 'te' }) => {
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const [announcements, setAnnouncements] = useState([]);
+  const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
+  const [isStreakModalOpen, setIsStreakModalOpen] = useState(false);
 
-  const latest = parentAttendance(student)[0];
-  const date = latest && activityDate(latest.date);
-  const lastAttendance = latest?.status === 'present' ? text('Present', 'హాజరు') : text('Absent', 'గైర్హాజరు');
-  const details = [
-    [text('Latest attendance', 'తాజా హాజరు'), latest ? lastAttendance : '—',
-      date?.toLocaleDateString(parentLang === 'te' ? 'te-IN' : 'en-IN', { day: 'numeric', month: 'short', year: 'numeric' })],
-    [text('Dollar balance', 'డాలర్ల నిల్వ'), '$' + (Number(student.dollarPoints) || 0)],
-  ];
+  useEffect(() => {
+    // 1. QUERY FIX: Use 'date' to match Android App & Admin Panel
+    // Added limit(5) so we don't fetch unnecessary history for the dashboard
+    const notificationsQuery = query(
+      collection(db, 'notifications'),
+      orderBy('date', 'desc'),
+      limit(5)
+    );
 
-  return <Stack spacing={{ xs: 2, sm: 3 }}>
-    <Paper elevation={0} sx={theme => ({
-      borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider',
-      backgroundImage: 'none',
-      '& .child-heading': { color: '#fff', background: `linear-gradient(115deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})` },
-    })}>
-      <Box className="child-heading" sx={{ p: { xs: 2.5, sm: 4 } }}>
-        <Typography variant="body2">{text('My child', 'నా బిడ్డ')}</Typography>
-        <Typography component="h1" variant="h4" fontWeight={800} sx={{ my: 1, overflowWrap: 'anywhere' }}>{student.name}</Typography>
-        <Stack direction="row" flexWrap="wrap" gap={1}>{[student.classType, student.place || student.location, student.studentId].filter(Boolean).map((value, index) =>
-          <Chip key={index} size="small" label={value} sx={{ color: 'inherit', bgcolor: '#ffffff26' }} />)}</Stack>
+    // 2. Real-time Listener
+    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+      const announcementsData = [];
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const audience = data.audience || 'All';
+
+        // 3. Audience Filter
+        if (audience === 'Parents' || audience === 'All Students' || audience === 'All') {
+
+          // 4. Robust Date Parsing (Handles 'date' field)
+          // We check data.date first (Android standard), then fallback to createdAt
+          const timestamp = data.date || data.createdAt;
+          let dateObj;
+
+          if (timestamp) {
+            if (typeof timestamp.toDate === 'function') {
+              dateObj = timestamp.toDate();
+            } else if (timestamp instanceof Date) {
+              dateObj = timestamp;
+            } else {
+              dateObj = new Date();
+            }
+          } else {
+            dateObj = new Date();
+          }
+
+          announcementsData.push({
+            id: doc.id,
+            title: data.title || '',
+            message: data.message || '',
+            date: format(dateObj, 'MMM dd, yyyy'),
+            audience: audience,
+            isImportant: data.isImportant || false
+          });
+        }
+      });
+      setAnnouncements(announcementsData);
+    }, (error) => {
+      console.error("Error getting announcements:", error);
+    });
+
+    return () => unsubscribe();
+  }, []); // Removed [student] dependency so it loads even if student data is delayed
+
+  if (!student) {
+    return (
+      <Box p={4} textAlign="center">
+        <Typography variant="h6" color="text.secondary">
+          Loading student data...
+        </Typography>
+        <CircularProgress sx={{ mt: 2 }} />
       </Box>
-      <Box component="dl" sx={{ m: 0, py: 2.5, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-        {details.map(([label, value, note], index) => <Box key={label} sx={{ px: { xs: 2, sm: 4 }, borderLeft: index ? '1px solid' : 0, borderColor: 'divider' }}>
-          <Typography component="dt" variant="body2" color="text.secondary">{label}</Typography>
-          <Typography component="dd" sx={{ m: 0, color: 'primary.main', fontSize: { xs: 21, sm: 26 }, fontWeight: 800 }}>{value}</Typography>
-          {note && <Typography variant="caption" color="text.secondary">{note}</Typography>}
-        </Box>)}
+    );
+  }
+
+  // Calculations
+  const records = parentAttendance(student);
+  const attendanceList = records.filter(record => record.status === "present").map(record => record.date);
+  const rewards = parentRewards(student);
+  const absentDates = records.filter(record => record.status === "absent");
+  const totalDays = attendanceList.length + absentDates.length;
+  const attendancePercentage = totalDays > 0
+    ? Math.round((attendanceList.length / totalDays) * 100)
+    : 0;
+
+  // Helper for Circular Progress
+  const CircularProgressWithLabel = (props) => {
+    return (
+      <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+        <CircularProgress
+          variant="determinate"
+          size={90}
+          thickness={5}
+          {...props}
+          sx={{
+            color: props.value >= 75 ? '#4caf50' : props.value >= 50 ? '#ff9800' : '#f44336',
+            borderRadius: '50%',
+            boxShadow: '0 0 10px rgba(0,0,0,0.05)'
+          }}
+        />
+        <Box
+          sx={{
+            top: 0,
+            left: 0,
+            bottom: 0,
+            right: 0,
+            position: 'absolute',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography variant="h5" component="div" color="text.primary" fontWeight="800">
+            {`${Math.round(props.value)}%`}
+          </Typography>
+        </Box>
       </Box>
-    </Paper>
-    <Box component="nav" aria-label={text('Parent actions', 'తల్లిదండ్రుల ఎంపికలు')} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-      {[
-        ['/parent/child', <PersonOutlineRounded />, text('My Child Details', 'నా పిల్లవాడి వివరాలు'), text('View attendance and rewards', 'హాజరు, బహుమతులు చూడండి')],
-        ['/parent/complaints', <ChatBubbleOutlineRounded />, text('Complaints & Help', 'ఫిర్యాదులు & సహాయం'), text('Contact the school and read replies', 'పాఠశాలను సంప్రదించండి, జవాబులు చూడండి')],
-      ].map(([to, icon, title, description]) => <Button component={Link} to={to} key={to} sx={{
-        p: 2, gap: 1.5, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', textAlign: 'left', textTransform: 'none',
-        '&:focus-visible': { outline: '2px solid', outlineOffset: 2 },
-      }}>
-        <Box sx={theme => ({ display: 'grid', placeItems: 'center', flexShrink: 0, width: 42, height: 42, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, .09) })}>{icon}</Box>
-        <Box sx={{ flex: 1 }}><Typography component="span" display="block" color="text.primary" fontWeight={750}>{title}</Typography><Typography component="span" variant="body2" color="text.secondary">{description}</Typography></Box>
-        <ArrowForwardRounded fontSize="small" />
-      </Button>)}
+    );
+  };
+
+  return (
+    <Box sx={{ pb: 10 }}>
+      {/* Install Banner */}
+      <InstallBanner />
+
+      {/* 1. Welcome Banner */}
+      <Paper
+        elevation={0}
+        sx={{
+          mb: 4,
+          p: 3,
+          borderRadius: 4,
+          background: `linear-gradient(120deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          color: '#fff',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <Box sx={{ position: 'relative', zIndex: 2 }}>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+                <Typography variant="h4" fontWeight="800">
+                Welcome back, {student.name ? student.name : 'Student'}
+                </Typography>
+                <WaveIcon sx={{ animation: 'wave 2s infinite', transformOrigin: '70% 70%' }} />
+            </Box>
+            <Typography variant="subtitle1" sx={{ opacity: 0.9, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CalendarIcon fontSize="small" />
+                {format(new Date(), 'EEEE, MMMM do, yyyy')}
+            </Typography>
+            <Button size="small" onClick={() => navigate('/parent/child')} sx={{ mt: 1, color: 'inherit' }}>
+              {parentLang === 'te' ? 'నా పిల్లవాడి వివరాలు' : 'My Child Details'}
+            </Button>
+        </Box>
+
+        {/* Decorative Circle overlay */}
+        <Box sx={{
+            position: 'absolute',
+            top: -20,
+            right: -20,
+            width: 150,
+            height: 150,
+            borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.1)'
+        }} />
+        <SchoolIcon sx={{
+            position: 'absolute',
+            bottom: -10,
+            right: 20,
+            fontSize: 100,
+            opacity: 0.15,
+            transform: 'rotate(-15deg)'
+        }} />
+      </Paper>
+
+      {/* 2. Stats Grid */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+
+        {/* A. Attendance */}
+        <Grid item xs={12} md={4}>
+          <Card
+            elevation={0}
+            sx={{
+                height: '100%',
+                borderRadius: 4,
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+            }}
+          >
+            <CardContent sx={{ textAlign: 'center', py: 3 }}>
+              <Typography variant="h6" fontWeight="bold" color="text.primary" gutterBottom>
+                Attendance
+              </Typography>
+              <Box sx={{ my: 2 }}>
+                <CircularProgressWithLabel value={attendancePercentage} />
+              </Box>
+
+              <Box display="flex" justifyContent="center" gap={3} mt={1}>
+                <Box textAlign="center">
+                    <Typography variant="h6" color="success.main" fontWeight="bold" lineHeight={1}>
+                        {attendanceList.length}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">Present</Typography>
+                </Box>
+                <Divider orientation="vertical" flexItem />
+                <Box textAlign="center">
+                    <Typography variant="h6" color="error.main" fontWeight="bold" lineHeight={1}>
+                        {absentDates.length}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">Absent</Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* B. Dollar Points */}
+        <Grid item xs={12} sm={6} md={4}>
+            <Card
+                elevation={3}
+                sx={{
+                    height: '100%',
+                    borderRadius: 4,
+                    background: 'linear-gradient(135deg, #FFD700 0%, #FFA000 100%)',
+                    color: '#fff',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'all 0.3s ease',
+                    '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 8px 25px rgba(255,160,0,0.4)' }
+                }}
+            >
+              <CardActionArea onClick={() => setIsRewardModalOpen(true)} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" zIndex={2}>
+                        <Box>
+                            <Typography variant="subtitle2" fontWeight="medium" sx={{ opacity: 0.9 }}>
+                                Dollar Points
+                            </Typography>
+                            <Typography variant="h3" fontWeight="800" sx={{ mt: 1, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                ${student.dollarPoints || 0}
+                            </Typography>
+                        </Box>
+                        <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: '#fff' }}>
+                            <DollarIcon />
+                        </Avatar>
+                    </Box>
+                    <Typography variant="caption" fontWeight="bold" sx={{ mt: 2, display: 'inline-block', opacity: 0.9, zIndex: 2, bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 2 }}>
+                        Tap to view history 👉
+                    </Typography>
+                    <DollarIcon sx={{
+                        position: 'absolute', bottom: -15, right: -15, fontSize: 120, opacity: 0.2, transform: 'rotate(-20deg)'
+                    }} />
+                </CardContent>
+              </CardActionArea>
+            </Card>
+        </Grid>
+
+        {/* C. Streak */}
+        <Grid item xs={12} sm={6} md={4}>
+            <Card
+                elevation={3}
+                sx={{
+                    height: '100%',
+                    borderRadius: 4,
+                    background: 'linear-gradient(135deg, #FF6B6B 0%, #EE5253 100%)',
+                    color: '#fff',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'all 0.3s ease',
+                    '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 8px 25px rgba(238,82,83,0.4)' }
+                }}
+            >
+              <CardActionArea onClick={() => setIsStreakModalOpen(true)} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" zIndex={2}>
+                        <Box>
+                            <Typography variant="subtitle2" fontWeight="medium" sx={{ opacity: 0.9 }}>
+                                Current Streak
+                            </Typography>
+                            <Typography variant="h3" fontWeight="800" sx={{ mt: 1, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                {student.currentStreak || 0}
+                            </Typography>
+                        </Box>
+                        <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: '#fff' }}>
+                            <StreakIcon />
+                        </Avatar>
+                    </Box>
+                    <Typography variant="caption" fontWeight="bold" sx={{ mt: 2, display: 'inline-block', opacity: 0.9, zIndex: 2, bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 2 }}>
+                        Tap to view attendance 👉
+                    </Typography>
+                     <StreakIcon sx={{
+                        position: 'absolute', bottom: -15, right: -15, fontSize: 120, opacity: 0.2, transform: 'rotate(-20deg)'
+                    }} />
+                </CardContent>
+              </CardActionArea>
+            </Card>
+        </Grid>
+      </Grid>
+
+      {/* 3. Announcements Section */}
+      <Box>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
+            mb: 2,
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2
+          }}
+        >
+          <Box>
+            <Typography variant="subtitle1" fontWeight="bold">Complaints & Issues</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {parentLang === 'te' ? 'ఇంగ్లీష్/తెలుగు లో ఫిర్యాదు పంపండి, వాయిస్ నోట్ జోడించండి.' : 'Raise complaints in English/Telugu and add voice notes.'}
+            </Typography>
+          </Box>
+          <Button variant="contained" onClick={() => navigate('/parent/complaints')}>
+            {tParent(parentLang, 'raiseNow')}
+          </Button>
+        </Paper>
+
+        <Box display="flex" alignItems="center" gap={1} mb={2}>
+            <Typography variant="h6" fontWeight="bold">
+                📢 Latest Updates
+            </Typography>
+            <Divider sx={{ flexGrow: 1 }} />
+        </Box>
+
+        {announcements.length > 0 ? (
+            <AnnouncementsSection announcements={announcements} />
+        ) : (
+            <Paper
+                elevation={0}
+                sx={{
+                    p: 4,
+                    textAlign: 'center',
+                    borderRadius: 3,
+                    bgcolor: 'background.paper',
+                    border: '1px dashed',
+                    borderColor: 'divider'
+                }}
+            >
+                <Typography variant="body1" color="text.secondary">
+                    No new announcements.
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                    (Checked 'date' field in database)
+                </Typography>
+            </Paper>
+        )}
+      </Box>
+
+      {/* Rewards History Modal */}
+      <Dialog
+        open={isRewardModalOpen}
+        onClose={() => setIsRewardModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Typography variant="h6" fontWeight="900" display="flex" alignItems="center" gap={1}>
+             <DollarIcon color="warning" /> Dollar Points History
+          </Typography>
+          <IconButton onClick={() => setIsRewardModalOpen(false)} sx={{ bgcolor: 'action.hover' }}>
+             <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          {!rewards.length ? (
+            <Box p={4} textAlign="center">
+                <Avatar sx={{ mx: 'auto', bgcolor: 'transparent', color: 'text.secondary', width: 64, height: 64, mb: 2 }}>
+                    <DollarIcon fontSize="large" />
+                </Avatar>
+                <Typography color="text.secondary" fontWeight="600">No rewards recorded yet.</Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table size="medium">
+                <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.02)' }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Reason</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Teacher</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rewards.map((reward, i) => (
+                    <TableRow key={i} hover>
+                      <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>{activityDate(reward.date)?.toLocaleDateString() || '—'}</TableCell>
+                      <TableCell>
+                          <Typography color="success.main" fontWeight="900">
+                             +${reward.dollars}
+                          </Typography>
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>{reward.reason || '-'}</TableCell>
+                      <TableCell>
+                          <Chip size="small" label={reward.teacher || reward.awardedBy || '-'} sx={{ fontWeight: 600, bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Streak History Modal */}
+      <Dialog
+        open={isStreakModalOpen}
+        onClose={() => setIsStreakModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Typography variant="h6" fontWeight="900" display="flex" alignItems="center" gap={1}>
+             <StreakIcon color="error" /> Attendance Log
+          </Typography>
+          <IconButton onClick={() => setIsStreakModalOpen(false)} sx={{ bgcolor: 'action.hover' }}>
+             <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          {!attendanceList.length ? (
+            <Box p={4} textAlign="center">
+                <Avatar sx={{ mx: 'auto', bgcolor: 'transparent', color: 'text.secondary', width: 64, height: 64, mb: 2 }}>
+                    <StreakIcon fontSize="large" />
+                </Avatar>
+                <Typography color="text.secondary" fontWeight="600">No attendance recorded yet.</Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table size="small">
+                <TableBody>
+                  {attendanceList.map((dateStr, i) => {
+                    const teacherName = student.attendanceByDate?.[dateStr]?.teacherName || '-';
+                    return (
+                      <TableRow key={i} hover>
+                        <TableCell sx={{ fontWeight: 700 }}>{dateStr}</TableCell>
+                        <TableCell>
+                            <Chip size="small" label={teacherName} sx={{ fontWeight: 600, bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', maxWidth: 120 }} />
+                        </TableCell>
+                        <TableCell align="right">
+                            <Chip size="small" label="Present" sx={{ fontWeight: 800, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }} />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </Box>
-  </Stack>;
-}
+  );
+};
+
+export default HomeTab;
