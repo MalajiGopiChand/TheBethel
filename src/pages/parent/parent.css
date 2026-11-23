@@ -10,3 +10,101 @@
   .parent-shell *, .parent-detail *, .parent-shell *::before, .parent-detail *::before { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .parent-stat:hover { transform: none; }
 }
+
+.parent-portal {
+  --ink: #151835;
+  --blue: #344ee2;
+  --line: #d7dcfa;
+  --shadow: 0 5px 16px #4152ad19, 0 2px 5px #5260b216;
+  color: var(--ink);
+  background: radial-gradient(ellipse at top right, #dce0ff, transparent 45%), linear-gradient(145deg, #f2f4ff, #ebeeff);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+.parent-portal .portal-header { background: #f7f8fff0; color: var(--ink); border-radius: 0 0 22px 22px; backdrop-filter: blur(18px); box-shadow: var(--shadow); }
+.parent-portal .portal-toolbar { box-sizing: border-box; width: 100%; max-width: 680px; margin: auto; gap: 9px; padding: 10px 16px; }
+.parent-portal .portal-logo { flex-shrink: 0; width: 43px; height: 43px; background: white; box-shadow: 0 4px 12px #454cb12a; }
+.portal-brand { flex: 1; min-width: 0; display: grid; gap: 2px; line-height: 1.25; }
+.portal-brand strong { font-size: clamp(.85rem, 3.5vw, 1.1rem); }
+.portal-brand span { font-size: .82rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.parent-portal .portal-language, .parent-portal .portal-logout { border-radius: 24px; min-height: 38px; font-size: .8rem; }
+.parent-portal .portal-language { background: white; }
+.parent-portal .portal-logout { background: #fce5e8; color: #a91e32; min-width: 38px; gap: 4px; padding-inline: 10px; text-transform: none; }
+.parent-portal .portal-content, .parent-portal .portal-subpage { padding: 16px clamp(12px, 3vw, 22px) 28px; }
+.portal-feed { display: grid; gap: 14px; }
+.portal-feed h1, .portal-feed h2, .portal-feed p { margin: 0; line-height: 1.3; }
+.portal-feed h2, .portal-metric-title { font-size: clamp(1rem, 3vw, 1.22rem); font-weight: 750; }
+.portal-hero, .portal-metric { position: relative; overflow: hidden; isolation: isolate; box-shadow: var(--shadow); }
+.portal-hero, .portal-points { color: white; background: radial-gradient(ellipse at top right, #8494ff, transparent 65%), linear-gradient(120deg, #455ef2, #2e40bc); }
+.portal-hero { border-radius: 32px; padding: clamp(20px, 4vw, 32px); }
+.portal-hero h1 { font-size: clamp(1.65rem, 5vw, 2.35rem); font-weight: 800; letter-spacing: -.045em; max-width: 79%; overflow-wrap: anywhere; }
+.portal-hero small { font-size: .82em; }
+.portal-family { position: absolute; z-index: -1; bottom: -13%; right: -4%; width: 34%; height: 95%; border-radius: 50%; background: #ffffff12; }
+.portal-family i { position: absolute; width: 60%; height: 58%; bottom: -7%; left: 8%; border-radius: 70% 70% 0 0; background: #c7ceff68; }
+.portal-family i:before { content: ''; position: absolute; width: 52%; aspect-ratio: 1; border-radius: 50%; left: 24%; bottom: 103%; background: #d8ddffb0; }
+.portal-family i+i { left: 54%; width: 40%; height: 44%; background: #939ef1; }
+.portal-date, .portal-updates h2 { display: flex; align-items: center; gap: 8px; }
+.portal-date { margin: 8px 0 12px; font-size: .88rem; }
+.portal-pill { display: inline-flex; align-items: center; gap: .7em; border: 1px solid #ffffff85; border-radius: 999px; padding: 4px 12px; background: #ffffff12; font-size: .8rem; font-weight: 650; color: inherit; text-decoration: none; }
+.portal-hero .portal-pill { min-height: 34px; }
+.portal-pill span { font-size: 1.3em; line-height: 1; }
+.portal-surface, .portal-streak, .parent-portal .portal-note { color: var(--ink); border-radius: 24px; background: linear-gradient(150deg, white, #f8f8ff); border: 1px solid #ffffffee; box-shadow: var(--shadow); }
+.portal-attendance { display: grid; grid-template-columns: 36% 1fr; align-items: center; padding: 18px 12px; }
+.portal-attendance-data { display: grid; justify-items: center; gap: 7px; border-left: 1px solid var(--line); }
+.calendar-art { display: grid; place-items: center; background: radial-gradient(ellipse, #e2e6ff 25%, transparent 70%); min-height: 96px; }
+.calendar-art i { position: relative; display: grid; place-items: center; width: clamp(54px, 13vw, 80px); aspect-ratio: 1; color: #465df1; font: bold 2.3rem/1 sans-serif; border-radius: 10px; background: linear-gradient(#5c70f5 0 23%, white 24%); box-shadow: 1px 3px #aab2fa, 3px 9px 12px #34399438; transform: rotate(-10deg); padding-top: 5px; }
+.calendar-art i:before, .calendar-art i:after { content: ''; position: absolute; top: -4px; left: 18%; width: 5px; height: 12px; border-radius: 5px; background: #d8ddfa; box-shadow: 1px 1px 2px #292d6c; }
+.calendar-art i:after { left: 72%; }
+.portal-ring { display: grid; place-items: center; width: 70px; aspect-ratio: 1; border-radius: 50%; background: conic-gradient(#5067ef var(--attendance), #e2e5ff 0); }
+.portal-ring b { width: 78%; aspect-ratio: 1; display: grid; place-items: center; background: #f9faff; border-radius: 50%; font-size: 1.1rem; }
+.portal-counts { display: flex; width: 100%; font-size: .8rem; }
+.portal-counts div { display: grid; justify-items: center; flex: 1; }
+.portal-counts b { color: #168451; font-size: 1.08rem; }
+.portal-counts div+div { border-left: 1px solid var(--line); }
+.portal-counts div+div b { color: #b93044; }
+.portal-metric { border: none; border-radius: 24px; padding: 16px 20px; display: grid; gap: 4px; justify-items: start; text-align: start; font: inherit; cursor: pointer; }
+.portal-metric strong { font-size: 2rem; line-height: 1.1; }
+.portal-metric .portal-pill { margin-top: 3px; }
+.portal-streak { background: radial-gradient(circle at 90% 130%, #cdd3ff 24%, transparent 25%), linear-gradient(150deg, white, #ecefff); }
+.portal-streak .portal-pill { color: #3447bd; border-color: #b9c1fa; }
+.coin-art, .flame-art { position: absolute; right: 7%; bottom: 15%; pointer-events: none; }
+.coin-art { width: 56px; height: 29px; border-radius: 50%; background: linear-gradient(90deg, #e79519, #ffdc76, #e29110); box-shadow: 0 5px #dfa026, 0 7px #ffcd5c, 0 11px #cc8216; }
+.coin-art i { position: absolute; bottom: 8px; left: -10px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 4px solid #ffda70; background: linear-gradient(130deg, #ffe69a, #ffb633); box-shadow: 2px 3px #c3841f, inset 1px 1px 3px #fff3bf; font: bold 24px/1 sans-serif; color: #ffefa7; text-shadow: 1px 2px #c1811b; transform: rotate(-12deg); }
+.flame-art { font-size: 3.2rem; filter: drop-shadow(0 5px 5px #a57c6f35); }
+.portal-help { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 16px; }
+.portal-help svg, .portal-updates svg { color: var(--blue); }
+.portal-help p { margin-top: 5px; color: #515779; font-size: .84rem; }
+.portal-help a { border-radius: 22px; padding: 9px 13px; color: white; font-size: .83rem; font-weight: 700; text-decoration: none; background: linear-gradient(#5e74fa, #3048da); }
+.portal-updates h2 { margin: 2px 0 10px; }
+.portal-empty { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 20px; font-size: .9rem; }
+.parent-portal .portal-dock { position: fixed; bottom: max(10px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 1000; width: min(94%, 552px); padding: 4px; border: 1px solid white; border-radius: 32px; background: #f9faffed; box-shadow: 0 5px 25px #4653a83a; backdrop-filter: blur(16px); }
+.portal-dock .MuiBottomNavigation-root { background: transparent; height: 50px; }
+.portal-dock .MuiBottomNavigationAction-root { min-width: 0; color: #56618a; border-radius: 30px; gap: 2px; }
+.portal-dock .MuiBottomNavigationAction-root.Mui-selected { background: linear-gradient(145deg, #606ffe, #2b4cec); color: white; }
+.portal-dock .MuiBottomNavigationAction-label, .portal-dock .MuiBottomNavigationAction-label.Mui-selected { font-size: .69rem; font-weight: 650; }
+.portal-subpage .MuiPaper-rounded, .portal-content .MuiCard-root, .portal-profile .MuiPaper-rounded { border-radius: 18px; box-shadow: var(--shadow); }
+.portal-subpage .parent-shell { background: transparent; }
+.parent-portal :is(button,a):focus-visible { outline: 3px solid #7882fa; outline-offset: 2px; }
+@media (max-width: 360px) {
+  .parent-portal .portal-toolbar { gap: 5px; padding-inline: 8px; }
+  .portal-logout span { display: none; }
+  .portal-help { grid-template-columns: 1fr auto; }
+  .portal-help > svg { display: none; }
+}
+.portal-note { display: flex; align-items: center; gap: 10px; }
+.portal-note > svg { color: var(--blue); }
+.portal-section-heading { display: flex; align-items: center; gap: 10px; }
+.portal-section-heading svg, .portal-homework-empty > div { border-radius: 14px; background: linear-gradient(145deg,#7182ff,#354edb); color: white; }
+.portal-section-heading svg { box-sizing: content-box; padding: 9px; }
+.portal-homework-empty { min-height: 42vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.portal-homework-empty > div { background: radial-gradient(ellipse at bottom,#d0d8ff,transparent 72%); color: #5268e9; padding: 20px 35px 10px; margin-bottom: 12px; }
+.portal-homework-empty svg { width: 86px; height: 86px; filter: drop-shadow(2px 5px 2px #5267bf36); }
+.portal-leaderboard .MuiCardContent-root:last-child { padding: 12px; }
+.portal-leaderboard .MuiCardContent-root > div { gap: 10px; }
+.portal-leaderboard .MuiCardContent-root .MuiTypography-h6 { font-size: 1rem; font-weight: 750; overflow-wrap: anywhere; }
+.portal-leaderboard .MuiCardContent-root > div > div:nth-child(3) { min-width: 0; }
+.portal-profile .MuiListItem-root { padding-block: 5px; }
+.portal-profile .MuiAvatar-root { z-index: 1; }
+.portal-child-heading { display: flex; align-items: center; gap: 16px; padding: 22px; border-radius: 20px; color: white; background: radial-gradient(ellipse at bottom right, #8998ff, transparent 48%), linear-gradient(110deg,#3047ca,#526cf2); margin-bottom: 16px; box-shadow: var(--shadow); }
+.portal-child-heading h1 { margin: 0; font-size: 1.55rem; overflow-wrap: anywhere; }
+.portal-child-heading p { margin: 3px 0 0; font-size: .9rem; }
+.portal-child-initial { display: grid; place-items: center; width: 52px; height: 52px; flex: none; background: #ffffff29; border: 1px solid #ffffff88; border-radius: 50%; font-size: 1.5rem; font-weight: 800; }

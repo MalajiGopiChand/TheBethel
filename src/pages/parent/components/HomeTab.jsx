@@ -1,39 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  CircularProgress,
-  useTheme,
-  Paper,
-  Divider,
-  Avatar,
-  Container,
-  CardActionArea,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  Button
-} from '@mui/material';
-import {
-  AttachMoney as DollarIcon,
-  LocalFireDepartment as StreakIcon,
-  CalendarMonth as CalendarIcon,
-  School as SchoolIcon,
-  WavingHand as WaveIcon,
-  Close as CloseIcon
-} from '@mui/icons-material';
+import { Link } from 'react-router-dom';
+import { Typography, Box, CircularProgress, Avatar, Dialog, DialogTitle, DialogContent, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
+import { AttachMoney as DollarIcon, LocalFireDepartment as StreakIcon, CalendarMonth as CalendarIcon, Close as CloseIcon, ChatOutlined as ChatIcon, CampaignOutlined as NewsIcon, ArticleOutlined as NoteIcon } from '@mui/icons-material';
 import {
   collection,
   query,
@@ -45,12 +13,10 @@ import { parentAttendance, parentRewards, activityDate } from '../../../utils/pa
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import AnnouncementsSection from '../../../components/AnnouncementsSection';
-import InstallBanner from '../../../components/InstallBanner';
 import { tParent } from '../../../utils/parentI18n';
 
 const HomeTab = ({ student, parentLang = 'te' }) => {
-  const navigate = useNavigate();
-  const theme = useTheme();
+  const label = (en, te) => parentLang === 'te' ? te : en;
   const [announcements, setAnnouncements] = useState([]);
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
   const [isStreakModalOpen, setIsStreakModalOpen] = useState(false);
@@ -131,279 +97,47 @@ const HomeTab = ({ student, parentLang = 'te' }) => {
     ? Math.round((attendanceList.length / totalDays) * 100)
     : 0;
 
-  // Helper for Circular Progress
-  const CircularProgressWithLabel = (props) => {
-    return (
-      <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-        <CircularProgress
-          variant="determinate"
-          size={90}
-          thickness={5}
-          {...props}
-          sx={{
-            color: props.value >= 75 ? '#4caf50' : props.value >= 50 ? '#ff9800' : '#f44336',
-            borderRadius: '50%',
-            boxShadow: '0 0 10px rgba(0,0,0,0.05)'
-          }}
-        />
-        <Box
-          sx={{
-            top: 0,
-            left: 0,
-            bottom: 0,
-            right: 0,
-            position: 'absolute',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Typography variant="h5" component="div" color="text.primary" fontWeight="800">
-            {`${Math.round(props.value)}%`}
-          </Typography>
-        </Box>
-      </Box>
-    );
-  };
-
   return (
-    <Box sx={{ pb: 10 }}>
-      {/* Install Banner */}
-      <InstallBanner />
+    <div className="portal-feed">
+      <section className="portal-hero">
+        <div className="portal-family" aria-hidden="true"><i /><i /></div>
+        <h1>{label('Welcome back,', 'స్వాగతం,')}<br />{student.name} <small>👋</small></h1>
+        <div className="portal-date"><CalendarIcon fontSize="small" />{new Date().toLocaleDateString(parentLang === 'te' ? 'te-IN' : 'en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
+        <Link className="portal-pill" to="/parent/child">{label('My Child Details', 'నా పిల్లవాడి వివరాలు')} <span aria-hidden="true">›</span></Link>
+      </section>
 
-      {/* 1. Welcome Banner */}
-      <Paper
-        elevation={0}
-        sx={{
-          mb: 4,
-          p: 3,
-          borderRadius: 4,
-          background: `linear-gradient(120deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-          color: '#fff',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-        <Box sx={{ position: 'relative', zIndex: 2 }}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-                <Typography variant="h4" fontWeight="800">
-                Welcome back, {student.name ? student.name : 'Student'}
-                </Typography>
-                <WaveIcon sx={{ animation: 'wave 2s infinite', transformOrigin: '70% 70%' }} />
-            </Box>
-            <Typography variant="subtitle1" sx={{ opacity: 0.9, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CalendarIcon fontSize="small" />
-                {format(new Date(), 'EEEE, MMMM do, yyyy')}
-            </Typography>
-            <Button size="small" onClick={() => navigate('/parent/child')} sx={{ mt: 1, color: 'inherit' }}>
-              {parentLang === 'te' ? 'నా పిల్లవాడి వివరాలు' : 'My Child Details'}
-            </Button>
-        </Box>
+      <section className="portal-attendance portal-surface">
+        <div className="calendar-art" aria-hidden="true"><i>✓</i></div>
+        <div className="portal-attendance-data">
+          <h2>{label('Attendance', 'హాజరు')}</h2>
+          <div className="portal-ring" style={{ '--attendance': attendancePercentage + '%' }}><b>{attendancePercentage}%</b></div>
+          <div className="portal-counts">
+            <div><b>{attendanceList.length}</b>{label('Present', 'హాజరు')}</div>
+            <div><b>{absentDates.length}</b>{label('Absent', 'గైర్హాజరు')}</div>
+          </div>
+        </div>
+      </section>
 
-        {/* Decorative Circle overlay */}
-        <Box sx={{
-            position: 'absolute',
-            top: -20,
-            right: -20,
-            width: 150,
-            height: 150,
-            borderRadius: '50%',
-            bgcolor: 'rgba(255,255,255,0.1)'
-        }} />
-        <SchoolIcon sx={{
-            position: 'absolute',
-            bottom: -10,
-            right: 20,
-            fontSize: 100,
-            opacity: 0.15,
-            transform: 'rotate(-15deg)'
-        }} />
-      </Paper>
+      <button type="button" className="portal-metric portal-points" onClick={() => setIsRewardModalOpen(true)}>
+        <span className="portal-metric-title">🌟 {label('Dollar Points', 'డాలర్ పాయింట్లు')}</span>
+        <strong>${student.dollarPoints || 0}</strong>
+        <span className="portal-pill">{label('Tap to view history', 'చరిత్ర చూడండి')} <span aria-hidden="true">›</span></span>
+        <span className="coin-art" aria-hidden="true"><i>★</i></span>
+      </button>
+      <button type="button" className="portal-metric portal-streak" onClick={() => setIsStreakModalOpen(true)}>
+        <span className="portal-metric-title">🔥 {label('Current Streak', 'వరుస హాజరు')}</span>
+        <strong>{student.currentStreak || 0}</strong>
+        <span className="portal-pill">{label('Tap to view attendance', 'హాజరు చూడండి')} <span aria-hidden="true">›</span></span>
+        <span className="flame-art" aria-hidden="true">🔥</span>
+      </button>
 
-      {/* 2. Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-
-        {/* A. Attendance */}
-        <Grid item xs={12} md={4}>
-          <Card
-            elevation={0}
-            sx={{
-                height: '100%',
-                borderRadius: 4,
-                border: '1px solid',
-                borderColor: 'divider',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center'
-            }}
-          >
-            <CardContent sx={{ textAlign: 'center', py: 3 }}>
-              <Typography variant="h6" fontWeight="bold" color="text.primary" gutterBottom>
-                Attendance
-              </Typography>
-              <Box sx={{ my: 2 }}>
-                <CircularProgressWithLabel value={attendancePercentage} />
-              </Box>
-
-              <Box display="flex" justifyContent="center" gap={3} mt={1}>
-                <Box textAlign="center">
-                    <Typography variant="h6" color="success.main" fontWeight="bold" lineHeight={1}>
-                        {attendanceList.length}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">Present</Typography>
-                </Box>
-                <Divider orientation="vertical" flexItem />
-                <Box textAlign="center">
-                    <Typography variant="h6" color="error.main" fontWeight="bold" lineHeight={1}>
-                        {absentDates.length}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">Absent</Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* B. Dollar Points */}
-        <Grid item xs={12} sm={6} md={4}>
-            <Card
-                elevation={3}
-                sx={{
-                    height: '100%',
-                    borderRadius: 4,
-                    background: 'linear-gradient(135deg, #FFD700 0%, #FFA000 100%)',
-                    color: '#fff',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    transition: 'all 0.3s ease',
-                    '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 8px 25px rgba(255,160,0,0.4)' }
-                }}
-            >
-              <CardActionArea onClick={() => setIsRewardModalOpen(true)} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" zIndex={2}>
-                        <Box>
-                            <Typography variant="subtitle2" fontWeight="medium" sx={{ opacity: 0.9 }}>
-                                Dollar Points
-                            </Typography>
-                            <Typography variant="h3" fontWeight="800" sx={{ mt: 1, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                ${student.dollarPoints || 0}
-                            </Typography>
-                        </Box>
-                        <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: '#fff' }}>
-                            <DollarIcon />
-                        </Avatar>
-                    </Box>
-                    <Typography variant="caption" fontWeight="bold" sx={{ mt: 2, display: 'inline-block', opacity: 0.9, zIndex: 2, bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 2 }}>
-                        Tap to view history 👉
-                    </Typography>
-                    <DollarIcon sx={{
-                        position: 'absolute', bottom: -15, right: -15, fontSize: 120, opacity: 0.2, transform: 'rotate(-20deg)'
-                    }} />
-                </CardContent>
-              </CardActionArea>
-            </Card>
-        </Grid>
-
-        {/* C. Streak */}
-        <Grid item xs={12} sm={6} md={4}>
-            <Card
-                elevation={3}
-                sx={{
-                    height: '100%',
-                    borderRadius: 4,
-                    background: 'linear-gradient(135deg, #FF6B6B 0%, #EE5253 100%)',
-                    color: '#fff',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    transition: 'all 0.3s ease',
-                    '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 8px 25px rgba(238,82,83,0.4)' }
-                }}
-            >
-              <CardActionArea onClick={() => setIsStreakModalOpen(true)} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" zIndex={2}>
-                        <Box>
-                            <Typography variant="subtitle2" fontWeight="medium" sx={{ opacity: 0.9 }}>
-                                Current Streak
-                            </Typography>
-                            <Typography variant="h3" fontWeight="800" sx={{ mt: 1, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                {student.currentStreak || 0}
-                            </Typography>
-                        </Box>
-                        <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: '#fff' }}>
-                            <StreakIcon />
-                        </Avatar>
-                    </Box>
-                    <Typography variant="caption" fontWeight="bold" sx={{ mt: 2, display: 'inline-block', opacity: 0.9, zIndex: 2, bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 2 }}>
-                        Tap to view attendance 👉
-                    </Typography>
-                     <StreakIcon sx={{
-                        position: 'absolute', bottom: -15, right: -15, fontSize: 120, opacity: 0.2, transform: 'rotate(-20deg)'
-                    }} />
-                </CardContent>
-              </CardActionArea>
-            </Card>
-        </Grid>
-      </Grid>
-
-      {/* 3. Announcements Section */}
-      <Box>
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            mb: 2,
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2
-          }}
-        >
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Complaints & Issues</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {parentLang === 'te' ? 'ఇంగ్లీష్/తెలుగు లో ఫిర్యాదు పంపండి, వాయిస్ నోట్ జోడించండి.' : 'Raise complaints in English/Telugu and add voice notes.'}
-            </Typography>
-          </Box>
-          <Button variant="contained" onClick={() => navigate('/parent/complaints')}>
-            {tParent(parentLang, 'raiseNow')}
-          </Button>
-        </Paper>
-
-        <Box display="flex" alignItems="center" gap={1} mb={2}>
-            <Typography variant="h6" fontWeight="bold">
-                📢 Latest Updates
-            </Typography>
-            <Divider sx={{ flexGrow: 1 }} />
-        </Box>
-
-        {announcements.length > 0 ? (
-            <AnnouncementsSection announcements={announcements} />
-        ) : (
-            <Paper
-                elevation={0}
-                sx={{
-                    p: 4,
-                    textAlign: 'center',
-                    borderRadius: 3,
-                    bgcolor: 'background.paper',
-                    border: '1px dashed',
-                    borderColor: 'divider'
-                }}
-            >
-                <Typography variant="body1" color="text.secondary">
-                    No new announcements.
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                    (Checked 'date' field in database)
-                </Typography>
-            </Paper>
-        )}
-      </Box>
+      <section className="portal-help portal-surface">
+        <ChatIcon aria-hidden="true" /><div><h2>{tParent(parentLang, 'complaints')}</h2><p>{label('Send a concern in English or Telugu.', 'ఇంగ్లీష్ లేదా తెలుగులో సమస్యను తెలియజేయండి.')}</p></div>
+        <Link to="/parent/complaints">{tParent(parentLang, 'raiseNow')}</Link>
+      </section>
+      <section className="portal-updates"><h2><NewsIcon />{label('Latest Updates', 'తాజా సమాచారం')}</h2>
+        {announcements.length ? <AnnouncementsSection announcements={announcements} /> : <div className="portal-empty portal-surface"><NoteIcon />{label('No new announcements.', 'కొత్త ప్రకటనలు లేవు.')}</div>}
+      </section>
 
       {/* Rewards History Modal */}
       <Dialog
@@ -511,7 +245,7 @@ const HomeTab = ({ student, parentLang = 'te' }) => {
         </DialogContent>
       </Dialog>
 
-    </Box>
+    </div>
   );
 };
 

@@ -460,8 +460,8 @@ const StudentDetailsPage = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', p: 2 }}>
-      {renderPageHeader(isParentView ? 'My Child’s Details' : 'Student Profile', !isParentView && (
+    <Box className={isParentView ? 'parent-detail' : undefined} sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', p: isParentView ? 0 : 2 }}>
+      {renderPageHeader(isParentView ? (parent?.parentLang === 'te' ? 'నా పిల్లవాడి వివరాలు' : 'My Child Details') : 'Student Profile', !isParentView && (
         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
           {isAdmin && (
             <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={handleEditClick}>
@@ -473,6 +473,11 @@ const StudentDetailsPage = () => {
           </Button>
         </Box>
       ))}
+
+      {isParentView && <section className="portal-child-heading">
+        <span className="portal-child-initial" aria-hidden="true">{student.name?.trim().charAt(0)}</span>
+        <div><h1>{student.name}</h1><p>{[student.classType, student.location || student.place, student.studentId].filter(Boolean).join(' · ')}</p></div>
+      </section>}
 
       {/* Content Grid */}
       <Grid container spacing={2}>

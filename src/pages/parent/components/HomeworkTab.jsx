@@ -239,9 +239,9 @@ const HomeworkTab = ({ student, parentLang = 'te' }) => {
 
       {homeworks.length === 0 ? (
         <Fade in={true} timeout={300}>
-            <Box textAlign="center" py={6} sx={{ opacity: 0.6 }}>
-                <AssignmentIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-                <Typography variant="h6" color="text.secondary">{tParent(parentLang, 'noHomework')}</Typography>
+            <Box className="portal-homework-empty">
+                <div aria-hidden="true"><AssignmentIcon /></div>
+                <Typography variant="h6" fontWeight={800}>{tParent(parentLang, 'noHomework')}</Typography>
                 <Typography variant="body2" color="text.secondary">{tParent(parentLang, 'enjoyFree')}</Typography>
             </Box>
         </Fade>

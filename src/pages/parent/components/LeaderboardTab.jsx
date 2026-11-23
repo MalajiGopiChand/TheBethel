@@ -24,6 +24,7 @@ import { tParent } from '../../../utils/parentI18n';
 const LeaderboardTab = ({ student, parentLang = 'te' }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     // Helper function to calculate dollar points from rewards array
@@ -31,7 +32,7 @@ const LeaderboardTab = ({ student, parentLang = 'te' }) => {
       const rewardsList = studentData.rewards || [];
       let calculatedPoints = 0;
       for (const reward of rewardsList) {
-        const points = reward.dollars;
+        const points = reward?.dollars;
         if (typeof points === 'number') {
           calculatedPoints += points;
         } else if (typeof points === 'string') {
@@ -43,6 +44,7 @@ const LeaderboardTab = ({ student, parentLang = 'te' }) => {
 
     // Real-time listener for leaderboard
     setLoading(true);
+    setFailed(false);
     const leaderboardQuery = query(
       collection(db, 'students'),
       orderBy('dollarPoints', 'desc')
@@ -72,6 +74,7 @@ const LeaderboardTab = ({ student, parentLang = 'te' }) => {
       setStudents(studentsData);
       setLoading(false);
     }, (error) => {
+      setFailed(true);
       console.error('Error fetching leaderboard:', error);
       setLoading(false);
     });
@@ -114,15 +117,17 @@ const LeaderboardTab = ({ student, parentLang = 'te' }) => {
     );
   }
 
+  if (failed) return <Typography role="alert">{parentLang === 'te' ? 'ర్యాంకులు లోడ్ కాలేదు.' : 'The leaderboard could not be loaded.'}</Typography>;
+
   // Derive current child rank
   const childIndex = students.findIndex(s => s.id === (student?.id || student?.studentId));
   const childRank = childIndex !== -1 ? childIndex + 1 : null;
   const childData = childIndex !== -1 ? students[childIndex] : null;
 
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom fontWeight="bold">
-        {tParent(parentLang, 'areaLeaderboard')}
+    <Box className="portal-leaderboard">
+      <Typography className="portal-section-heading" variant="h5" gutterBottom fontWeight="bold">
+        <TrophyIcon /> {tParent(parentLang, 'areaLeaderboard')}
       </Typography>
 
       {/* Hero Widget for the Parent's Child */}

@@ -94,7 +94,7 @@ const ProfileTab = ({ student, parentUser, parentLang = 'te' }) => {
   );
 
   return (
-    <Box sx={{ pb: 4 }}>
+    <Box className="portal-profile" sx={{ pb: 4 }}>
 
       {/* 1. Profile Header Card */}
       <Grow in={true} timeout={250}>
@@ -114,8 +114,8 @@ const ProfileTab = ({ student, parentUser, parentLang = 'te' }) => {
           {/* Animated Gradient Banner */}
           <Box
             sx={{
-              height: 140,
-              background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              height: 108,
+              background: 'radial-gradient(ellipse at 80% 130%, #a6afff 32%, transparent 33%), linear-gradient(125deg, #294bd7, #536df7 66%, #8265ff)',
               backgroundSize: '200% 200%',
               animation: 'gradientBG 6s ease infinite',
               position: 'relative',
@@ -133,10 +133,10 @@ const ProfileTab = ({ student, parentUser, parentLang = 'te' }) => {
             <Zoom in={true} timeout={250}>
               <Avatar
                 sx={{
-                  width: 110,
-                  height: 110,
+                  width: 82,
+                  height: 82,
                   border: '5px solid #fff',
-                  bgcolor: theme.palette.secondary.main,
+                  bgcolor: '#eb5081',
                   fontSize: '2.2rem',
                   fontWeight: '900',
                   mx: 'auto',
@@ -309,7 +309,7 @@ const ProfileTab = ({ student, parentUser, parentLang = 'te' }) => {
             mt: 3,
             p: 2.5,
             borderRadius: 4,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(125deg, #4056cc, #526af1)',
             color: 'white',
             transition: 'all 0.3s',
             '&:hover': {
