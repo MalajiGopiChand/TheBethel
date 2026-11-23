@@ -5,17 +5,29 @@ export function activityDate(value) {
 }
 export function parentAttendance(student = {}) {
   const entries = new Map();
-  for (const value of Array.isArray(student.attendance) ? student.attendance : []) {
-    const date = typeof value === 'string' ? value.split('::')[0] : value?.date;
-    if (date) entries.set(date, { date, status: 'present' });
+  function addRecord(date, status, teacherName) {
+    if (!date) return;
+    const previous = entries.get(date);
+    const teacher = teacherName || (previous?.status === status && previous.teacherName);
+    const record = { date, status };
+    if (teacher) record.teacherName = teacher;
+    entries.set(date, record);
   }
-  for (const value of Array.isArray(student.absentDates) ? student.absentDates : []) {
-    const date = typeof value === 'string' ? value.split('::')[0] : value?.date;
-    if (date) entries.set(date, { date, status: 'absent' });
+  for (const [values, status] of [[student.attendance, 'present'], [student.absentDates, 'absent']]) {
+    for (const value of Array.isArray(values) ? values : []) {
+      if (typeof value === 'string') {
+        const [date, ...name] = value.split('::');
+        addRecord(date, status, name.join('::'));
+      } else {
+        addRecord(value?.date, status, value?.teacherName);
+      }
+    }
   }
   for (const [date, record] of Object.entries(student.attendanceByDate || {})) {
     const status = typeof record === 'string' ? record : record?.status;
-    if (typeof status === 'string' && ['present', 'absent'].includes(status.toLowerCase())) entries.set(date, { date, status: status.toLowerCase() });
+    if (typeof status === 'string' && ['present', 'absent'].includes(status.toLowerCase())) {
+      addRecord(date, status.toLowerCase(), record?.teacherName);
+    }
   }
   return [...entries.values()].sort((a, b) => (activityDate(b.date)?.getTime() || 0) - (activityDate(a.date)?.getTime() || 0));
 }

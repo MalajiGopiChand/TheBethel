@@ -14,5 +14,5 @@ test('staff retain their existing student lookup', () => {
   assert.equal(studentDetailsId({ role: 'ADMIN' }, 'selected-child'), 'selected-child');
 });
 test('legacy attendance containing teacher names merges with structured attendance', () => {
-  assert.deepEqual(parentAttendance({ attendance: ['2026-11-15::Teacher'], attendanceByDate: { '2026-11-15': { status: 'present' } } }), [{ date: '2026-11-15', status: 'present' }]);
+  assert.deepEqual(parentAttendance({ attendance: ['2026-11-15::Teacher'], attendanceByDate: { '2026-11-15': { status: 'present' } } }), [{ date: '2026-11-15', status: 'present', teacherName: 'Teacher' }]);
 });

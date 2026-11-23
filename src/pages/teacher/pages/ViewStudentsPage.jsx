@@ -111,7 +111,7 @@ const ViewStudentsPage = () => {
   });
 
   const handleViewDetails = (studentId) => {
-    navigate(`/teacher/student-details?id=${studentId}`);
+    navigate(`/teacher/student-details?${new URLSearchParams({ id: studentId })}`);
   };
 
   const exportParams = {

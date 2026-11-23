@@ -1,11 +1,9 @@
+import './student-details.css';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
-  Box, Paper, Typography, Button, Card, CardContent, CircularProgress,
-  TextField, Grid, Chip, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Alert, InputAdornment, IconButton, useTheme, useMediaQuery, Stack,
-  Dialog, DialogTitle, DialogContent, DialogActions, MenuItem,
-  Select, FormControl, InputLabel, Divider
+  Box, Paper, Typography, Button, CircularProgress, TextField, Grid, Chip,
+  Alert, InputAdornment, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Divider
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -20,6 +18,8 @@ import {
   Cancel as AbsentIcon,
   ChevronLeft as PrevIcon,
   ChevronRight as NextIcon,
+  SchoolOutlined as SchoolIcon, LocationOnOutlined as LocationIcon, FamilyRestroom as FamilyIcon, Tag as IdIcon,
+  TrendingUp as TrendIcon, LocalFireDepartmentOutlined as FlameIcon, CardGiftcard as GiftIcon, EmojiEvents as TrophyIcon,
   FactCheck as AttendanceIcon
 } from '@mui/icons-material';
 import {
@@ -30,7 +30,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';
 import { handleBackNavigation } from '../../../utils/navigation';
 import { studentDetailsId } from '../../../utils/studentDetailsAccess';
-import { activityDate, parentRewards } from '../../../utils/parentActivity';
+import { activityDate, parentAttendance, parentRewards } from '../../../utils/parentActivity';
 import { 
   format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
   eachDayOfInterval, isSameMonth, addMonths, subMonths,
@@ -39,8 +39,8 @@ import {
 
 const StudentDetailsPage = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const location = useLocation();
+
   const [searchParams, setSearchParams] = useSearchParams();
   
   const { currentUser } = useAuth();
@@ -48,6 +48,13 @@ const StudentDetailsPage = () => {
   const isParentView = currentUser?.role === UserRole.PARENT;
   const studentId = studentDetailsId(currentUser, searchParams.get('id'));
   
+  const section = searchParams.get('section');
+  const performance = searchParams.get('view') === 'performance' || ['attendance', 'performance', 'dollars'].includes(section);
+  const openPerformance = () => {
+    const next = new URLSearchParams(searchParams);
+    next.set('view', 'performance');
+    setSearchParams(next, { state: { fromDetails: true } });
+  };
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -101,12 +108,14 @@ const StudentDetailsPage = () => {
   };
 
   const handleBack = () => {
-    if (isParentView) { handleBackNavigation(navigate, currentUser); return; }
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/teacher/students');
+    if (student && performance && !location.state?.fromDetails) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('view');
+      next.delete('section');
+      setSearchParams(next, { replace: true });
+      return;
     }
+    handleBackNavigation(navigate, currentUser, isParentView ? '/parent/dashboard' : '/teacher/view-students');
   };
 
   const renderPageHeader = (title, rightAction = null) => (
@@ -176,51 +185,13 @@ const StudentDetailsPage = () => {
      const completeData = { ...data, dollarPoints: calculatedPoints };
      setStudent(completeData);
      
-     // Unify Attendance
-     const byDate = completeData.attendanceByDate || {};
-     const legacyPresent = completeData.attendance || [];
-     const legacyAbsent = completeData.absentDates || [];
-     
-     const attendanceMap = new Map();
-     
-     // 1. Load legacy present
-     legacyPresent.forEach(entry => {
-       const [dateStr, teacherName] = typeof entry === 'string' ? entry.split('::') : [entry, 'Unknown'];
-       if (dateStr) {
-         attendanceMap.set(dateStr, {
-           date: dateStr,
-           status: 'present',
-           markedBy: teacherName || 'Unknown',
-           markedAt: null
-         });
-       }
-     });
-
-     // 2. Load legacy absent
-     legacyAbsent.forEach(entry => {
-       const [dateStr, teacherName] = typeof entry === 'string' ? entry.split('::') : [entry, 'Unknown'];
-       if (dateStr) {
-         attendanceMap.set(dateStr, {
-           date: dateStr,
-           status: 'absent',
-           markedBy: teacherName || 'Unknown',
-           markedAt: null
-         });
-       }
-     });
-
-     // 3. Override with new structured map
-     Object.entries(byDate).forEach(([dateStr, record]) => {
-        attendanceMap.set(dateStr, {
-           date: dateStr,
-           status: record.status,
-           markedBy: record.teacherName || 'Unknown',
-           markedAt: record.updatedAt?.toDate ? record.updatedAt.toDate() : null
-        });
-     });
-
-     const unified = Array.from(attendanceMap.values()).filter(record => typeof record.date === 'string' && activityDate(record.date)).sort((a, b) => b.date.localeCompare(a.date));
-     setUnifiedAttendance(unified);
+     setUnifiedAttendance(parentAttendance(data)
+       .filter(record => typeof record.date === 'string' && !Number.isNaN(parseISO(record.date).getTime()))
+       .map(record => ({
+         ...record,
+         markedBy: record.teacherName || '—',
+         markedAt: activityDate(data.attendanceByDate?.[record.date]?.updatedAt)
+       })));
 
      // Process Rewards
      const rewardsList = parentRewards(completeData);
@@ -320,71 +291,29 @@ const StudentDetailsPage = () => {
     });
   }, [unifiedAttendance, statusFilter, dateFilter, attendanceSearch]);
 
-  const absentRecords = unifiedAttendance.filter(r => r.status === 'absent').sort((a, b) => b.date.localeCompare(a.date));
-
-  // --- CALENDAR HELPERS ---
   const renderCalendar = () => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart, { weekStartsOn: 1 }); // Monday start
-    const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
-    const dateFormat = "d";
-    
-    const daysInterval = eachDayOfInterval({ start: startDate, end: endDate });
-    
-    // Day headers
-    const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    
-    return (
-      <Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <IconButton size="small" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-            <PrevIcon />
-          </IconButton>
-          <Typography fontWeight="bold">{format(currentMonth, 'MMMM yyyy')}</Typography>
-          <IconButton size="small" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-            <NextIcon />
-          </IconButton>
-        </Box>
-        <Grid container spacing={1}>
-          {weekDays.map(wd => (
-            <Grid item xs={12/7} key={wd} sx={{ textAlign: 'center' }}>
-              <Typography variant="caption" fontWeight="bold" color="text.secondary">{wd}</Typography>
-            </Grid>
-          ))}
-          {daysInterval.map((currentDay, idx) => {
-            const dateStr = format(currentDay, 'yyyy-MM-dd');
-            const record = unifiedAttendance.find(r => r.date === dateStr);
-            const isCurrentMonth = isSameMonth(currentDay, monthStart);
-            
-            let dotColor = 'transparent';
-            if (record?.status === 'present') dotColor = theme.palette.success.main;
-            else if (record?.status === 'absent') dotColor = theme.palette.error.main;
-
-            return (
-              <Grid item xs={12/7} key={idx} sx={{ textAlign: 'center', p: 0.5 }}>
-                <Box 
-                  onClick={() => record && setSelectedRecord(record)}
-                  sx={{ 
-                    p: 1, 
-                    borderRadius: 2, 
-                    bgcolor: isCurrentMonth ? 'background.paper' : 'rgba(0,0,0,0.02)',
-                    color: isCurrentMonth ? 'text.primary' : 'text.disabled',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    cursor: record ? 'pointer' : 'default',
-                    '&:hover': record ? { bgcolor: 'action.hover' } : {}
-                  }}
-                >
-                  <Typography variant="body2">{format(currentDay, dateFormat)}</Typography>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: dotColor, mx: 'auto', mt: 0.5 }} />
-                </Box>
-              </Grid>
-            );
-          })}
-        </Grid>
-      </Box>
-    );
+    const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 });
+    const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 });
+    const byDate = new Map(unifiedAttendance.map(record => [record.date, record]));
+    return <div className="sd-calendar">
+      <div className="sd-month">
+        <IconButton aria-label="Previous month" onClick={() => setCurrentMonth(month => subMonths(month, 1))}><PrevIcon /></IconButton>
+        <strong><CalendarIcon /> {format(currentMonth, 'MMMM yyyy')}</strong>
+        <IconButton aria-label="Next month" onClick={() => setCurrentMonth(month => addMonths(month, 1))}><NextIcon /></IconButton>
+      </div>
+      <div className="sd-days">
+        {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day => <small key={day}>{day}</small>)}
+        {eachDayOfInterval({ start, end }).map(day => {
+          const date = format(day, 'yyyy-MM-dd');
+          const record = byDate.get(date);
+          return <button type="button" key={date} disabled={!record} onClick={() => setSelectedRecord(record)}
+            aria-label={[date, record?.status].filter(Boolean).join(', ')}
+            className={[record?.status, !isSameMonth(day, currentMonth) && 'outside'].filter(Boolean).join(' ')}>
+            {format(day, 'd')}
+          </button>;
+        })}
+      </div>
+    </div>;
   };
 
   const renderSearchBar = () => (
@@ -459,315 +388,83 @@ const StudentDetailsPage = () => {
     );
   }
 
+  const title = performance ? 'Performance' : isParentView
+    ? (parent?.parentLang === 'te' ? 'నా పిల్లవాడి వివరాలు' : 'My Child Details') : 'Student Details';
+  const fields = [
+    [PersonIcon, 'Name', student.name], [IdIcon, 'ID', student.studentId],
+    [SchoolIcon, 'Class', student.classType], [LocationIcon, 'Location', student.location || student.place],
+    [FamilyIcon, 'Father', student.fatherName], [FamilyIcon, 'Mother', student.motherName],
+    [PhoneIcon, 'Parent Phone', resolvedPhone]
+  ];
+  const phone = resolvedPhone.replace(/[^\d+]/g, '');
   return (
-    <Box className={isParentView ? 'parent-detail' : undefined} sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', p: isParentView ? 0 : 2 }}>
-      {renderPageHeader(isParentView ? (parent?.parentLang === 'te' ? 'నా పిల్లవాడి వివరాలు' : 'My Child Details') : 'Student Profile', !isParentView && (
-        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-          {isAdmin && (
-            <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={handleEditClick}>
-              Edit
-            </Button>
-          )}
-          <Button size="small" startIcon={<SearchIcon />} onClick={() => setSearchParams({})}>
-            Search
-          </Button>
-        </Box>
-      ))}
-
-      {isParentView && <section className="portal-child-heading">
-        <span className="portal-child-initial" aria-hidden="true">{student.name?.trim().charAt(0)}</span>
-        <div><h1>{student.name}</h1><p>{[student.classType, student.location || student.place, student.studentId].filter(Boolean).join(' · ')}</p></div>
-      </section>}
-
-      {/* Content Grid */}
-      <Grid container spacing={2}>
-        
-        {/* 1. Left Col: Personal Info */}
-        <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                  <PersonIcon sx={{ mr: 1, color: 'primary.main' }} /> Personal Information
-                </Typography>
-                <Grid container spacing={2} sx={{ mt: 1 }}>
-                  <Grid item xs={6}><Typography variant="caption" color="text.secondary">Name</Typography><Typography variant="body1" fontWeight="bold">{student.name}</Typography></Grid>
-                  <Grid item xs={6}><Typography variant="caption" color="text.secondary">ID</Typography><Typography variant="body1"><code>{student.studentId}</code></Typography></Grid>
-                  <Grid item xs={6}><Typography variant="caption" color="text.secondary">Class</Typography><br /><Chip label={student.classType} size="small" color="primary" variant="outlined" /></Grid>
-                  <Grid item xs={6}><Typography variant="caption" color="text.secondary">Location</Typography><Typography variant="body1">{student.location || student.place || '-'}</Typography></Grid>
-                  <Grid item xs={6}><Typography variant="caption" color="text.secondary">Father</Typography><Typography variant="body1">{student.fatherName || '-'}</Typography></Grid>
-                  <Grid item xs={6}><Typography variant="caption" color="text.secondary">Mother</Typography><Typography variant="body1">{student.motherName || '-'}</Typography></Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">Parent Phone</Typography>
-                    <Typography variant="body1" fontWeight="bold">
-                      {resolvedPhone || '-'}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Button
-                      size="small"
-                      startIcon={<PhoneIcon />}
-                      disabled={!resolvedPhone}
-                      onClick={() => {
-                        const raw = String(resolvedPhone).trim();
-                        const phone = raw.replace(/[^\d+]/g, '');
-                        if (phone) window.open(`tel:${phone}`, '_self');
-                      }}
-                      sx={{ mt: 2 }}
-                    >
-                      {isParentView ? 'Call family contact' : 'Call Parent'}
-                    </Button>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-        </Grid>
-
-        {/* 2. Right Col: Performance */}
-        <Grid item xs={12} md={6} id="child-performance" sx={{ scrollMarginTop: 24 }}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                  <DollarIcon sx={{ mr: 1, color: 'success.main' }} /> Performance
-                </Typography>
-                <Grid container spacing={2} sx={{ mt: 1 }}>
-                  <Grid item xs={6}>
-                     <Paper elevation={0} sx={{ p: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(76,175,80,0.1)' : '#f0fdf4', textAlign: 'center', borderRadius: 2 }}>
-                        <Typography variant="caption" color="text.secondary">Dollar Points</Typography>
-                        <Typography variant="h4" color="success.main" fontWeight="bold">${student.dollarPoints}</Typography>
-                     </Paper>
-                  </Grid>
-                  <Grid item xs={6}>
-                     <Paper elevation={0} sx={{ p: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,152,0,0.1)' : '#fff7ed', textAlign: 'center', borderRadius: 2 }}>
-                        <Typography variant="caption" color="text.secondary">Streak</Typography>
-                        <Typography variant="h4" color="warning.main" fontWeight="bold">{currentStreak} 🔥</Typography>
-                     </Paper>
-                  </Grid>
-                  <Grid item xs={12}>
-                     <Box sx={{ mt: 1, p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
-                        <Grid container>
-                            <Grid item xs={6}>
-                                <Typography variant="caption">Attendance</Typography>
-                                <Typography variant="h6">{presentClasses} Days</Typography>
-                            </Grid>
-                            <Grid item xs={6}>
-                                <Typography variant="caption">Attendance Rate</Typography>
-                                <Typography variant="h6">{attendanceRate}%</Typography>
-                            </Grid>
-                        </Grid>
-                     </Box>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-        </Grid>
-
-        {/* 3. NEW: Attendance Records */}
-        <Grid item xs={12} id="child-attendance" sx={{ scrollMarginTop: 24 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                  <AttendanceIcon sx={{ mr: 1, color: 'primary.main' }} /> Attendance Records
-              </Typography>
-              
-              <Grid container spacing={2} sx={{ mb: 3, mt: 1 }}>
-                {/* Attendance Summary */}
-                <Grid item xs={12} md={4}>
-                  <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2, height: '100%' }}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>Attendance Summary</Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">Total Classes:</Typography>
-                      <Typography variant="body2" fontWeight="bold">{totalClasses}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">Present:</Typography>
-                      <Typography variant="body2" fontWeight="bold" color="success.main">{presentClasses}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">Absent:</Typography>
-                      <Typography variant="body2" fontWeight="bold" color="error.main">{absentClasses}</Typography>
-                    </Box>
-                    <Divider sx={{ my: 1 }} />
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Attendance Rate:</Typography>
-                      <Typography variant="body2" fontWeight="bold">{attendanceRate}%</Typography>
-                    </Box>
-                  </Paper>
-                </Grid>
-                
-                {/* Absent Dates Summary */}
-                <Grid item xs={12} md={4}>
-                  <Paper elevation={0} sx={{ p: 2, bgcolor: 'rgba(211,47,47,0.05)', borderRadius: 2, height: '100%' }}>
-                    <Typography variant="subtitle2" color="error.main" gutterBottom>Absent Dates</Typography>
-                    {absentRecords.length === 0 ? (
-                      <Typography variant="body2" color="text.secondary">No absences recorded.</Typography>
-                    ) : (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {absentRecords.map(record => (
-                          <Chip 
-                            key={record.date} 
-                            label={format(parseISO(record.date), 'MMM d')} 
-                            size="small" 
-                            color="error" 
-                            variant="outlined"
-                            onClick={() => setSelectedRecord(record)}
-                            sx={{ cursor: 'pointer', bgcolor: 'white' }}
-                          />
-                        ))}
-                      </Box>
-                    )}
-                  </Paper>
-                </Grid>
-
-                {/* Calendar */}
-                <Grid item xs={12} md={4}>
-                   <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2, height: '100%' }}>
-                      {renderCalendar()}
-                   </Paper>
-                </Grid>
-              </Grid>
-
-              {/* Filters & Search */}
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>Status</InputLabel>
-                  <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)}>
-                    <MenuItem value="All">All</MenuItem>
-                    <MenuItem value="Present">Present</MenuItem>
-                    <MenuItem value="Absent">Absent</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>Date</InputLabel>
-                  <Select value={dateFilter} label="Date" onChange={(e) => setDateFilter(e.target.value)}>
-                    <MenuItem value="All">All Time</MenuItem>
-                    <MenuItem value="Today">Today</MenuItem>
-                    <MenuItem value="This Week">This Week</MenuItem>
-                    <MenuItem value="This Month">This Month</MenuItem>
-                  </Select>
-                </FormControl>
-                <TextField 
-                  size="small" 
-                  placeholder="Search attendance..."
-                  value={attendanceSearch}
-                  onChange={(e) => setAttendanceSearch(e.target.value)}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
-                  }}
-                  sx={{ flexGrow: 1 }}
-                />
-              </Box>
-
-              {/* Attendance Table */}
-              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400 }}>
-                <Table stickyHeader size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.default' }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.default' }}>Day</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.default' }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.default' }}>Marked By</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.default' }}>Marked At</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredAttendance.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                          <Typography color="text.secondary">No attendance records found.</Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredAttendance.map((record) => {
-                        const rDate = parseISO(record.date);
-                        return (
-                          <TableRow 
-                            key={record.date} 
-                            hover 
-                            onClick={() => setSelectedRecord(record)}
-                            sx={{ cursor: 'pointer' }}
-                          >
-                            <TableCell>{format(rDate, 'yyyy-MM-dd')}</TableCell>
-                            <TableCell>{format(rDate, 'EEEE')}</TableCell>
-                            <TableCell>
-                              <Chip 
-                                icon={record.status === 'present' ? <PresentIcon /> : <AbsentIcon />}
-                                label={record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                                color={record.status === 'present' ? 'success' : 'error'}
-                                size="small"
-                                sx={{ fontWeight: 'bold' }}
-                              />
-                            </TableCell>
-                            <TableCell>{record.markedBy}</TableCell>
-                            <TableCell>{record.markedAt ? format(record.markedAt, 'hh:mm a') : '—'}</TableCell>
-                          </TableRow>
-                        )
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* 4. Bottom Col: Rewards History */}
-        <Grid item xs={12} id="child-dollars" sx={{ scrollMarginTop: 24 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                  <CalendarIcon sx={{ mr: 1, color: 'action.active' }} /> Reward History
-                </Typography>
-                {rewards.length === 0 ? (
-                  <Typography color="text.secondary" sx={{ mt: 2, textAlign: 'center', py: 4 }}>No rewards recorded yet</Typography>
-                ) : isMobile ? (
-                  <Stack spacing={2} sx={{ mt: 2 }}>
-                    {rewards.map((reward, index) => (
-                      <Card key={index} variant="outlined" sx={{ borderRadius: 2, bgcolor: 'background.default' }}>
-                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                          <Box display="flex" justifyContent="space-between" mb={1}>
-                            <Typography variant="caption" color="text.secondary">{activityDate(reward.date)?.toLocaleDateString('en-IN') || 'N/A'}</Typography>
-                            <Typography fontWeight="bold" color="success.main">+${reward.dollars}</Typography>
-                          </Box>
-                          <Typography variant="body2" sx={{ mb: 1.5, wordBreak: 'break-word' }}>
-                            {reward.reason || '-'}
-                          </Typography>
-                          <Box display="flex" justifyContent="flex-end">
-                            <Chip label={reward.teacher || 'Unknown'} size="small" variant="outlined" />
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </Stack>
-                ) : (
-                  <TableContainer sx={{ maxHeight: 400 }}>
-                    <Table stickyHeader size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ bgcolor: 'background.paper' }}>Date</TableCell>
-                          <TableCell sx={{ bgcolor: 'background.paper' }}>Amount</TableCell>
-                          <TableCell sx={{ bgcolor: 'background.paper' }}>Reason</TableCell>
-                          <TableCell sx={{ bgcolor: 'background.paper' }}>Teacher</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {rewards.map((reward, index) => (
-                          <TableRow key={index} hover>
-                            <TableCell>{activityDate(reward.date)?.toLocaleDateString('en-IN') || 'N/A'}</TableCell>
-                            <TableCell><Typography fontWeight="bold" color="success.main">+${reward.dollars}</Typography></TableCell>
-                            <TableCell>{reward.reason || '-'}</TableCell>
-                            <TableCell>{reward.teacher || '-'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </CardContent>
-            </Card>
-        </Grid>
-
-      </Grid>
+    <div className="sd-page">
+      <header className={'sd-header' + (performance ? ' sd-blue' : '')}>
+        <Button onClick={handleBack} startIcon={<BackIcon />}>Back</Button><h1>{title}</h1>
+        {performance ? <TrophyIcon aria-hidden="true" /> : !isParentView && <IconButton aria-label="Find another student" onClick={() => setSearchParams({})}><SearchIcon /></IconButton>}
+      </header>
+      {!performance && <>
+        <section className="sd-identity sd-blue">
+          <span>{student.name?.trim().charAt(0)}</span><div><h2>{student.name}</h2>
+          <p>{[student.classType, student.location || student.place, student.studentId].filter(Boolean).join(' · ')}</p></div><SchoolIcon />
+        </section>
+        <section className="sd-card"><div className="sd-title"><PersonIcon /><h2>Personal Information</h2>
+          {isAdmin && <IconButton aria-label="Edit student details" onClick={handleEditClick}><EditIcon /></IconButton>}</div>
+          <div className="sd-fields">{fields.map(([Icon, label, value]) => <div key={label}><Icon /><div><small>{label}</small><b>{value || '—'}</b></div></div>)}
+            <div><Button href={phone ? 'tel:' + phone : undefined} disabled={!phone} size="small" startIcon={<PhoneIcon />}>{isParentView ? 'Call Family Contact' : 'Call Parent'}</Button></div>
+          </div>
+        </section>
+      </>}
+      <section className="sd-card" id="child-performance">
+        <div className="sd-title"><TrendIcon /><h2>{performance ? 'Performance Summary' : 'Performance'}</h2>
+          {!performance && <Button size="small" onClick={openPerformance} endIcon={<NextIcon />}>View details</Button>}</div>
+        <div className="sd-stats">{[
+          [DollarIcon,'Dollar Points', '$' + student.dollarPoints],
+          [FlameIcon,'Current Streak', currentStreak],
+          [AttendanceIcon,'Attendance', presentClasses + (presentClasses === 1 ? ' Day' : ' Days')]
+        ].map(([Icon,label,value]) => <div key={label}><Icon /><div><small>{label}</small><b>{value}</b></div></div>)}</div>
+      </section>
+      <section className="sd-card" id="child-attendance">
+        <div className="sd-title"><CalendarIcon /><h2>{performance ? 'Attendance Summary' : 'Attendance Records'}</h2></div>
+        <div className="sd-summary">
+          {!performance && <h3>Attendance Summary</h3>}
+          <div className="sd-summary-items">
+            <div><small>Total Classes</small><b>{totalClasses}</b></div>
+            <div><small>Present</small><b>{presentClasses}</b></div>
+            <div><small>Absent</small><b>{absentClasses}</b></div>
+            <div><small>Attendance Rate</small><span className="sd-rate" style={{ '--rate': attendanceRate + '%' }}><b>{attendanceRate}%</b></span></div>
+          </div>
+        </div>
+        {renderCalendar()}
+        {performance && <div className="sd-filters">
+          <TextField select size="small" label="Status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            {['All','Present','Absent'].map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</TextField>
+          <TextField select size="small" label="Date" value={dateFilter} onChange={e => setDateFilter(e.target.value)}>
+            {['All','Today','This Week','This Month'].map(v => <MenuItem key={v} value={v}>{v === 'All' ? 'All Time' : v}</MenuItem>)}</TextField>
+          <TextField size="small" label="Search attendance" value={attendanceSearch} onChange={e => setAttendanceSearch(e.target.value)} />
+        </div>}
+      </section>
+      {performance && <>
+        <section className="sd-card"><div className="sd-title"><AttendanceIcon /><h2>Attendance Records</h2></div>
+          <div className="sd-scroll"><table><thead><tr>{['Date','Day','Status','Marked By','Marked At'].map(label => <th key={label}>{label}</th>)}</tr></thead>
+            <tbody>{filteredAttendance.map(record => <tr key={record.date}>
+              <td><button className="sd-date-link" onClick={() => setSelectedRecord(record)}>{record.date}</button></td>
+              <td>{format(parseISO(record.date),'EEEE')}</td><td><span className={'sd-status ' + record.status}>{record.status}</span></td>
+              <td>{record.markedBy}</td><td>{record.markedAt ? format(record.markedAt,'hh:mm a') : '—'}</td>
+            </tr>)}</tbody></table></div>
+          {!filteredAttendance.length && <p className="sd-empty">No attendance records found.</p>}
+        </section>
+        <section className="sd-card" id="child-dollars"><div className="sd-title"><GiftIcon /><h2>Reward History</h2></div>
+          {rewards.map((reward, index) => {
+            const amount = Number(reward.dollars);
+            return <div className="sd-reward" key={index}><GiftIcon /><div>
+              <small>{activityDate(reward.date)?.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) || '—'}</small>
+              <b>{reward.reason || '—'}</b></div><strong className={amount < 0 ? 'deduction' : ''}>{Number.isFinite(amount) ? (amount < 0 ? '−' : '+') + '$' + Math.abs(amount) : '—'}</strong>
+              <span>{reward.teacher || reward.awardedBy || '—'}</span></div>;
+          })}
+          {!rewards.length && <p className="sd-empty">No rewards recorded yet.</p>}
+        </section>
+      </>}
 
       {/* Edit Dialog for Admins */}
       <Dialog open={editOpen} onClose={() => !saving && setEditOpen(false)} maxWidth="sm" fullWidth>
@@ -887,7 +584,7 @@ const StudentDetailsPage = () => {
           <Button onClick={() => setSelectedRecord(null)}>Close</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 };
 

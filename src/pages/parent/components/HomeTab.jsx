@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Typography, Box, CircularProgress, Avatar, Dialog, DialogTitle, DialogContent, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
-import { AttachMoney as DollarIcon, LocalFireDepartment as StreakIcon, CalendarMonth as CalendarIcon, Close as CloseIcon, ChatOutlined as ChatIcon, CampaignOutlined as NewsIcon, ArticleOutlined as NoteIcon } from '@mui/icons-material';
+import { Typography, Box, CircularProgress } from '@mui/material';
+import { CalendarMonth as CalendarIcon, ChatOutlined as ChatIcon, CampaignOutlined as NewsIcon, ArticleOutlined as NoteIcon } from '@mui/icons-material';
 import {
   collection,
   query,
@@ -9,7 +9,8 @@ import {
   limit, // Added limit
   onSnapshot
 } from "../../../services/notifyingFirestore";
-import { parentAttendance, parentRewards, activityDate } from '../../../utils/parentActivity';
+import { parentAttendance, parentRewards } from '../../../utils/parentActivity';
+import ParentHistoryDialog from './ParentHistoryDialog';
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import AnnouncementsSection from '../../../components/AnnouncementsSection';
@@ -18,8 +19,7 @@ import { tParent } from '../../../utils/parentI18n';
 const HomeTab = ({ student, parentLang = 'te' }) => {
   const label = (en, te) => parentLang === 'te' ? te : en;
   const [announcements, setAnnouncements] = useState([]);
-  const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
-  const [isStreakModalOpen, setIsStreakModalOpen] = useState(false);
+  const [history, setHistory] = useState(null);
 
   useEffect(() => {
     // 1. QUERY FIX: Use 'date' to match Android App & Admin Panel
@@ -118,13 +118,13 @@ const HomeTab = ({ student, parentLang = 'te' }) => {
         </div>
       </section>
 
-      <button type="button" className="portal-metric portal-points" onClick={() => setIsRewardModalOpen(true)}>
+      <button type="button" className="portal-metric portal-points" onClick={() => setHistory('points')}>
         <span className="portal-metric-title">🌟 {label('Dollar Points', 'డాలర్ పాయింట్లు')}</span>
         <strong>${student.dollarPoints || 0}</strong>
         <span className="portal-pill">{label('Tap to view history', 'చరిత్ర చూడండి')} <span aria-hidden="true">›</span></span>
         <span className="coin-art" aria-hidden="true"><i>★</i></span>
       </button>
-      <button type="button" className="portal-metric portal-streak" onClick={() => setIsStreakModalOpen(true)}>
+      <button type="button" className="portal-metric portal-streak" onClick={() => setHistory('attendance')}>
         <span className="portal-metric-title">🔥 {label('Current Streak', 'వరుస హాజరు')}</span>
         <strong>{student.currentStreak || 0}</strong>
         <span className="portal-pill">{label('Tap to view attendance', 'హాజరు చూడండి')} <span aria-hidden="true">›</span></span>
@@ -139,112 +139,8 @@ const HomeTab = ({ student, parentLang = 'te' }) => {
         {announcements.length ? <AnnouncementsSection announcements={announcements} /> : <div className="portal-empty portal-surface"><NoteIcon />{label('No new announcements.', 'కొత్త ప్రకటనలు లేవు.')}</div>}
       </section>
 
-      {/* Rewards History Modal */}
-      <Dialog
-        open={isRewardModalOpen}
-        onClose={() => setIsRewardModalOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 4 } }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-          <Typography variant="h6" fontWeight="900" display="flex" alignItems="center" gap={1}>
-             <DollarIcon color="warning" /> Dollar Points History
-          </Typography>
-          <IconButton onClick={() => setIsRewardModalOpen(false)} sx={{ bgcolor: 'action.hover' }}>
-             <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          {!rewards.length ? (
-            <Box p={4} textAlign="center">
-                <Avatar sx={{ mx: 'auto', bgcolor: 'transparent', color: 'text.secondary', width: 64, height: 64, mb: 2 }}>
-                    <DollarIcon fontSize="large" />
-                </Avatar>
-                <Typography color="text.secondary" fontWeight="600">No rewards recorded yet.</Typography>
-            </Box>
-          ) : (
-            <TableContainer>
-              <Table size="medium">
-                <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.02)' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Reason</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Teacher</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rewards.map((reward, i) => (
-                    <TableRow key={i} hover>
-                      <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>{activityDate(reward.date)?.toLocaleDateString() || '—'}</TableCell>
-                      <TableCell>
-                          <Typography color="success.main" fontWeight="900">
-                             +${reward.dollars}
-                          </Typography>
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 500 }}>{reward.reason || '-'}</TableCell>
-                      <TableCell>
-                          <Chip size="small" label={reward.teacher || reward.awardedBy || '-'} sx={{ fontWeight: 600, bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }} />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Streak History Modal */}
-      <Dialog
-        open={isStreakModalOpen}
-        onClose={() => setIsStreakModalOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 4 } }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-          <Typography variant="h6" fontWeight="900" display="flex" alignItems="center" gap={1}>
-             <StreakIcon color="error" /> Attendance Log
-          </Typography>
-          <IconButton onClick={() => setIsStreakModalOpen(false)} sx={{ bgcolor: 'action.hover' }}>
-             <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          {!attendanceList.length ? (
-            <Box p={4} textAlign="center">
-                <Avatar sx={{ mx: 'auto', bgcolor: 'transparent', color: 'text.secondary', width: 64, height: 64, mb: 2 }}>
-                    <StreakIcon fontSize="large" />
-                </Avatar>
-                <Typography color="text.secondary" fontWeight="600">No attendance recorded yet.</Typography>
-            </Box>
-          ) : (
-            <TableContainer>
-              <Table size="small">
-                <TableBody>
-                  {attendanceList.map((dateStr, i) => {
-                    const teacherName = student.attendanceByDate?.[dateStr]?.teacherName || '-';
-                    return (
-                      <TableRow key={i} hover>
-                        <TableCell sx={{ fontWeight: 700 }}>{dateStr}</TableCell>
-                        <TableCell>
-                            <Chip size="small" label={teacherName} sx={{ fontWeight: 600, bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', maxWidth: 120 }} />
-                        </TableCell>
-                        <TableCell align="right">
-                            <Chip size="small" label="Present" sx={{ fontWeight: 800, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }} />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </DialogContent>
-      </Dialog>
-
+      {history && <ParentHistoryDialog kind={history} rewards={rewards} records={records}
+        parentLang={parentLang} onClose={() => setHistory(null)} />}
     </div>
   );
 };
