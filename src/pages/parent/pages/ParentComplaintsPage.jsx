@@ -2,10 +2,9 @@ import '../parent.css';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
-  Box,
   Typography,
   IconButton,
-  Container,
+  InputAdornment,
   Paper,
   TextField,
   Button,
@@ -16,7 +15,8 @@ import {
   Chip
 } from '@mui/material';
 import {
-  ArrowBack as BackIcon,
+  ArrowBack as BackIcon, ForumRounded, PeopleRounded, PersonRounded, SchoolRounded, PhoneRounded, BadgeRounded,
+  DescriptionOutlined, LayersOutlined, EditOutlined, SendRounded, AssignmentOutlined, ScheduleRounded,
 } from '@mui/icons-material';
 import { addDoc, collection, serverTimestamp, query, where, getDoc, doc, onSnapshot } from '../../../services/studentData';
 import { db } from '../../../config/firebase';
@@ -113,42 +113,33 @@ const ParentComplaintsPage = () => {
     }
   };
 
+  const label = (en, te) => parentLang === 'te' ? te : en;
+  const fieldIcon = Icon => <InputAdornment position="start"><Icon fontSize="small" /></InputAdornment>;
   return (
-    <Box className="parent-shell" sx={{ minHeight: '100vh' }}>
-      <Stack direction="row" alignItems="center" spacing={1}>
-          <IconButton aria-label="Go back" onClick={() => handleBackNavigation(navigate, currentUser)} sx={{ mr: 1 }}>
-            <BackIcon />
-          </IconButton>
-          <Typography variant="h6" fontWeight="bold">
-            {parentLang === 'te' ? 'ఫిర్యాదు / సమస్య నమోదు' : 'Raise Complaint / Issue'}
-          </Typography>
-      </Stack>
-
-      <Container disableGutters maxWidth="md" sx={{ py: 2 }}>
-        <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {parentLang === 'te'
-              ? 'మీరు తెలుగు లేదా ఇంగ్లీష్‌లో సమస్య వివరాలను రాయవచ్చు.'
-              : 'Describe the issue in English or Telugu. You can track its status below.'}
-          </Typography>
-
-          <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}>
-            <Stack spacing={0.5}>
-              <Typography variant="body2"><strong>{parentLang === 'te' ? 'తల్లిదండ్రి పేరు' : 'Parent Name'}:</strong> {currentUser?.name || '-'}</Typography>
-              <Typography variant="body2"><strong>{parentLang === 'te' ? 'తల్లిదండ్రి ఫోన్' : 'Parent Phone'}:</strong> {parentPhone || '-'}</Typography>
-              <Typography variant="body2"><strong>{parentLang === 'te' ? 'విద్యార్థి పేరు' : 'Student Name'}:</strong> {studentName || '-'}</Typography>
-              <Typography variant="body2"><strong>{parentLang === 'te' ? 'విద్యార్థి ఐడి' : 'Student ID'}:</strong> {currentUser?.studentId || '-'}</Typography>
-            </Stack>
-          </Paper>
-
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-
-          <Box component="form" onSubmit={handleSubmit}>
+    <main className="complaint-page">
+      <header className="complaint-hero">
+        <IconButton aria-label={label('Go back', 'వెనక్కి')} onClick={() => handleBackNavigation(navigate, currentUser)}><BackIcon /></IconButton>
+        <h1>{label('Raise Complaint / Issue', 'ఫిర్యాదు / సమస్య నమోదు')}</h1>
+        <p>{label('Describe the issue in English or Telugu. You can track its status below.', 'సమస్యను తెలుగు లేదా ఇంగ్లీష్‌లో వివరించండి. దాని స్థితిని కింద చూడండి.')}</p>
+        <ForumRounded className="complaint-art" aria-hidden="true" />
+      </header>
+      <section className="complaint-card">
+        <h2><PeopleRounded />{label('Complaint For', 'ఫిర్యాదు వివరాలు')}</h2>
+        <dl className="complaint-family">{[
+          [PersonRounded, label('Parent Name', 'తల్లిదండ్రి పేరు'), currentUser?.name],
+          [SchoolRounded, label('Student Name', 'విద్యార్థి పేరు'), studentName],
+          [PhoneRounded, label('Parent Phone', 'తల్లిదండ్రి ఫోన్'), parentPhone],
+          [BadgeRounded, label('Student ID', 'విద్యార్థి ఐడి'), currentUser?.studentId]
+        ].map(([Icon, name, value]) => <div key={name}><Icon aria-hidden="true" /><dt>{name}</dt><dd>{value || '—'}</dd></div>)}</dl>
+      </section>
+      {error && <Alert severity="error">{error}</Alert>}
+      {success && <Alert severity="success">{label(success, 'ఫిర్యాదు విజయవంతంగా పంపబడింది.')}</Alert>}
+      <form className="complaint-card complaint-form" onSubmit={handleSubmit}>
             <Stack spacing={2}>
               <TextField
                 label={parentLang === 'te' ? 'శీర్షిక' : 'Title'}
                 disabled={submitting}
+                InputProps={{ startAdornment: fieldIcon(DescriptionOutlined) }}
                 inputProps={{ maxLength: 150 }}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -156,7 +147,8 @@ const ParentComplaintsPage = () => {
                 required
               />
               <TextField
-                select
+                select required
+                InputProps={{ startAdornment: fieldIcon(LayersOutlined) }}
                 label={parentLang === 'te' ? 'సమస్య రకం' : 'Issue Type'}
                 disabled={submitting}
                 value={issueType}
@@ -171,6 +163,7 @@ const ParentComplaintsPage = () => {
               <TextField
                 label={parentLang === 'te' ? 'వివరణ (తెలుగు / ఇంగ్లీష్)' : 'Description (English / Telugu)'}
                 disabled={submitting}
+                InputProps={{ startAdornment: fieldIcon(EditOutlined) }}
                 inputProps={{ maxLength: 5000 }}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -180,28 +173,28 @@ const ParentComplaintsPage = () => {
                 minRows={4}
               />
 
-              <Button type="submit" variant="contained" disabled={submitting}>
+              <Button startIcon={!submitting && <SendRounded />} type="submit" variant="contained" disabled={submitting}>
                 {submitting ? <CircularProgress size={20} color="inherit" /> : (parentLang === 'te' ? 'ఫిర్యాదు పంపు' : 'Submit Complaint')}
               </Button>
             </Stack>
-          </Box>
-        </Paper>
-        <Paper sx={{ p: { xs: 2, sm: 3 }, mt: 3 }}>
-          <Typography variant="h6" gutterBottom>Your complaints</Typography>
+      </form>
+      <section className="complaint-card">
+          <h2><AssignmentOutlined />{label('Your Complaints', 'మీ ఫిర్యాదులు')}
+            {!historyLoading && !historyError && <small>{history.length} {label(history.length === 1 ? 'Complaint' : 'Complaints', 'ఫిర్యాదులు')}</small>}
+          </h2>
           {historyError && <Alert severity="error">{historyError}</Alert>}
-          {historyLoading ? <CircularProgress size={24} /> : history.length === 0 && !historyError ? <Typography color="text.secondary">You have not submitted any complaints yet.</Typography> : (
-            <Stack spacing={2}>{history.map(item => <Paper key={item.id} variant="outlined" sx={{ p: 2 }}>
+          {historyLoading ? <CircularProgress size={24} /> : history.length === 0 && !historyError ? <Typography color="text.secondary">{label('You have not submitted any complaints yet.', 'మీరు ఇంకా ఫిర్యాదులు పంపలేదు.')}</Typography> : (
+            <Stack spacing={2}>{history.map(item => <Paper key={item.id} variant="outlined" className="complaint-entry"><DescriptionOutlined aria-hidden="true" /><div>
               <Stack direction="row" justifyContent="space-between" gap={2}>
                 <Typography fontWeight="bold" sx={{ overflowWrap: 'anywhere' }}>{item.title}</Typography>
-                <Chip size="small" label={item.status || 'open'} color={item.status === 'resolved' ? 'success' : 'warning'} />
+                <Chip size="small" label={item.status === 'resolved' ? label('Resolved', 'పరిష్కరించబడింది') : !item.status || item.status === 'open' ? label('Open', 'పెండింగ్') : item.status} color={item.status === 'resolved' ? 'success' : 'warning'} />
               </Stack>
               <Typography sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', mt: 1 }}>{item.description}</Typography>
-              <Typography variant="caption" color="text.secondary">{item.createdAt?.toDate?.().toLocaleString() || 'Saving…'}</Typography>
-            </Paper>)}</Stack>
+              <Typography className="complaint-time" variant="caption" color="text.secondary"><ScheduleRounded />{item.createdAt?.toDate?.().toLocaleString(parentLang === 'te' ? 'te-IN' : 'en-GB') || label('Saving…', 'సేవ్ అవుతోంది…')}</Typography>
+            </div></Paper>)}</Stack>
           )}
-        </Paper>
-      </Container>
-    </Box>
+      </section>
+    </main>
   );
 };
 

@@ -154,3 +154,31 @@
   .points-history .history-banner { padding: 10px 50px 18px; }
   .points-history .history-symbol { display: none; }
 }
+
+.complaint-page { display: grid; gap: 12px; margin: 0 auto; max-width: 680px; color: #141c40; }
+.complaint-hero, .complaint-card { padding: clamp(14px, 3vw, 22px); border-radius: 18px; box-shadow: 0 4px 16px #344db723; }
+.complaint-hero { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; padding-right: 24%; position: relative; overflow: hidden; color: white; background: radial-gradient(ellipse at bottom right,#5087ff 0%,transparent 53%),linear-gradient(115deg,#2845b7,#2658eb); }
+.complaint-hero h1, .complaint-card h2, .complaint-hero p { margin: 0; }
+.complaint-hero h1 { font-size: clamp(1rem,4.2vw,1.45rem); line-height: 1.25; }
+.complaint-hero p { grid-column: span 2; font-size: .91rem; }
+.complaint-hero .MuiIconButton-root { background: white; color: #223ebf; border-radius: 10px; width: 38px; height: 38px; }
+.complaint-hero .complaint-art { position: absolute; right: 4%; width: 16%; height: auto; color: #dbe4ff; filter: drop-shadow(2px 6px 5px #09278255); transform: rotate(-6deg); }
+.complaint-card { background: linear-gradient(145deg,#fff,#f8faff); min-width: 0; }
+.complaint-card h2 { display: flex; align-items: center; gap: 8px; font-size: 1.02rem; margin-bottom: 12px; }
+.complaint-card svg { color: #315ce7; }
+.complaint-card h2 small { margin-left: auto; border-radius: 18px; padding: 4px 8px; color: #243fbd; background: #e3eaff; font-size: .72rem; }
+.complaint-family { list-style: none; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); margin: 0; padding: 10px; gap: 9px 0; background: #edf1ff; border-radius: 13px; }
+.complaint-family > div { display: grid; grid-template-columns: auto minmax(0,1fr); column-gap: 6px; padding: 0 5px; align-content: start; }
+.complaint-family > div:nth-child(even) { border-left: 1px solid #c8d3fa; }
+.complaint-family svg { grid-row: span 2; align-self: center; font-size: 19px; }
+.complaint-family dt { font-size: .74rem; }
+.complaint-family dd { margin: 0; font-size: .9rem; font-weight: 700; overflow-wrap: anywhere; }
+.complaint-form .MuiOutlinedInput-root { border-radius: 13px; }
+.complaint-form .MuiInputBase-multiline { align-items: flex-start; }
+.complaint-form .MuiButton-root { border-radius: 24px; padding: 10px; background: linear-gradient(155deg,#3975fa,#153fc8); text-transform: none; }
+.complaint-form .MuiButton-root svg { color: white; }
+.complaint-entry.MuiPaper-root { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 10px; padding: 12px; border-color: #e3e8fc; }
+.complaint-entry > svg { background: #e8edff; border-radius: 8px; box-sizing: content-box; padding: 5px; }
+.complaint-entry .complaint-time { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.complaint-time svg { color: inherit; font-size: 14px; }
+.complaint-page > .MuiAlert-root { border-radius: 16px; }

@@ -1,6 +1,6 @@
 import './student-details.css';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   Box, Paper, Typography, Button, CircularProgress, TextField, Grid, Chip,
   Alert, InputAdornment, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Divider
@@ -19,7 +19,7 @@ import {
   ChevronLeft as PrevIcon,
   ChevronRight as NextIcon,
   SchoolOutlined as SchoolIcon, LocationOnOutlined as LocationIcon, FamilyRestroom as FamilyIcon, Tag as IdIcon,
-  TrendingUp as TrendIcon, LocalFireDepartmentOutlined as FlameIcon, CardGiftcard as GiftIcon, EmojiEvents as TrophyIcon,
+  TrendingUp as TrendIcon, LocalFireDepartmentOutlined as FlameIcon, CardGiftcard as GiftIcon,
   FactCheck as AttendanceIcon
 } from '@mui/icons-material';
 import {
@@ -39,7 +39,6 @@ import {
 
 const StudentDetailsPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -48,13 +47,6 @@ const StudentDetailsPage = () => {
   const isParentView = currentUser?.role === UserRole.PARENT;
   const studentId = studentDetailsId(currentUser, searchParams.get('id'));
   
-  const section = searchParams.get('section');
-  const performance = searchParams.get('view') === 'performance' || ['attendance', 'performance', 'dollars'].includes(section);
-  const openPerformance = () => {
-    const next = new URLSearchParams(searchParams);
-    next.set('view', 'performance');
-    setSearchParams(next, { state: { fromDetails: true } });
-  };
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -108,13 +100,6 @@ const StudentDetailsPage = () => {
   };
 
   const handleBack = () => {
-    if (student && performance && !location.state?.fromDetails) {
-      const next = new URLSearchParams(searchParams);
-      next.delete('view');
-      next.delete('section');
-      setSearchParams(next, { replace: true });
-      return;
-    }
     handleBackNavigation(navigate, currentUser, isParentView ? '/parent/dashboard' : '/teacher/view-students');
   };
 
@@ -388,7 +373,7 @@ const StudentDetailsPage = () => {
     );
   }
 
-  const title = performance ? 'Performance' : isParentView
+  const title = isParentView
     ? (parent?.parentLang === 'te' ? 'నా పిల్లవాడి వివరాలు' : 'My Child Details') : 'Student Details';
   const fields = [
     [PersonIcon, 'Name', student.name], [IdIcon, 'ID', student.studentId],
@@ -399,25 +384,22 @@ const StudentDetailsPage = () => {
   const phone = resolvedPhone.replace(/[^\d+]/g, '');
   return (
     <div className="sd-page">
-      <header className={'sd-header' + (performance ? ' sd-blue' : '')}>
+      <header className="sd-header">
         <Button onClick={handleBack} startIcon={<BackIcon />}>Back</Button><h1>{title}</h1>
-        {performance ? <TrophyIcon aria-hidden="true" /> : !isParentView && <IconButton aria-label="Find another student" onClick={() => setSearchParams({})}><SearchIcon /></IconButton>}
+        {!isParentView && <IconButton aria-label="Find another student" onClick={() => setSearchParams({})}><SearchIcon /></IconButton>}
       </header>
-      {!performance && <>
-        <section className="sd-identity sd-blue">
-          <span>{student.name?.trim().charAt(0)}</span><div><h2>{student.name}</h2>
-          <p>{[student.classType, student.location || student.place, student.studentId].filter(Boolean).join(' · ')}</p></div><SchoolIcon />
-        </section>
-        <section className="sd-card"><div className="sd-title"><PersonIcon /><h2>Personal Information</h2>
-          {isAdmin && <IconButton aria-label="Edit student details" onClick={handleEditClick}><EditIcon /></IconButton>}</div>
-          <div className="sd-fields">{fields.map(([Icon, label, value]) => <div key={label}><Icon /><div><small>{label}</small><b>{value || '—'}</b></div></div>)}
-            <div><Button href={phone ? 'tel:' + phone : undefined} disabled={!phone} size="small" startIcon={<PhoneIcon />}>{isParentView ? 'Call Family Contact' : 'Call Parent'}</Button></div>
-          </div>
-        </section>
-      </>}
+      <section className="sd-identity sd-blue">
+        <span>{student.name?.trim().charAt(0)}</span><div><h2>{student.name}</h2>
+        <p>{[student.classType, student.location || student.place, student.studentId].filter(Boolean).join(' · ')}</p></div><SchoolIcon />
+      </section>
+      <section className="sd-card"><div className="sd-title"><PersonIcon /><h2>Personal Information</h2>
+        {isAdmin && <IconButton aria-label="Edit student details" onClick={handleEditClick}><EditIcon /></IconButton>}</div>
+        <div className="sd-fields">{fields.map(([Icon, label, value]) => <div key={label}><Icon /><div><small>{label}</small><b>{value || '—'}</b></div></div>)}
+          <div><Button href={phone ? 'tel:' + phone : undefined} disabled={!phone} size="small" startIcon={<PhoneIcon />}>{isParentView ? 'Call Family Contact' : 'Call Parent'}</Button></div>
+        </div>
+      </section>
       <section className="sd-card" id="child-performance">
-        <div className="sd-title"><TrendIcon /><h2>{performance ? 'Performance Summary' : 'Performance'}</h2>
-          {!performance && <Button size="small" onClick={openPerformance} endIcon={<NextIcon />}>View details</Button>}</div>
+        <div className="sd-title"><TrendIcon /><h2>Performance Summary</h2></div>
         <div className="sd-stats">{[
           [DollarIcon,'Dollar Points', '$' + student.dollarPoints],
           [FlameIcon,'Current Streak', currentStreak],
@@ -425,9 +407,8 @@ const StudentDetailsPage = () => {
         ].map(([Icon,label,value]) => <div key={label}><Icon /><div><small>{label}</small><b>{value}</b></div></div>)}</div>
       </section>
       <section className="sd-card" id="child-attendance">
-        <div className="sd-title"><CalendarIcon /><h2>{performance ? 'Attendance Summary' : 'Attendance Records'}</h2></div>
+        <div className="sd-title"><CalendarIcon /><h2>Attendance Summary</h2></div>
         <div className="sd-summary">
-          {!performance && <h3>Attendance Summary</h3>}
           <div className="sd-summary-items">
             <div><small>Total Classes</small><b>{totalClasses}</b></div>
             <div><small>Present</small><b>{presentClasses}</b></div>
@@ -436,35 +417,33 @@ const StudentDetailsPage = () => {
           </div>
         </div>
         {renderCalendar()}
-        {performance && <div className="sd-filters">
+        <div className="sd-filters">
           <TextField select size="small" label="Status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             {['All','Present','Absent'].map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}</TextField>
           <TextField select size="small" label="Date" value={dateFilter} onChange={e => setDateFilter(e.target.value)}>
             {['All','Today','This Week','This Month'].map(v => <MenuItem key={v} value={v}>{v === 'All' ? 'All Time' : v}</MenuItem>)}</TextField>
           <TextField size="small" label="Search attendance" value={attendanceSearch} onChange={e => setAttendanceSearch(e.target.value)} />
-        </div>}
+        </div>
       </section>
-      {performance && <>
-        <section className="sd-card"><div className="sd-title"><AttendanceIcon /><h2>Attendance Records</h2></div>
-          <div className="sd-scroll"><table><thead><tr>{['Date','Day','Status','Marked By','Marked At'].map(label => <th key={label}>{label}</th>)}</tr></thead>
-            <tbody>{filteredAttendance.map(record => <tr key={record.date}>
-              <td><button className="sd-date-link" onClick={() => setSelectedRecord(record)}>{record.date}</button></td>
-              <td>{format(parseISO(record.date),'EEEE')}</td><td><span className={'sd-status ' + record.status}>{record.status}</span></td>
-              <td>{record.markedBy}</td><td>{record.markedAt ? format(record.markedAt,'hh:mm a') : '—'}</td>
-            </tr>)}</tbody></table></div>
-          {!filteredAttendance.length && <p className="sd-empty">No attendance records found.</p>}
-        </section>
-        <section className="sd-card" id="child-dollars"><div className="sd-title"><GiftIcon /><h2>Reward History</h2></div>
-          {rewards.map((reward, index) => {
-            const amount = Number(reward.dollars);
-            return <div className="sd-reward" key={index}><GiftIcon /><div>
-              <small>{activityDate(reward.date)?.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) || '—'}</small>
-              <b>{reward.reason || '—'}</b></div><strong className={amount < 0 ? 'deduction' : ''}>{Number.isFinite(amount) ? (amount < 0 ? '−' : '+') + '$' + Math.abs(amount) : '—'}</strong>
-              <span>{reward.teacher || reward.awardedBy || '—'}</span></div>;
-          })}
-          {!rewards.length && <p className="sd-empty">No rewards recorded yet.</p>}
-        </section>
-      </>}
+      <section className="sd-card"><div className="sd-title"><AttendanceIcon /><h2>Attendance Records</h2></div>
+        <div className="sd-scroll"><table><thead><tr>{['Date','Day','Status','Marked By','Marked At'].map(label => <th key={label}>{label}</th>)}</tr></thead>
+          <tbody>{filteredAttendance.map(record => <tr key={record.date}>
+            <td><button className="sd-date-link" onClick={() => setSelectedRecord(record)}>{record.date}</button></td>
+            <td>{format(parseISO(record.date),'EEEE')}</td><td><span className={'sd-status ' + record.status}>{record.status}</span></td>
+            <td>{record.markedBy}</td><td>{record.markedAt ? format(record.markedAt,'hh:mm a') : '—'}</td>
+          </tr>)}</tbody></table></div>
+        {!filteredAttendance.length && <p className="sd-empty">No attendance records found.</p>}
+      </section>
+      <section className="sd-card" id="child-dollars"><div className="sd-title"><GiftIcon /><h2>Reward History</h2></div>
+        {rewards.map((reward, index) => {
+          const amount = Number(reward.dollars);
+          return <div className="sd-reward" key={index}><GiftIcon /><div>
+            <small>{activityDate(reward.date)?.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) || '—'}</small>
+            <b>{reward.reason || '—'}</b></div><strong className={amount < 0 ? 'deduction' : ''}>{Number.isFinite(amount) ? (amount < 0 ? '−' : '+') + '$' + Math.abs(amount) : '—'}</strong>
+            <span>{reward.teacher || reward.awardedBy || '—'}</span></div>;
+        })}
+        {!rewards.length && <p className="sd-empty">No rewards recorded yet.</p>}
+      </section>
 
       {/* Edit Dialog for Admins */}
       <Dialog open={editOpen} onClose={() => !saving && setEditOpen(false)} maxWidth="sm" fullWidth>
