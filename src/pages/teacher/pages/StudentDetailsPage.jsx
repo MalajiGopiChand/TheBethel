@@ -28,6 +28,8 @@ import {
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';
+import { studentDetailsId } from '../../../utils/studentDetailsAccess';
+import { activityDate, parentRewards } from '../../../utils/parentActivity';
 import { 
   format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
   eachDayOfInterval, isSameMonth, addMonths, subMonths,
@@ -40,16 +42,18 @@ const StudentDetailsPage = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchParams, setSearchParams] = useSearchParams();
   
-  const studentId = searchParams.get('id');
+  const { currentUser } = useAuth();
+  const isParentView = currentUser?.role === UserRole.PARENT;
+  const studentId = studentDetailsId(currentUser, searchParams.get('id'));
   
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [rewards, setRewards] = useState([]);
   const [unifiedAttendance, setUnifiedAttendance] = useState([]);
   const [searchInput, setSearchInput] = useState('');
   
-  const { currentUser } = useAuth();
-  const isAdmin = currentUser?.role === UserRole.ADMIN || currentUser?.email === 'gop1@gmail.com' || currentUser?.email === 'premkumartenali@gmail.com';
+  const isAdmin = !isParentView && (currentUser?.role === UserRole.ADMIN || currentUser?.email === 'gop1@gmail.com' || currentUser?.email === 'premkumartenali@gmail.com');
   
   // Edit state
   const [editOpen, setEditOpen] = useState(false);
@@ -95,6 +99,7 @@ const StudentDetailsPage = () => {
   };
 
   const handleBack = () => {
+    if (isParentView) { navigate('/parent/dashboard'); return; }
     if (window.history.length > 1) {
       navigate(-1);
     } else {
@@ -107,14 +112,16 @@ const StudentDetailsPage = () => {
       <Button startIcon={<BackIcon />} onClick={handleBack}>
         Back
       </Button>
-      <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
+      <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold', fontSize: { xs: 18, sm: 24 } }}>
         {title}
       </Typography>
-      <Box sx={{ minWidth: 90, textAlign: 'right' }}>{rightAction}</Box>
+      <Box sx={{ minWidth: isParentView ? 0 : 90, textAlign: 'right' }}>{rightAction}</Box>
     </Paper>
   );
 
   useEffect(() => {
+    setStudent(null);
+    setLoadError('');
     if (!studentId) {
         setLoading(false);
         return;
@@ -122,28 +129,39 @@ const StudentDetailsPage = () => {
 
     setLoading(true);
     let unsubscribe;
+    let stopFallback;
+    const failed = () => { setStudent(null); setLoading(false); setLoadError('Could not load student details. Please check your connection and try again.'); };
 
     const q = query(collection(db, 'students'), where('studentId', '==', studentId));
     
     unsubscribe = onSnapshot(q, (snapshot) => {
+        if (stopFallback) { stopFallback(); stopFallback = undefined; }
         if (!snapshot.empty) {
             const rawData = snapshot.docs[0].data();
             loadStudentData({ id: snapshot.docs[0].id, ...rawData });
         } else {
              const docRef = doc(db, 'students', studentId);
-             onSnapshot(docRef, (docSnap) => {
+             stopFallback = onSnapshot(docRef, (docSnap) => {
                  if (docSnap.exists()) {
                      loadStudentData({ id: docSnap.id, ...docSnap.data() });
                  } else {
                      setStudent(null);
                      setLoading(false);
                  }
-             });
+             }, failed);
         }
-    });
+    }, failed);
 
-    return () => { if (unsubscribe) unsubscribe(); };
+    return () => { if (unsubscribe) unsubscribe(); if (stopFallback) stopFallback(); };
   }, [studentId]);
+
+  useEffect(() => {
+    if (!isParentView || !student) return;
+    const section = searchParams.get('section');
+    if (!['attendance', 'dollars', 'performance'].includes(section)) return;
+    const frame = requestAnimationFrame(() => document.getElementById(`child-${section}`)?.scrollIntoView({ block: 'start', behavior: 'auto' }));
+    return () => cancelAnimationFrame(frame);
+  }, [isParentView, student, searchParams]);
 
   const loadStudentData = (data) => {
      const calculatedPoints = calculateDollarPoints(data);
@@ -193,24 +211,25 @@ const StudentDetailsPage = () => {
         });
      });
 
-     const unified = Array.from(attendanceMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+     const unified = Array.from(attendanceMap.values()).filter(record => typeof record.date === 'string' && activityDate(record.date)).sort((a, b) => b.date.localeCompare(a.date));
      setUnifiedAttendance(unified);
 
      // Process Rewards
-     const rewardsList = completeData.rewards || [];
-     rewardsList.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+     const rewardsList = parentRewards(completeData);
      setRewards(rewardsList);
      setLoading(false);
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
+    if (isParentView) return;
     if (searchInput.trim()) {
         setSearchParams({ id: searchInput.trim() });
     }
   };
 
   const handleEditClick = () => {
+    if (!isAdmin) return;
     setEditData({
       name: student.name || '',
       studentId: student.studentId || '',
@@ -224,6 +243,7 @@ const StudentDetailsPage = () => {
   };
 
   const handleSaveEdit = async () => {
+    if (!isAdmin) return;
     setSaving(true);
     try {
       const docRef = doc(db, 'students', student.id);
@@ -405,6 +425,10 @@ const StudentDetailsPage = () => {
     );
   }
 
+  if (loadError) return <Box sx={{ p: 2 }}>{renderPageHeader(isParentView ? 'My Child' : 'Student Details')}<Alert severity="error">{loadError}</Alert></Box>;
+
+  if (!studentId && isParentView) return <Box sx={{ p: 2 }}>{renderPageHeader('My Child')}<Alert severity="info">No child is linked to this parent account. Please contact the school administrator.</Alert></Box>;
+
   if (!studentId) {
       return (
         <Box sx={{ p: 2 }}>
@@ -417,7 +441,7 @@ const StudentDetailsPage = () => {
   if (studentId && !student) {
     return (
       <Box sx={{ p: 2 }}>
-        {renderPageHeader('Student Details', (
+        {renderPageHeader(isParentView ? 'My Child' : 'Student Details', !isParentView && (
           <Button size="small" startIcon={<SearchIcon />} onClick={() => setSearchParams({})}>
             Search
           </Button>
@@ -429,7 +453,7 @@ const StudentDetailsPage = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', p: 2 }}>
-      {renderPageHeader('Student Profile', (
+      {renderPageHeader(isParentView ? 'My Child’s Details' : 'Student Profile', !isParentView && (
         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
           {isAdmin && (
             <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={handleEditClick}>
@@ -477,7 +501,7 @@ const StudentDetailsPage = () => {
                       }}
                       sx={{ mt: 2 }}
                     >
-                      Call Parent
+                      {isParentView ? 'Call family contact' : 'Call Parent'}
                     </Button>
                   </Grid>
                 </Grid>
@@ -486,7 +510,7 @@ const StudentDetailsPage = () => {
         </Grid>
 
         {/* 2. Right Col: Performance */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={6} id="child-performance" sx={{ scrollMarginTop: 24 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -525,7 +549,7 @@ const StudentDetailsPage = () => {
         </Grid>
 
         {/* 3. NEW: Attendance Records */}
-        <Grid item xs={12}>
+        <Grid item xs={12} id="child-attendance" sx={{ scrollMarginTop: 24 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -675,7 +699,7 @@ const StudentDetailsPage = () => {
         </Grid>
 
         {/* 4. Bottom Col: Rewards History */}
-        <Grid item xs={12}>
+        <Grid item xs={12} id="child-dollars" sx={{ scrollMarginTop: 24 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -689,7 +713,7 @@ const StudentDetailsPage = () => {
                       <Card key={index} variant="outlined" sx={{ borderRadius: 2, bgcolor: 'background.default' }}>
                         <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                           <Box display="flex" justifyContent="space-between" mb={1}>
-                            <Typography variant="caption" color="text.secondary">{reward.date || 'N/A'}</Typography>
+                            <Typography variant="caption" color="text.secondary">{activityDate(reward.date)?.toLocaleDateString('en-IN') || 'N/A'}</Typography>
                             <Typography fontWeight="bold" color="success.main">+${reward.dollars}</Typography>
                           </Box>
                           <Typography variant="body2" sx={{ mb: 1.5, wordBreak: 'break-word' }}>
@@ -716,7 +740,7 @@ const StudentDetailsPage = () => {
                       <TableBody>
                         {rewards.map((reward, index) => (
                           <TableRow key={index} hover>
-                            <TableCell>{reward.date || 'N/A'}</TableCell>
+                            <TableCell>{activityDate(reward.date)?.toLocaleDateString('en-IN') || 'N/A'}</TableCell>
                             <TableCell><Typography fontWeight="bold" color="success.main">+${reward.dollars}</Typography></TableCell>
                             <TableCell>{reward.reason || '-'}</TableCell>
                             <TableCell>{reward.teacher || '-'}</TableCell>

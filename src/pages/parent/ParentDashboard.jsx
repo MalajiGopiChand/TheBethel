@@ -121,7 +121,7 @@ const ParentDashboard = () => {
 
     if (studentError) return <Alert severity="error">{studentError}</Alert>;
     const tabs = [
-        <HomeTab student={student} parentLang={parentLang} />,
+        <HomeTab student={student} parentLang={parentLang} onSelectTab={setCurrentTab} />,
         <HomeworkTab student={student} parentLang={parentLang} />,
         <LeaderboardTab student={student} parentLang={parentLang} />,
         <ProfileTab student={student} parentUser={currentUser} parentLang={parentLang} />
@@ -142,20 +142,20 @@ const ParentDashboard = () => {
   };
 
   return (
-    <Box className="parent-shell">
-      <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#ffffffee', color: '#183f35', backdropFilter: 'blur(16px)', borderBottom: '1px solid #e2ebe5' }}>
+    <Box className="parent-shell" sx={{ bgcolor: 'background.default', color: 'text.primary' }}>
+      <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'background.paper', color: 'text.primary', backdropFilter: 'blur(16px)', borderBottom: '1px solid', borderColor: 'divider' }}>
         <Toolbar sx={{ width: '100%', maxWidth: 1040, mx: 'auto', boxSizing: 'border-box', py: 1, gap: 1 }}>
           <Avatar src="/image.png" alt="The Bethel" variant="rounded" sx={{ width: 38, height: 38, borderRadius: 2 }} />
           <Box sx={{ flex: 1, minWidth: 0 }}><Typography fontWeight={800} sx={{ letterSpacing: '-.03em', fontSize: 18 }}>The Bethel</Typography><Typography variant="caption" color="text.secondary">{parentLang === 'te' ? 'తల్లిదండ్రుల పోర్టల్' : 'Parent portal'}</Typography></Box>
           <Select size="small" value={parentLang} onChange={event => handleLangChange(event.target.value)} inputProps={{ 'aria-label': 'Language / భాష' }} sx={{ fontSize: 13, borderRadius: 2, '& .MuiSelect-select': { py: 1 } }}><MenuItem value={ParentLang.TE}>తెలుగు</MenuItem><MenuItem value={ParentLang.EN}>English</MenuItem></Select>
-          <Tooltip title={parentLang === 'te' ? 'లాగ్ అవుట్' : 'Sign out'}><span><IconButton aria-label="Sign out" onClick={handleLogout} disabled={loadingLogout} sx={{ color: '#44675c' }}>{loadingLogout ? <CircularProgress size={20} /> : <LogoutIcon fontSize="small" />}</IconButton></span></Tooltip>
+          <Tooltip title={parentLang === 'te' ? 'లాగ్ అవుట్' : 'Sign out'}><span><IconButton aria-label="Sign out" onClick={handleLogout} disabled={loadingLogout} sx={{ color: 'primary.main' }}>{loadingLogout ? <CircularProgress size={20} /> : <LogoutIcon fontSize="small" />}</IconButton></span></Tooltip>
         </Toolbar>
       </AppBar>
       <Container maxWidth="md" sx={{ pt: { xs: 2.5, sm: 4 }, pb: 'calc(110px + env(safe-area-inset-bottom))', px: { xs: 2, sm: 3 } }}>
         {renderTabContent()}
       </Container>
-      <Paper elevation={0} sx={{ position: 'fixed', bottom: 'calc(12px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: 'calc(100% - 24px)', maxWidth: 580, borderRadius: 4, border: '1px solid #dce7df', boxShadow: '0 8px 36px #173c3020', bgcolor: '#ffffffee', backdropFilter: 'blur(16px)', overflow: 'hidden' }}>
-        <BottomNavigation value={currentTab} showLabels onChange={(_, value) => { setCurrentTab(value); window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }} sx={{ height: 68, bgcolor: 'transparent', '& .MuiBottomNavigationAction-root': { minWidth: 0, color: '#71847c', gap: .5, '&.Mui-selected': { color: '#17695e', bgcolor: '#edf4ef' } }, '& .MuiBottomNavigationAction-label': { fontSize: 11, fontWeight: 700, '&.Mui-selected': { fontSize: 11 } } }}>
+      <Paper elevation={0} sx={{ position: 'fixed', bottom: 'calc(12px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: 'calc(100% - 24px)', maxWidth: 580, borderRadius: 4, border: '1px solid #334155', boxShadow: '0 12px 32px #0f172a30', bgcolor: 'rgba(15,23,42,0.96)', backdropFilter: 'blur(16px)', overflow: 'hidden' }}>
+        <BottomNavigation value={currentTab} showLabels onChange={(_, value) => { setCurrentTab(value); window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }} sx={{ height: 68, bgcolor: 'transparent', '& .MuiBottomNavigationAction-root': { minWidth: 0, color: '#cbd5e1', gap: .5, '&.Mui-selected': { color: '#fff', bgcolor: 'rgba(76,111,255,0.25)' } }, '& .MuiBottomNavigationAction-label': { fontSize: 11, fontWeight: 700, '&.Mui-selected': { fontSize: 11 } } }}>
           <BottomNavigationAction label={parentLang === 'te' ? 'హోమ్' : 'Home'} icon={<HomeOutlinedIcon />} />
           <BottomNavigationAction label={parentLang === 'te' ? 'హోమ్‌వర్క్' : 'Homework'} icon={<HomeworkOutlinedIcon />} />
           <BottomNavigationAction label={parentLang === 'te' ? 'ర్యాంకులు' : 'Leaderboard'} icon={<LeaderboardOutlinedIcon />} />

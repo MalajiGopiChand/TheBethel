@@ -199,7 +199,7 @@ const ParentNotificationPage = () => {
                             bottom: 12, 
                             width: 4, 
                             borderRadius: '0 4px 4px 0',
-                            bgcolor: notification.isImportant ? '#ff1744' : '#23796a'
+                            bgcolor: notification.isImportant ? '#ff1744' : '#2979ff'
                         }} 
                     />
 
@@ -207,7 +207,7 @@ const ParentNotificationPage = () => {
                         avatar={
                             <Avatar 
                                 sx={{ 
-                                    bgcolor: notification.isImportant ? '#ffebee' : '#eaf2ed',
+                                    bgcolor: notification.isImportant ? '#ffebee' : '#e3f2fd',
                                     color: notification.isImportant ? '#d32f2f' : '#1976d2'
                                 }}
                             >

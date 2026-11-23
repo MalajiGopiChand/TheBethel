@@ -42,7 +42,7 @@ import PendingApprovalPage from './pages/auth/PendingApprovalPage';
 import AdminComplaintsPage from './pages/admin/pages/AdminComplaintsPage';
 import AdminDownloadStudentsPage from './pages/admin/pages/AdminDownloadStudentsPage';
 import { Box, CircularProgress } from '@mui/material';
-import GlobalNotificationListener from './components/GlobalNotificationListener';
+
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { isTeacherPendingAccess } from './utils/teacherVerification';
@@ -87,7 +87,7 @@ function App() {
 
   return (
     <Box className="page-shell page-glow-background">
-      <GlobalNotificationListener />
+
       <PWAInstallPrompt />
       <Routes>
       <Route
@@ -182,6 +182,7 @@ function App() {
           )
         }
       />
+      <Route path="/parent/child" element={currentUser?.role === UserRole.PARENT ? <StudentDetailsPage /> : <Navigate to="/" replace />} />
       <Route
         path="/parent/dashboard"
         element={
