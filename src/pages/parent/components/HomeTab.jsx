@@ -1,80 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Typography, Box, CircularProgress } from '@mui/material';
-import { CalendarMonth as CalendarIcon, ChatOutlined as ChatIcon, CampaignOutlined as NewsIcon, ArticleOutlined as NoteIcon } from '@mui/icons-material';
-import {
-  collection,
-  query,
-  orderBy,
-  limit, // Added limit
-  onSnapshot
-} from "../../../services/notifyingFirestore";
+import { CalendarMonth as CalendarIcon, ChatOutlined as ChatIcon, CampaignOutlined as NewsIcon } from '@mui/icons-material';
 import { parentAttendance, parentRewards } from '../../../utils/parentActivity';
 import ParentHistoryDialog from './ParentHistoryDialog';
-import { format } from 'date-fns';
-import { db } from '../../../config/firebase';
-import AnnouncementsSection from '../../../components/AnnouncementsSection';
+import ParentAnnouncements from './ParentAnnouncements';
 import { tParent } from '../../../utils/parentI18n';
 
 const HomeTab = ({ student, parentLang = 'te' }) => {
   const label = (en, te) => parentLang === 'te' ? te : en;
-  const [announcements, setAnnouncements] = useState([]);
   const [history, setHistory] = useState(null);
-
-  useEffect(() => {
-    // 1. QUERY FIX: Use 'date' to match Android App & Admin Panel
-    // Added limit(5) so we don't fetch unnecessary history for the dashboard
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      orderBy('date', 'desc'),
-      limit(5)
-    );
-
-    // 2. Real-time Listener
-    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      const announcementsData = [];
-
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const audience = data.audience || 'All';
-
-        // 3. Audience Filter
-        if (audience === 'Parents' || audience === 'All Students' || audience === 'All') {
-
-          // 4. Robust Date Parsing (Handles 'date' field)
-          // We check data.date first (Android standard), then fallback to createdAt
-          const timestamp = data.date || data.createdAt;
-          let dateObj;
-
-          if (timestamp) {
-            if (typeof timestamp.toDate === 'function') {
-              dateObj = timestamp.toDate();
-            } else if (timestamp instanceof Date) {
-              dateObj = timestamp;
-            } else {
-              dateObj = new Date();
-            }
-          } else {
-            dateObj = new Date();
-          }
-
-          announcementsData.push({
-            id: doc.id,
-            title: data.title || '',
-            message: data.message || '',
-            date: format(dateObj, 'MMM dd, yyyy'),
-            audience: audience,
-            isImportant: data.isImportant || false
-          });
-        }
-      });
-      setAnnouncements(announcementsData);
-    }, (error) => {
-      console.error("Error getting announcements:", error);
-    });
-
-    return () => unsubscribe();
-  }, []); // Removed [student] dependency so it loads even if student data is delayed
 
   if (!student) {
     return (
@@ -135,8 +70,10 @@ const HomeTab = ({ student, parentLang = 'te' }) => {
         <ChatIcon aria-hidden="true" /><div><h2>{tParent(parentLang, 'complaints')}</h2><p>{label('Send a concern in English or Telugu.', 'ఇంగ్లీష్ లేదా తెలుగులో సమస్యను తెలియజేయండి.')}</p></div>
         <Link to="/parent/complaints">{tParent(parentLang, 'raiseNow')}</Link>
       </section>
-      <section className="portal-updates"><h2><NewsIcon />{label('Latest Updates', 'తాజా సమాచారం')}</h2>
-        {announcements.length ? <AnnouncementsSection announcements={announcements} /> : <div className="portal-empty portal-surface"><NoteIcon />{label('No new announcements.', 'కొత్త ప్రకటనలు లేవు.')}</div>}
+      <section className="portal-updates">
+        <div className="portal-updates-heading"><h2><NewsIcon />{label('Announcements', 'ప్రకటనలు')}</h2>
+          <Link to="/parent/notifications">{label('View all', 'అన్నీ చూడండి')}</Link></div>
+        <ParentAnnouncements parentLang={parentLang} maximum={5} />
       </section>
 
       {history && <ParentHistoryDialog kind={history} rewards={rewards} records={records}

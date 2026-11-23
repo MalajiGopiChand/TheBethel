@@ -182,3 +182,5 @@
 .complaint-entry .complaint-time { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
 .complaint-time svg { color: inherit; font-size: 14px; }
 .complaint-page > .MuiAlert-root { border-radius: 16px; }
+.portal-updates-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.portal-updates-heading a { color: var(--blue); font-size: .85rem; font-weight: 700; padding: 6px; }

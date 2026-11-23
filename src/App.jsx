@@ -187,6 +187,7 @@ function App() {
         : <Navigate to="/" replace />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<ParentHome />} />
+        <Route path="notifications" element={<ParentNotificationPage />} />
         <Route path="child" element={<StudentDetailsPage />} />
         <Route path="complaints" element={<ParentComplaintsPage />} />
       </Route>
@@ -505,16 +506,6 @@ function App() {
         element={
           currentUser && (currentUser.role === UserRole.TEACHER || currentUser.role === UserRole.ADMIN) ? (
             <DollarHistoryPage />
-          ) : (
-            <Navigate to="/" replace />
-          )
-        }
-      />
-      <Route
-        path="/parent/notifications"
-        element={
-          currentUser && currentUser.role === UserRole.PARENT ? (
-            <ParentNotificationPage />
           ) : (
             <Navigate to="/" replace />
           )
