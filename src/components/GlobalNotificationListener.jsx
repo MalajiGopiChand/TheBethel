@@ -26,14 +26,14 @@ export default function GlobalNotificationListener() {
   }, []);
   useEffect(() => {
     setItems([]); setPushEnabled(false); setPushMessage('');
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid || currentUser.role === 'PARENT') return;
     setLoading(true);
     return onSnapshot(query(collection(db, 'user_notifications', currentUser.uid, 'items'), orderBy('createdAt', 'desc'), limit(50)), snapshot => {
       setItems(snapshot.docs.map(item => ({ id: item.id, ...item.data() })));
       setLoading(false); setError('');
     }, () => { setLoading(false); setError('Could not load notifications. Check your connection or contact the administrator.'); });
   }, [currentUser?.uid]);
-  if (!currentUser) return null;
+  if (!currentUser || currentUser.role === 'PARENT') return null;
   const enablePush = async () => {
     setEnabling(true); setPushMessage('');
     try {

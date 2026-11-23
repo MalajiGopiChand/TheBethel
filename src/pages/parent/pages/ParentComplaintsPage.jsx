@@ -1,3 +1,4 @@
+import '../parent.css';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -132,7 +133,7 @@ const ParentComplaintsPage = () => {
   };
 
   return (
-    <Box className="page-shell page-glow-background" sx={{ minHeight: '100vh' }}>
+    <Box className="parent-shell" sx={{ minHeight: '100vh' }}>
       <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'background.paper', backgroundImage: 'none', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider', backdropFilter: 'blur(22px)' }}>
         <Toolbar>
           <IconButton aria-label="Go back" onClick={() => handleBackNavigation(navigate, currentUser)} sx={{ mr: 1 }}>
@@ -144,7 +145,7 @@ const ParentComplaintsPage = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" sx={{ py: 3 }}>
+      <Container className="parent-enter" maxWidth="md" sx={{ py: 3 }}>
         <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {parentLang === 'te'

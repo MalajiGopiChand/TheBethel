@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
+import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import { lightTheme, darkTheme } from '../utils/theme';
 
 const ThemeContext = createContext();
@@ -36,7 +36,16 @@ export const ThemeContextProvider = ({ children }) => {
     setIsDarkMode(!isDarkMode);
   };
 
-  const theme = useMemo(() => effectiveDarkMode ? darkTheme : lightTheme, [effectiveDarkMode]);
+  const parentView = location.pathname.startsWith('/parent');
+  const theme = useMemo(() => parentView ? createTheme(lightTheme, {
+    palette: { primary: { main: '#17695e', dark: '#164f46', light: '#eaf2ed', contrastText: '#ffffff' }, background: { default: '#f4f7f6', paper: '#ffffff' }, text: { primary: '#182f2c', secondary: '#637a70' } },
+    components: {
+      MuiButton: { styleOverrides: { root: { borderRadius: 12, textTransform: 'none', fontWeight: 700, boxShadow: 'none' } } },
+      MuiCard: { styleOverrides: { root: { boxShadow: '0 4px 20px #193c3008', border: '1px solid #e2ebe5' } } },
+      MuiPaper: { styleOverrides: { rounded: { borderRadius: 20 } } },
+      MuiTypography: { styleOverrides: { root: { overflowWrap: 'anywhere' } } },
+    },
+  }) : effectiveDarkMode ? darkTheme : lightTheme, [effectiveDarkMode, parentView]);
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, effectiveDarkMode, toggleTheme }}>

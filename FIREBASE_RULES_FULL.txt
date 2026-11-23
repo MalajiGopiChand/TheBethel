@@ -1,0 +1,331 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // =========================================================
+    // 1. HELPER FUNCTIONS - IMPROVED
+    // =========================================================
+    
+    // Check if user is Admin
+    function isAdmin() {
+      // Check by email (for initial setup)
+      let adminByEmail = request.auth != null && 
+        request.auth.token.email in [
+          "gop1@gmail.com", 
+          "premkumartenali@gmail.com"
+        ];
+      
+      // Check by custom claim (more secure)
+      let adminByClaim = request.auth != null && 
+        request.auth.token.get('admin', false) == true;
+      
+      return adminByEmail || adminByClaim;
+    }
+    
+    // Check if user is a Teacher (custom claim or explicitly approved in Firestore)
+    function isTeacher() {
+      let teacherByClaim = request.auth != null && 
+        request.auth.token.get('teacher', false) == true;
+      
+      let teacherPath = /databases/$(database)/documents/teachers/$(request.auth.uid);
+      let isApprovedTeacher = request.auth != null && exists(teacherPath) && (
+        get(teacherPath).data.get('approvalState', '') == 'approved' ||
+        (!(get(teacherPath).data.get('approvalState', '') in ['pending', 'rejected']) && (
+          get(teacherPath).data.get('isVerified', false) == true ||
+          get(teacherPath).data.get('isApproved', false) == true
+        ))
+      );
+      
+      return teacherByClaim || isApprovedTeacher;
+    }
+    
+    // Check if user is a Parent
+    function isParent() {
+      // Check by custom claim
+      let parentByClaim = request.auth != null && 
+        request.auth.token.get('parent', false) == true;
+      
+      // OR check in parents collection
+      let parentInCollection = request.auth != null && 
+        exists(/databases/$(database)/documents/parents/$(request.auth.uid));
+      
+      return parentByClaim || parentInCollection;
+    }
+    
+    // Check if the user is the owner of the data
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Allow authenticated users to read their own UID document
+    function canReadOwnDocument(collection, userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // =========================================================
+    // 2. GLOBAL RULES
+    // =========================================================
+    
+    // Default deny-all for unmatched documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================
+    // 3. CHATS & MESSAGES
+    // =========================================================
+    match /chats/{chatId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || isTeacher();
+      allow update, delete: if isAdmin();
+      
+      match /status/{statusDoc} {
+        allow read, write: if isAuthenticated() && (isAdmin() || isTeacher());
+      }
+    }
+    
+    match /chats/{chatId}/messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.senderId == request.auth.uid || 
+        isAdmin() || 
+        isTeacher()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // 4. HOMEWORKS
+    // =========================================================
+    match /homeworks/{homeworkId} {
+      allow read: if isAuthenticated();
+      allow create: if isTeacher() || isAdmin();
+      allow update: if isTeacher() || isAdmin();
+      allow delete: if isTeacher() || isAdmin();
+    }
+
+    // =========================================================
+    // 5. STUDENTS, TEACHERS, PARENTS & PROFILES
+    // =========================================================
+    
+    // STUDENTS - Allow admin and teachers full access, parents read-only
+    match /students/{studentId} {
+      allow read: if isAuthenticated(); 
+      allow create: if isAdmin() || isTeacher();
+      allow update: if isAdmin() || isTeacher();
+      allow delete: if isAdmin();
+    }
+
+    // TEACHERS - Allow admin full access, teachers can read
+    match /teachers/{teacherId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || (isOwner(teacherId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.role == 'TEACHER' &&
+        request.resource.data.isVerified == false &&
+        request.resource.data.isApproved == false &&
+        request.resource.data.approvalState == 'pending');
+      // Teachers may update their own profile but cannot change approval fields (only admin can).
+      allow update: if isAdmin() || (isOwner(teacherId) &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['uid', 'role', 'isVerified', 'isApproved', 'approvalState', 'status']));
+      allow delete: if isAdmin();
+    }
+    
+    // PARENTS - FIXED: Allow admin to read ALL parent documents
+    match /parents/{parentId} {
+      // ✅ FIXED: Admin can read ALL parents
+      allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isOwner(parentId));
+      
+      // ✅ Allow parents to create their own profile
+      allow create: if isOwner(parentId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.role == 'PARENT';
+      
+      // ✅ Allow parents to update their own profile, admin can update any
+      allow update: if isAdmin() || (isOwner(parentId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'role']));
+      
+      // ✅ Only admin can delete
+      allow delete: if isAdmin();
+    }
+    
+    // USERS collection (for authentication profiles)
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isAdmin() || isOwner(userId));
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // 6. ATTENDANCE & REPORTS
+    // =========================================================
+    match /attendance/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher() || isAdmin();
+    }
+    
+    match /attendance_summary/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher() || isAdmin();
+    }
+
+    match /teacher_reports/{document=**} {
+      allow read: if isTeacher() || isAdmin();
+      allow write: if isTeacher() || isAdmin();
+    }
+
+    match /photos/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher() || isAdmin();
+    }
+
+    // =========================================================
+    // 7. MESSAGES & COMMUNICATION
+    // =========================================================
+    match /messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.senderId == request.auth.uid || 
+        resource.data.receiverId == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+    
+    // =========================================================
+    // 8. SCHEDULES & TIMETABLES
+    // =========================================================
+    match /schedules/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+    
+    match /timetables/{timetable} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isTeacher();
+    }
+    
+    match /teacherProgress/{document=**} {
+      allow read: if isAuthenticated();
+      allow create, update: if isTeacher() || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // =========================================================
+    // 9. NOTIFICATIONS/ANNOUNCEMENTS
+    // =========================================================
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || isTeacher();
+      allow update: if isAdmin() || isTeacher();
+      allow delete: if isAdmin();
+    }
+    
+    // =========================================================
+    // 10. PARENT LOGINS
+    // =========================================================
+    match /parent_logins/{loginId} {
+      allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isParent() || isOwner(resource.data.parentId));
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isAdmin() || isParent() || isOwner(resource.data.parentId));
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // 11. FINANCE - OFFERINGS
+    // =========================================================
+    match /offerings/{offeringId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isTeacher() || isAdmin()) 
+                    && request.resource.data.type == "offering"
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount > 0
+                    && request.resource.data.place is string
+                    && request.resource.data.date is string
+                    && request.resource.data.recordedBy == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // 12. FINANCE - EXPENSES
+    // =========================================================
+    match /expenses/{expenseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isTeacher() || isAdmin()) 
+                    && request.resource.data.type == "expense"
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount > 0
+                    && request.resource.data.place is string
+                    && request.resource.data.date is string
+                    && request.resource.data.recordedBy == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // 13. PARENT COMPLAINTS / ISSUES
+    // =========================================================
+    match /complaints/{complaintId} {
+      // Admin sees all, parent sees own complaints
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        (isParent() && resource.data.parentId == request.auth.uid)
+      );
+      // Only parent can create and only for own uid
+      allow create: if isAuthenticated() && isParent() &&
+        request.resource.data.parentId == request.auth.uid;
+      // Parents can update only own complaint (optional), admin can update any
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (isParent() && resource.data.parentId == request.auth.uid)
+      );
+      // Admin can delete complaints
+      allow delete: if isAdmin();
+    }
+   
+    match /pushTokens/{tokenId} {
+      allow read, delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid && request.resource.data.token == tokenId;
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid && request.resource.data.token == tokenId;
+    }
+    match /user_notifications/{uid}/items/{id} {
+      allow read: if isOwner(uid);
+      allow update: if isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']) && request.resource.data.read is bool;
+    }
+
+    // Website-only periods preserve original student attendance and rewards.
+    match /app_settings/website_activity {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['activePeriod', 'resetAt', 'resetBy']) &&
+        request.resource.data.activePeriod is string &&
+        request.resource.data.resetBy == request.auth.uid &&
+        request.resource.data.resetAt == request.time;
+    }
+    match /website_activity/{periodId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.createdBy == request.auth.uid;
+      match /students/{studentId} {
+        allow read: if isAuthenticated();
+        allow create, update: if (isAdmin() || isTeacher()) &&
+          get(/databases/$(database)/documents/app_settings/website_activity).data.activePeriod == periodId &&
+          request.resource.data.keys().hasOnly(['attendance', 'absentDates', 'attendanceByDate', 'rewards', 'dollarPoints', 'currentStreak', 'activityUpdatedBy', 'activityUpdatedByName']);
+      }
+    }
+
+    // =========================================================
+    // 14. LEGACY DATA (for backward compatibility)
+    // =========================================================
+    match /financial_records/{recordId} {
+      allow read: if isAuthenticated();
+    }
+  }
+}

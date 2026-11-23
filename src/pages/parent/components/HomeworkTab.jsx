@@ -219,15 +219,15 @@ const HomeworkTab = ({ student, parentLang = 'te' }) => {
   }
 
   return (
-    <Box sx={{ pb: 4 }}>
+    <Box className="parent-enter" sx={{ pb: 4 }}>
       {/* Header */}
-      <Fade in={true} timeout={500}>
+      <Fade in={true} timeout={250}>
         <Box mb={3} display="flex" alignItems="center" gap={1}>
-            <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+            <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
                 <SchoolIcon />
             </Box>
             <Box>
-                <Typography variant="h5" fontWeight="800" sx={{ letterSpacing: '-0.5px' }}>
+                <Typography variant="h4" component="h1" fontWeight="800" sx={{ letterSpacing: '-0.5px' }}>
                     {tParent(parentLang, 'homework')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -238,7 +238,7 @@ const HomeworkTab = ({ student, parentLang = 'te' }) => {
       </Fade>
 
       {homeworks.length === 0 ? (
-        <Fade in={true} timeout={800}>
+        <Fade in={true} timeout={300}>
             <Box textAlign="center" py={6} sx={{ opacity: 0.6 }}>
                 <AssignmentIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
                 <Typography variant="h6" color="text.secondary">{tParent(parentLang, 'noHomework')}</Typography>
@@ -259,9 +259,9 @@ const HomeworkTab = ({ student, parentLang = 'te' }) => {
             const isDueToday = dueDateObj && isToday(dueDateObj);
 
             return (
-              <Grow in={true} key={homework.id} timeout={500 + (index * 100)}>
+              <Grow in={true} key={homework.id} timeout={250 + Math.min(index, 3) * 50}>
                 <Card 
-                  elevation={2}
+                  elevation={0}
                   sx={{ 
                     borderRadius: 4,
                     position: 'relative',

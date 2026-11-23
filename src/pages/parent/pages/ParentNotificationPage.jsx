@@ -1,3 +1,4 @@
+import '../parent.css';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,7 +19,6 @@ import {
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
-  NotificationsActive as BellIcon,
   PriorityHigh as PriorityIcon,
   EventNote as DateIcon,
   Campaign as MegaphoneIcon
@@ -108,7 +108,7 @@ const ParentNotificationPage = () => {
   }, []);
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f0f2f5', pb: 4 }}>
+    <Box className="parent-shell" sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 4 }}>
       
       {/* Header */}
       <Paper 
@@ -126,12 +126,12 @@ const ParentNotificationPage = () => {
       >
         <Container maxWidth="md">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={handleBack} sx={{ bgcolor: 'grey.100' }}>
+          <IconButton aria-label="Go back" onClick={handleBack} sx={{ bgcolor: 'grey.100' }}>
               <BackIcon />
             </IconButton>
             <Box>
                 <Typography variant="h6" fontWeight="800" sx={{ lineHeight: 1.2 }}>
-                Notifications
+                School updates
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                 Updates from The Bethel Church
@@ -165,10 +165,10 @@ const ParentNotificationPage = () => {
           >
             <MegaphoneIcon sx={{ fontSize: 60, color: 'grey.300', mb: 2 }} />
             <Typography variant="h6" color="text.secondary" fontWeight="bold">
-              No new notifications
+              You’re all caught up
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              If you just sent one, check if the Audience matches.
+              New updates from your school will appear here.
             </Typography>
           </Box>
         ) : (
@@ -199,7 +199,7 @@ const ParentNotificationPage = () => {
                             bottom: 12, 
                             width: 4, 
                             borderRadius: '0 4px 4px 0',
-                            bgcolor: notification.isImportant ? '#ff1744' : '#2979ff' 
+                            bgcolor: notification.isImportant ? '#ff1744' : '#23796a'
                         }} 
                     />
 
@@ -207,11 +207,11 @@ const ParentNotificationPage = () => {
                         avatar={
                             <Avatar 
                                 sx={{ 
-                                    bgcolor: notification.isImportant ? '#ffebee' : '#e3f2fd',
+                                    bgcolor: notification.isImportant ? '#ffebee' : '#eaf2ed',
                                     color: notification.isImportant ? '#d32f2f' : '#1976d2'
                                 }}
                             >
-                                {notification.isImportant ? <PriorityIcon /> : <BellIcon />}
+                                {notification.isImportant ? <PriorityIcon /> : <DateIcon />}
                             </Avatar>
                         }
                         title={

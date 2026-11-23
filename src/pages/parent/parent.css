@@ -1,0 +1,12 @@
+.parent-shell { background: #f4f7f6; color: #182f2c; min-height: 100dvh; }
+.parent-enter { animation: parent-rise .45s ease both; }
+.parent-stat { transition: transform .2s ease, box-shadow .2s ease; }
+.parent-stat:hover { transform: translateY(-3px); box-shadow: 0 12px 30px #143b3010; }
+.parent-stat:focus-visible { outline: 3px solid #207b6b; outline-offset: 4px; }
+.parent-number { font-variant-numeric: tabular-nums; letter-spacing: -.055em; }
+.parent-progress .MuiCircularProgress-circle { transition: stroke-dashoffset 1s ease; }
+@keyframes parent-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .parent-shell *, .parent-detail *, .parent-shell *::before, .parent-detail *::before { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .parent-stat:hover { transform: none; }
+}

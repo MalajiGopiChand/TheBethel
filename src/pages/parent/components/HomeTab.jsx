@@ -1,512 +1,84 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  CircularProgress,
-  useTheme,
-  Paper,
-  Divider,
-  Avatar,
-  Container,
-  CardActionArea,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  Button
-} from '@mui/material';
-import {
-  AttachMoney as DollarIcon,
-  LocalFireDepartment as StreakIcon,
-  CalendarMonth as CalendarIcon,
-  School as SchoolIcon,
-  WavingHand as WaveIcon,
-  Close as CloseIcon
-} from '@mui/icons-material';
-import {
-  collection,
-  query,
-  orderBy,
-  limit, // Added limit
-  onSnapshot
-} from "../../../services/notifyingFirestore";
-import { format } from 'date-fns';
+import { Box, Typography, Paper, Button, ButtonBase, Stack, Avatar, Chip, Dialog, DialogTitle, DialogContent, IconButton, CircularProgress, Alert, ToggleButtonGroup, ToggleButton, LinearProgress } from '@mui/material';
+import { ArrowForwardRounded, CloseRounded, LocalFireDepartmentRounded, AccountBalanceWalletRounded, CalendarMonthRounded, CheckRounded, ChatBubbleOutlineRounded, SchoolOutlined } from '@mui/icons-material';
+import { collection, query, orderBy, limit, onSnapshot } from '../../../services/notifyingFirestore';
 import { db } from '../../../config/firebase';
-import AnnouncementsSection from '../../../components/AnnouncementsSection';
-import InstallBanner from '../../../components/InstallBanner';
-import { tParent } from '../../../utils/parentI18n';
+import { activityDate, parentAttendance, parentRewards } from '../../../utils/parentActivity';
 
-const HomeTab = ({ student, parentLang = 'te' }) => {
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const [announcements, setAnnouncements] = useState([]);
-  const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
-  const [isStreakModalOpen, setIsStreakModalOpen] = useState(false);
-
+function AnimatedNumber({ value }) {
+  const [shown, setShown] = useState(value);
   useEffect(() => {
-    // 1. QUERY FIX: Use 'date' to match Android App & Admin Panel
-    // Added limit(5) so we don't fetch unnecessary history for the dashboard
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      orderBy('date', 'desc'), 
-      limit(5) 
-    );
-    
-    // 2. Real-time Listener
-    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      const announcementsData = [];
-      
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const audience = data.audience || 'All';
-
-        // 3. Audience Filter
-        if (audience === 'Parents' || audience === 'All Students' || audience === 'All') {
-          
-          // 4. Robust Date Parsing (Handles 'date' field)
-          // We check data.date first (Android standard), then fallback to createdAt
-          const timestamp = data.date || data.createdAt;
-          let dateObj;
-
-          if (timestamp) {
-            if (typeof timestamp.toDate === 'function') {
-              dateObj = timestamp.toDate();
-            } else if (timestamp instanceof Date) {
-              dateObj = timestamp;
-            } else {
-              dateObj = new Date();
-            }
-          } else {
-            dateObj = new Date();
-          }
-
-          announcementsData.push({
-            id: doc.id,
-            title: data.title || '',
-            message: data.message || '',
-            date: format(dateObj, 'MMM dd, yyyy'),
-            audience: audience,
-            isImportant: data.isImportant || false
-          });
-        }
-      });
-      setAnnouncements(announcementsData);
-    }, (error) => {
-      console.error("Error getting announcements:", error);
-    });
-
-    return () => unsubscribe();
-  }, []); // Removed [student] dependency so it loads even if student data is delayed
-
-  if (!student) {
-    return (
-      <Box p={4} textAlign="center">
-        <Typography variant="h6" color="text.secondary">
-          Loading student data...
-        </Typography>
-        <CircularProgress sx={{ mt: 2 }} />
-      </Box>
-    );
-  }
-
-  // Calculations
-  const attendanceList = student.attendance || [];
-  const absentDates = student.absentDates || [];
-  const totalDays = attendanceList.length + absentDates.length;
-  const attendancePercentage = totalDays > 0
-    ? Math.round((attendanceList.length / totalDays) * 100)
-    : 0;
-
-  // Helper for Circular Progress
-  const CircularProgressWithLabel = (props) => {
-    return (
-      <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-        <CircularProgress 
-          variant="determinate" 
-          size={90} 
-          thickness={5} 
-          {...props} 
-          sx={{ 
-            color: props.value >= 75 ? '#4caf50' : props.value >= 50 ? '#ff9800' : '#f44336',
-            borderRadius: '50%',
-            boxShadow: '0 0 10px rgba(0,0,0,0.05)'
-          }}
-        />
-        <Box
-          sx={{
-            top: 0,
-            left: 0,
-            bottom: 0,
-            right: 0,
-            position: 'absolute',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Typography variant="h5" component="div" color="text.primary" fontWeight="800">
-            {`${Math.round(props.value)}%`}
-          </Typography>
-        </Box>
-      </Box>
-    );
-  };
-
-  return (
-    <Box sx={{ pb: 10 }}> 
-      {/* Install Banner */}
-      <InstallBanner />
-      
-      {/* 1. Welcome Banner */}
-      <Paper 
-        elevation={0}
-        sx={{ 
-          mb: 4, 
-          p: 3, 
-          borderRadius: 4, 
-          background: `linear-gradient(120deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-          color: '#fff',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-        <Box sx={{ position: 'relative', zIndex: 2 }}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-                <Typography variant="h4" fontWeight="800">
-                Welcome back, {student.name ? student.name : 'Student'}
-                </Typography>
-                <WaveIcon sx={{ animation: 'wave 2s infinite', transformOrigin: '70% 70%' }} />
-            </Box>
-            <Typography variant="subtitle1" sx={{ opacity: 0.9, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CalendarIcon fontSize="small" />
-                {format(new Date(), 'EEEE, MMMM do, yyyy')}
-            </Typography>
-        </Box>
-        
-        {/* Decorative Circle overlay */}
-        <Box sx={{ 
-            position: 'absolute', 
-            top: -20, 
-            right: -20, 
-            width: 150, 
-            height: 150, 
-            borderRadius: '50%', 
-            bgcolor: 'rgba(255,255,255,0.1)' 
-        }} />
-        <SchoolIcon sx={{ 
-            position: 'absolute', 
-            bottom: -10, 
-            right: 20, 
-            fontSize: 100, 
-            opacity: 0.15,
-            transform: 'rotate(-15deg)'
-        }} />
-      </Paper>
-
-      {/* 2. Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        
-        {/* A. Attendance */}
-        <Grid item xs={12} md={4}>
-          <Card 
-            elevation={0} 
-            sx={{ 
-                height: '100%', 
-                borderRadius: 4, 
-                border: '1px solid',
-                borderColor: 'divider',
-                display: 'flex', 
-                flexDirection: 'column', 
-                justifyContent: 'center' 
-            }}
-          >
-            <CardContent sx={{ textAlign: 'center', py: 3 }}>
-              <Typography variant="h6" fontWeight="bold" color="text.primary" gutterBottom>
-                Attendance
-              </Typography>
-              <Box sx={{ my: 2 }}>
-                <CircularProgressWithLabel value={attendancePercentage} />
-              </Box>
-              
-              <Box display="flex" justifyContent="center" gap={3} mt={1}>
-                <Box textAlign="center">
-                    <Typography variant="h6" color="success.main" fontWeight="bold" lineHeight={1}>
-                        {attendanceList.length}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">Present</Typography>
-                </Box>
-                <Divider orientation="vertical" flexItem />
-                <Box textAlign="center">
-                    <Typography variant="h6" color="error.main" fontWeight="bold" lineHeight={1}>
-                        {absentDates.length}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">Absent</Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* B. Dollar Points */}
-        <Grid item xs={12} sm={6} md={4}>
-            <Card 
-                elevation={3} 
-                sx={{ 
-                    height: '100%',
-                    borderRadius: 4, 
-                    background: 'linear-gradient(135deg, #FFD700 0%, #FFA000 100%)',
-                    color: '#fff',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    transition: 'all 0.3s ease',
-                    '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 8px 25px rgba(255,160,0,0.4)' }
-                }}
-            >
-              <CardActionArea onClick={() => setIsRewardModalOpen(true)} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" zIndex={2}>
-                        <Box>
-                            <Typography variant="subtitle2" fontWeight="medium" sx={{ opacity: 0.9 }}>
-                                Dollar Points
-                            </Typography>
-                            <Typography variant="h3" fontWeight="800" sx={{ mt: 1, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                ${student.dollarPoints || 0}
-                            </Typography>
-                        </Box>
-                        <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: '#fff' }}>
-                            <DollarIcon />
-                        </Avatar>
-                    </Box>
-                    <Typography variant="caption" fontWeight="bold" sx={{ mt: 2, display: 'inline-block', opacity: 0.9, zIndex: 2, bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 2 }}>
-                        Tap to view history 👉
-                    </Typography>
-                    <DollarIcon sx={{ 
-                        position: 'absolute', bottom: -15, right: -15, fontSize: 120, opacity: 0.2, transform: 'rotate(-20deg)'
-                    }} />
-                </CardContent>
-              </CardActionArea>
-            </Card>
-        </Grid>
-
-        {/* C. Streak */}
-        <Grid item xs={12} sm={6} md={4}>
-            <Card 
-                elevation={3} 
-                sx={{ 
-                    height: '100%',
-                    borderRadius: 4, 
-                    background: 'linear-gradient(135deg, #FF6B6B 0%, #EE5253 100%)',
-                    color: '#fff',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    transition: 'all 0.3s ease',
-                    '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 8px 25px rgba(238,82,83,0.4)' }
-                }}
-            >
-              <CardActionArea onClick={() => setIsStreakModalOpen(true)} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" zIndex={2}>
-                        <Box>
-                            <Typography variant="subtitle2" fontWeight="medium" sx={{ opacity: 0.9 }}>
-                                Current Streak
-                            </Typography>
-                            <Typography variant="h3" fontWeight="800" sx={{ mt: 1, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                {student.currentStreak || 0}
-                            </Typography>
-                        </Box>
-                        <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: '#fff' }}>
-                            <StreakIcon />
-                        </Avatar>
-                    </Box>
-                    <Typography variant="caption" fontWeight="bold" sx={{ mt: 2, display: 'inline-block', opacity: 0.9, zIndex: 2, bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 2 }}>
-                        Tap to view attendance 👉
-                    </Typography>
-                     <StreakIcon sx={{ 
-                        position: 'absolute', bottom: -15, right: -15, fontSize: 120, opacity: 0.2, transform: 'rotate(-20deg)'
-                    }} />
-                </CardContent>
-              </CardActionArea>
-            </Card>
-        </Grid>
-      </Grid>
-
-      {/* 3. Announcements Section */}
-      <Box>
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2,
-            mb: 2,
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2
-          }}
-        >
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Complaints & Issues</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {parentLang === 'te' ? 'ఇంగ్లీష్/తెలుగు లో ఫిర్యాదు పంపండి, వాయిస్ నోట్ జోడించండి.' : 'Raise complaints in English/Telugu and add voice notes.'}
-            </Typography>
-          </Box>
-          <Button variant="contained" onClick={() => navigate('/parent/complaints')}>
-            {tParent(parentLang, 'raiseNow')}
-          </Button>
-        </Paper>
-
-        <Box display="flex" alignItems="center" gap={1} mb={2}>
-            <Typography variant="h6" fontWeight="bold">
-                📢 Latest Updates
-            </Typography>
-            <Divider sx={{ flexGrow: 1 }} />
-        </Box>
-        
-        {announcements.length > 0 ? (
-            <AnnouncementsSection announcements={announcements} />
-        ) : (
-            <Paper 
-                elevation={0}
-                sx={{ 
-                    p: 4, 
-                    textAlign: 'center', 
-                    borderRadius: 3, 
-                    bgcolor: 'background.paper',
-                    border: '1px dashed',
-                    borderColor: 'divider'
-                }}
-            >
-                <Typography variant="body1" color="text.secondary">
-                    No new announcements.
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                    (Checked 'date' field in database)
-                </Typography>
-            </Paper>
-        )}
-      </Box>
-
-      {/* Rewards History Modal */}
-      <Dialog 
-        open={isRewardModalOpen} 
-        onClose={() => setIsRewardModalOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 4 } }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-          <Typography variant="h6" fontWeight="900" display="flex" alignItems="center" gap={1}>
-             <DollarIcon color="warning" /> Dollar Points History
-          </Typography>
-          <IconButton onClick={() => setIsRewardModalOpen(false)} sx={{ bgcolor: 'action.hover' }}>
-             <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          {(!student.rewards || student.rewards.length === 0) ? (
-            <Box p={4} textAlign="center">
-                <Avatar sx={{ mx: 'auto', bgcolor: 'transparent', color: 'text.secondary', width: 64, height: 64, mb: 2 }}>
-                    <DollarIcon fontSize="large" />
-                </Avatar>
-                <Typography color="text.secondary" fontWeight="600">No rewards recorded yet.</Typography>
-            </Box>
-          ) : (
-            <TableContainer>
-              <Table size="medium">
-                <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.02)' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Reason</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Teacher</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {[...student.rewards].sort((a,b) => (b.date || '').localeCompare(a.date || '')).map((reward, i) => (
-                    <TableRow key={i} hover>
-                      <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>{reward.date || 'N/A'}</TableCell>
-                      <TableCell>
-                          <Typography color="success.main" fontWeight="900">
-                             +${reward.dollars}
-                          </Typography>
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 500 }}>{reward.reason || '-'}</TableCell>
-                      <TableCell>
-                          <Chip size="small" label={reward.teacher || reward.awardedBy || '-'} sx={{ fontWeight: 600, bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }} />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Streak History Modal */}
-      <Dialog 
-        open={isStreakModalOpen} 
-        onClose={() => setIsStreakModalOpen(false)} 
-        maxWidth="xs" 
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 4 } }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-          <Typography variant="h6" fontWeight="900" display="flex" alignItems="center" gap={1}>
-             <StreakIcon color="error" /> Attendance Log
-          </Typography>
-          <IconButton onClick={() => setIsStreakModalOpen(false)} sx={{ bgcolor: 'action.hover' }}>
-             <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
-          {(!student.attendance || student.attendance.length === 0) ? (
-            <Box p={4} textAlign="center">
-                <Avatar sx={{ mx: 'auto', bgcolor: 'transparent', color: 'text.secondary', width: 64, height: 64, mb: 2 }}>
-                    <StreakIcon fontSize="large" />
-                </Avatar>
-                <Typography color="text.secondary" fontWeight="600">No attendance recorded yet.</Typography>
-            </Box>
-          ) : (
-            <TableContainer>
-              <Table size="small">
-                <TableBody>
-                  {[...student.attendance].sort((a,b) => (b || '').localeCompare(a || '')).map((dateStr, i) => {
-                    const teacherName = student.attendanceByDate?.[dateStr]?.teacherName || '-';
-                    return (
-                      <TableRow key={i} hover>
-                        <TableCell sx={{ fontWeight: 700 }}>{dateStr}</TableCell>
-                        <TableCell>
-                            <Chip size="small" label={teacherName} sx={{ fontWeight: 600, bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', maxWidth: 120 }} />
-                        </TableCell>
-                        <TableCell align="right">
-                            <Chip size="small" label="Present" sx={{ fontWeight: 800, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }} />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </DialogContent>
-      </Dialog>
-
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setShown(value); return; }
+    let frame; const start = performance.now();
+    const tick = now => { const progress = Math.min((now - start) / 650, 1); setShown(Math.round(value * (1 - (1 - progress) ** 3))); if (progress < 1) frame = requestAnimationFrame(tick); };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+  return <span className="parent-number" aria-label={String(value)}><span aria-hidden="true">{shown.toLocaleString()}</span></span>;
+}
+const surface = { p: 2.5, borderRadius: 4, border: '1px solid #e2ebe5', bgcolor: '#fff' };
+export default function HomeTab({ student, parentLang = 'te' }) {
+  const navigate = useNavigate();
+  const te = parentLang === 'te', text = (en, tel) => te ? tel : en;
+  const [detail, setDetail] = useState(null), [filter, setFilter] = useState('all');
+  const [announcements, setAnnouncements] = useState([]), [announcementError, setAnnouncementError] = useState(false);
+  const dateLabel = value => activityDate(value)?.toLocaleDateString(te ? 'te-IN' : 'en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) || text('Date unavailable', 'తేదీ అందుబాటులో లేదు');
+  useEffect(() => onSnapshot(query(collection(db, 'notifications'), orderBy('date', 'desc'), limit(30)), snapshot => {
+    setAnnouncements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(note => ['Parents', 'All Students', 'All'].includes(note.audience || 'All')).slice(0, 4));
+    setAnnouncementError(false);
+  }, () => setAnnouncementError(true)), []);
+  if (!student) return <Alert severity="info">{text('No student is linked to this account. Please contact your school administrator.', 'ఈ ఖాతాకు విద్యార్థి వివరాలు లేవు. నిర్వాహకుడిని సంప్రదించండి.')}</Alert>;
+  const records = parentAttendance(student), rewards = parentRewards(student);
+  const present = records.filter(item => item.status === 'present').length;
+  const percent = records.length ? Math.round(present / records.length * 100) : 0;
+  const dollars = Number(student.dollarPoints) || 0, streak = Math.max(0, Number(student.currentStreak) || 0);
+  const showDetail = value => { setFilter('all'); setDetail(value); };
+  const title = detail === 'dollars' ? text('Dollar history', 'డాలర్ల చరిత్ర') : detail === 'streak' ? text('Current streak', 'ప్రస్తుత వరుస హాజరు') : text('Attendance history', 'హాజరు చరిత్ర');
+  const rewardRow = (reward, i) => <Stack key={i} direction="row" spacing={1.5} alignItems="center" sx={{ py: 2, borderBottom: '1px solid #edf1ef' }}>
+    <Avatar sx={{ bgcolor: '#fff4d9', color: '#92651a', borderRadius: 3 }}><AccountBalanceWalletRounded fontSize="small" /></Avatar>
+    <Box sx={{ flex: 1, minWidth: 0 }}><Typography fontWeight={700} sx={{ overflowWrap: 'anywhere' }}>{reward.reason || text('Dollar reward', 'డాలర్ల బహుమతి')}</Typography><Typography variant="caption" color="text.secondary">{dateLabel(reward.date)}{(reward.teacher || reward.awardedBy) ? ` · ${reward.teacher || reward.awardedBy}` : ''}</Typography></Box>
+    <Typography fontWeight={800} sx={{ color: Number(reward.dollars) < 0 ? '#b34040' : '#17695e', whiteSpace: 'nowrap' }}>{Number(reward.dollars) >= 0 ? '+' : '−'}{Math.abs(Number(reward.dollars) || 0)} $</Typography>
+  </Stack>;
+  const filteredRecords = records.filter(item => filter === 'all' || item.status === filter);
+  return <Box className="parent-enter">
+    <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 4 }, borderRadius: 5, color: '#fff', background: 'linear-gradient(115deg, #164f46, #23796a)', position: 'relative', overflow: 'hidden', mb: 3 }}>
+      <SchoolOutlined aria-hidden sx={{ position: 'absolute', right: -12, bottom: -30, fontSize: 190, opacity: .08, transform: 'rotate(-12deg)' }} />
+      <Typography variant="overline" sx={{ letterSpacing: 2, color: '#c2e8d6' }}>{text('A LITTLE PROGRESS, EVERY SUNDAY', 'ప్రతి ఆదివారం ఒక ముందడుగు')}</Typography>
+      <Typography component="h1" sx={{ fontSize: { xs: 28, sm: 38 }, fontWeight: 800, letterSpacing: '-.04em', mt: 1, overflowWrap: 'anywhere' }}>{student.name}</Typography>
+      <Typography sx={{ color: '#dbede7', mt: 1 }}>{text('Growing in faith. Celebrating every step.', 'విశ్వాసంలో ఎదుగుతూ, ప్రతి అడుగును ఆనందిద్దాం.')}</Typography>
+      <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: 2.5 }}>{[student.classType, student.place || student.location, dateLabel(new Date())].filter(Boolean).map((label, i) => <Chip key={i} label={label} size="small" sx={{ color: '#fff', bgcolor: '#ffffff18', border: '1px solid #ffffff30' }} />)}</Stack>
+    </Paper>
+    <Typography component="h2" variant="h6" fontWeight={800} sx={{ mb: 1.5 }}>{text('Your child at a glance', 'మీ పిల్లవాడి పురోగతి')}</Typography>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1.1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
+      <ButtonBase className="parent-stat" onClick={() => showDetail('attendance')} sx={{ ...surface, gridColumn: { xs: '1 / -1', md: 'auto' }, display: 'flex', justifyContent: 'space-between', gap: 2, textAlign: 'left' }}>
+        <Box><CalendarMonthRounded sx={{ color: '#23796a', mb: 1 }} /><Typography fontWeight={700}>{text('Attendance', 'హాజరు')}</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>{present} {text('present', 'హాజరు')} · {records.length - present} {text('absent', 'గైర్హాజరు')}</Typography><Typography variant="caption" color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>{text('View attendance', 'హాజరు చూడండి')} <ArrowForwardRounded sx={{ fontSize: 16 }} /></Typography></Box>
+        <Box className="parent-progress" sx={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}><CircularProgress variant="determinate" value={100} size={88} thickness={4} sx={{ color: '#edf3ef', position: 'absolute' }} /><CircularProgress variant="determinate" value={percent} size={88} thickness={4} sx={{ color: '#23796a' }} /><Typography sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 23, fontWeight: 800 }}>{percent}%</Typography></Box>
+      </ButtonBase>
+      {[
+        { id: 'dollars', title: text('Dollar balance', 'డాలర్ల మొత్తం'), value: dollars, Icon: AccountBalanceWalletRounded, bg: '#fff6df', color: '#805917', subtitle: text('View reward history', 'బహుమతుల చరిత్ర') },
+        { id: 'streak', title: text('Current streak', 'వరుస హాజరు'), value: streak, Icon: LocalFireDepartmentRounded, bg: '#ffefe8', color: '#a14a2c', subtitle: text('Consecutive Sundays', 'వరుస ఆదివారాలు') },
+      ].map(({ id, title, value, Icon, bg, color, subtitle }) => <ButtonBase key={id} className="parent-stat" onClick={() => showDetail(id)} sx={{ display: 'block', textAlign: 'left', p: { xs: 2, sm: 2.5 }, borderRadius: 4, bgcolor: bg, color, minWidth: 0 }}>
+        <Stack direction="row" justifyContent="space-between"><Icon /><ArrowForwardRounded sx={{ fontSize: 18, opacity: .7 }} /></Stack><Typography sx={{ fontSize: { xs: 36, sm: 44 }, fontWeight: 800, my: .8 }}><AnimatedNumber value={value} /></Typography><Typography fontWeight={700}>{title}</Typography><Typography variant="caption">{subtitle}</Typography>
+      </ButtonBase>)}
     </Box>
-  );
-};
-
-export default HomeTab;
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr' }, gap: 3 }}>
+      <Paper elevation={0} sx={surface}><Stack direction="row" alignItems="center" justifyContent="space-between"><Typography component="h2" variant="h6" fontWeight={800}>{text('Recent rewards', 'ఇటీవలి బహుమతులు')}</Typography><Button onClick={() => showDetail('dollars')} size="small">{text('View all', 'అన్నీ చూడండి')}</Button></Stack>{rewards.length ? rewards.slice(0, 3).map(rewardRow) : <Box sx={{ py: 4 }}><Typography fontWeight={700}>{text('A fresh start', 'కొత్త ప్రారంభం')}</Typography><Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>{text('Your child’s rewards will appear here as they are earned.', 'మీ పిల్లవాడు పొందిన బహుమతులు ఇక్కడ కనిపిస్తాయి.')}</Typography></Box>}</Paper>
+      <Paper elevation={0} sx={{ ...surface, bgcolor: '#eaf2ed', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}><ChatBubbleOutlineRounded sx={{ color: '#23796a', mb: 1.5 }} /><Typography component="h2" variant="h6" fontWeight={800}>{text('We’re here to help', 'మీకు సహాయం చేయడానికి')}</Typography><Typography variant="body2" color="text.secondary" sx={{ my: 1.5 }}>{text('Share a concern with the school and track its response.', 'మీ సమస్యను పాఠశాలకు తెలియజేసి, సమాధానాన్ని చూడండి.')}</Typography><Button variant="outlined" endIcon={<ArrowForwardRounded />} onClick={() => navigate('/parent/complaints')}>{text('Contact the school', 'పాఠశాలను సంప్రదించండి')}</Button></Paper>
+    </Box>
+    <Typography component="h2" variant="h6" fontWeight={800} sx={{ mt: 3.5, mb: 1.5 }}>{text('From your school', 'పాఠశాల సమాచారం')}</Typography>
+    {announcementError ? <Alert severity="info">{text('School updates could not load. Please try again later.', 'సమాచారం లోడ్ కాలేదు. మళ్లీ ప్రయత్నించండి.')}</Alert> : announcements.length ? announcements.map(note => <Paper key={note.id} elevation={0} sx={{ ...surface, mb: 1.5 }}><Typography variant="caption" color="text.secondary">{dateLabel(note.date || note.createdAt)}</Typography><Typography fontWeight={800} sx={{ mt: .5 }}>{note.title}</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{note.message}</Typography></Paper>) : <Paper elevation={0} sx={{ ...surface, borderStyle: 'dashed' }}><Typography color="text.secondary">{text('You’re all caught up. New school updates will appear here.', 'కొత్త పాఠశాల సమాచారం ఇక్కడ కనిపిస్తుంది.')}</Typography></Paper>}
+    <Dialog open={!!detail} onClose={() => setDetail(null)} maxWidth="sm" fullWidth PaperProps={{ className: 'parent-detail', sx: { borderRadius: 4, m: 2, width: 'calc(100% - 32px)', maxHeight: '85dvh' } }} aria-labelledby="parent-detail-title">
+      <DialogTitle id="parent-detail-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 800 }}>{title}<IconButton aria-label={text('Close details', 'మూసివేయండి')} onClick={() => setDetail(null)}><CloseRounded /></IconButton></DialogTitle>
+      <DialogContent dividers sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box className="parent-enter" sx={{ p: 3, borderRadius: 3, bgcolor: detail === 'dollars' ? '#fff6df' : '#eaf2ed', mb: 2 }}><Typography variant="body2" color="text.secondary">{student.name}</Typography><Typography sx={{ fontSize: 44, fontWeight: 800, color: '#183f35' }}><AnimatedNumber value={detail === 'dollars' ? dollars : detail === 'streak' ? streak : percent} />{detail === 'attendance' ? '%' : ''}</Typography><Typography fontWeight={600}>{detail === 'dollars' ? text('Total dollar balance', 'మొత్తం డాలర్లు') : detail === 'streak' ? text('Consecutive Sundays attended', 'వరుసగా హాజరైన ఆదివారాలు') : text('Of recorded sessions attended', 'నమోదైన తరగతుల్లో హాజరు')}</Typography>
+          {detail === 'streak' && <><LinearProgress variant="determinate" value={streak % 4 * 25} sx={{ mt: 2, height: 8, borderRadius: 4, bgcolor: '#d4e5d9' }} /><Typography variant="caption" sx={{ display: 'block', mt: 1 }}>{text(`Next milestone: ${Math.floor(streak / 4) * 4 + 4} Sundays. Keep showing up!`, `తదుపరి లక్ష్యం: ${Math.floor(streak / 4) * 4 + 4} ఆదివారాలు.`)}</Typography></>}
+        </Box>
+        {detail === 'dollars' ? (rewards.length ? rewards.map(rewardRow) : <Typography sx={{ p: 2 }} color="text.secondary">{text('No rewards recorded yet.', 'ఇంకా బహుమతులు నమోదు కాలేదు.')}</Typography>) : <>
+          <ToggleButtonGroup size="small" value={filter} exclusive onChange={(_, value) => value && setFilter(value)} aria-label={text('Filter attendance', 'హాజరు వడపోత')} sx={{ mb: 2, display: 'flex', '& button': { flex: 1, textTransform: 'none' } }}><ToggleButton value="all">{text('All', 'అన్నీ')}</ToggleButton><ToggleButton value="present">{text('Present', 'హాజరు')}</ToggleButton><ToggleButton value="absent">{text('Absent', 'గైర్హాజరు')}</ToggleButton></ToggleButtonGroup>
+          {filteredRecords.length ? filteredRecords.map(record => <Stack key={record.date} direction="row" alignItems="center" gap={1.5} sx={{ py: 1.5, borderBottom: '1px solid #edf1ef' }}><Avatar sx={{ bgcolor: record.status === 'present' ? '#eaf2ed' : '#fff0ec', color: record.status === 'present' ? '#23796a' : '#ad4f36', width: 36, height: 36 }}>{record.status === 'present' ? <CheckRounded fontSize="small" /> : <CloseRounded fontSize="small" />}</Avatar><Typography sx={{ flex: 1 }} fontWeight={600}>{dateLabel(record.date)}</Typography><Chip size="small" label={record.status === 'present' ? text('Present', 'హాజరు') : text('Absent', 'గైర్హాజరు')} sx={{ bgcolor: record.status === 'present' ? '#eaf2ed' : '#fff0ec', color: record.status === 'present' ? '#23796a' : '#ad4f36' }} /></Stack>) : <Typography sx={{ p: 2 }} color="text.secondary">{text('No attendance records in this view yet.', 'ఈ విభాగంలో ఇంకా హాజరు వివరాలు లేవు.')}</Typography>}
+        </>}
+      </DialogContent>
+    </Dialog>
+  </Box>;
+}
