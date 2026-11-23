@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   Box, Paper, Typography, Button, Card, CardContent, CircularProgress,
   TextField, Grid, Chip, Table, TableBody, TableCell, TableContainer,
@@ -28,6 +28,7 @@ import {
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';
+import { handleBackNavigation } from '../../../utils/navigation';
 import { studentDetailsId } from '../../../utils/studentDetailsAccess';
 import { activityDate, parentRewards } from '../../../utils/parentActivity';
 import { 
@@ -43,6 +44,7 @@ const StudentDetailsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   
   const { currentUser } = useAuth();
+  const parent = useOutletContext();
   const isParentView = currentUser?.role === UserRole.PARENT;
   const studentId = studentDetailsId(currentUser, searchParams.get('id'));
   
@@ -85,10 +87,10 @@ const StudentDetailsPage = () => {
   const resolvedPhone = studentDocPhone || '';
 
   const calculateDollarPoints = (studentData) => {
-    const rewardsList = studentData.rewards || [];
+    const rewardsList = Array.isArray(studentData.rewards) ? studentData.rewards : [];
     let calculatedPoints = 0;
     for (const reward of rewardsList) {
-      const points = reward.dollars;
+      const points = reward?.dollars;
       if (typeof points === 'number') {
         calculatedPoints += points;
       } else if (typeof points === 'string') {
@@ -99,7 +101,7 @@ const StudentDetailsPage = () => {
   };
 
   const handleBack = () => {
-    if (isParentView) { navigate('/parent/dashboard'); return; }
+    if (isParentView) { handleBackNavigation(navigate, currentUser); return; }
     if (window.history.length > 1) {
       navigate(-1);
     } else {
@@ -122,6 +124,12 @@ const StudentDetailsPage = () => {
   useEffect(() => {
     setStudent(null);
     setLoadError('');
+    if (isParentView && parent) {
+      if (parent.student) loadStudentData(parent.student);
+      else setLoading(parent.loadingStudent);
+      if (parent.studentError) setLoadError('Could not load student details. Please check your connection and try again.');
+      return;
+    }
     if (!studentId) {
         setLoading(false);
         return;
@@ -153,7 +161,7 @@ const StudentDetailsPage = () => {
     }, failed);
 
     return () => { if (unsubscribe) unsubscribe(); if (stopFallback) stopFallback(); };
-  }, [studentId]);
+  }, [studentId, isParentView, parent?.student, parent?.studentError, parent?.loadingStudent]);
 
   useEffect(() => {
     if (!isParentView || !student) return;

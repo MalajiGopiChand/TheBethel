@@ -1,9 +1,7 @@
 import '../parent.css';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
-  AppBar,
-  Toolbar,
   Box,
   Typography,
   IconButton,
@@ -20,12 +18,11 @@ import {
 import {
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
-import { addDoc, collection, serverTimestamp, query, where, getDocs, getDoc, doc, onSnapshot } from '../../../services/studentData';
+import { addDoc, collection, serverTimestamp, query, where, getDoc, doc, onSnapshot } from '../../../services/studentData';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';
 import { UserRole } from '../../../types';
-import { getParentLang } from '../../../utils/parentI18n';
 
 const ParentComplaintsPage = () => {
   const navigate = useNavigate();
@@ -36,13 +33,14 @@ const ParentComplaintsPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [studentName, setStudentName] = useState('');
-  const [parentPhone, setParentPhone] = useState('');
+  const { student, parentLang } = useOutletContext();
+  const studentName = student?.name || currentUser?.studentName || '';
+  const [profilePhone, setProfilePhone] = useState('');
+  const parentPhone = String(profilePhone || student?.parentPhone || student?.phone || student?.contactNumber || student?.parentContact || currentUser?.phone || '').trim();
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState('');
   const [issueType, setIssueType] = useState('homework');
-  const parentLang = getParentLang();
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== UserRole.PARENT) {
@@ -51,31 +49,14 @@ const ParentComplaintsPage = () => {
   }, [currentUser, navigate]);
 
   useEffect(() => {
-    const fetchStudent = async () => {
-      if (!currentUser?.studentId) return;
-      const q = query(collection(db, 'students'), where('studentId', '==', currentUser.studentId));
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        const s = snap.docs[0].data();
-        setStudentName(s.name || '');
-        setParentPhone(String(s.parentPhone || s.phone || s.contactNumber || s.parentContact || currentUser?.phone || '').trim());
-      } else {
-        setParentPhone(String(currentUser?.phone || '').trim());
-      }
-
-      // Read only this parent's UID document; collection-wide queries are denied to parents.
-      const ownParent = await getDoc(doc(db, 'parents', currentUser.uid));
-      if (ownParent.exists()) {
-        const parent = ownParent.data();
-        const phone = String(parent.phone || parent.parentPhone || parent.contactNumber || '').trim();
-        if (phone) setParentPhone(phone);
-      }
-
-    };
-    setParentPhone(currentUser?.phone || '');
-    setStudentName(currentUser?.studentName || '');
-    fetchStudent().catch((e) => console.error('fetch student for complaint', e));
-  }, [currentUser]);
+    if (!currentUser?.uid) return;
+    let active = true;
+    getDoc(doc(db, 'parents', currentUser.uid)).then(snapshot => {
+      const profile = snapshot.data();
+      if (active) setProfilePhone(profile?.phone || profile?.parentPhone || profile?.contactNumber || '');
+    }).catch(error => console.error('Could not load parent contact', error));
+    return () => { active = false; };
+  }, [currentUser?.uid]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -134,18 +115,16 @@ const ParentComplaintsPage = () => {
 
   return (
     <Box className="parent-shell" sx={{ minHeight: '100vh' }}>
-      <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'background.paper', backgroundImage: 'none', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider', backdropFilter: 'blur(22px)' }}>
-        <Toolbar>
+      <Stack direction="row" alignItems="center" spacing={1}>
           <IconButton aria-label="Go back" onClick={() => handleBackNavigation(navigate, currentUser)} sx={{ mr: 1 }}>
             <BackIcon />
           </IconButton>
           <Typography variant="h6" fontWeight="bold">
             {parentLang === 'te' ? 'ఫిర్యాదు / సమస్య నమోదు' : 'Raise Complaint / Issue'}
           </Typography>
-        </Toolbar>
-      </AppBar>
+      </Stack>
 
-      <Container className="parent-enter" maxWidth="md" sx={{ py: 3 }}>
+      <Container disableGutters maxWidth="md" sx={{ py: 2 }}>
         <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {parentLang === 'te'

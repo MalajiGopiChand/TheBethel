@@ -9,7 +9,7 @@ import AdminLogin from './pages/auth/AdminLogin';
 import ParentLogin from './pages/auth/ParentLogin';
 import ParentSignUp from './pages/auth/ParentSignUp';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
-import ParentDashboard from './pages/parent/ParentDashboard';
+import ParentDashboard, { ParentHome } from './pages/parent/ParentDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import HomeworkPage from './pages/teacher/pages/HomeworkPage';
 import MessagingPage from './pages/teacher/pages/MessagingPage';
@@ -182,17 +182,14 @@ function App() {
           )
         }
       />
-      <Route path="/parent/child" element={currentUser?.role === UserRole.PARENT ? <StudentDetailsPage /> : <Navigate to="/" replace />} />
-      <Route
-        path="/parent/dashboard"
-        element={
-          currentUser && currentUser.role === UserRole.PARENT ? (
-            <ParentDashboard />
-          ) : (
-            <Navigate to="/" replace />
-          )
-        }
-      />
+      <Route path="/parent" element={currentUser?.role === UserRole.PARENT
+        ? <ParentDashboard key={JSON.stringify([currentUser.uid, currentUser.studentId])} />
+        : <Navigate to="/" replace />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<ParentHome />} />
+        <Route path="child" element={<StudentDetailsPage />} />
+        <Route path="complaints" element={<ParentComplaintsPage />} />
+      </Route>
       <Route
         path="/teacher/homework"
         element={
@@ -518,16 +515,6 @@ function App() {
         element={
           currentUser && currentUser.role === UserRole.PARENT ? (
             <ParentNotificationPage />
-          ) : (
-            <Navigate to="/" replace />
-          )
-        }
-      />
-      <Route
-        path="/parent/complaints"
-        element={
-          currentUser && currentUser.role === UserRole.PARENT ? (
-            <ParentComplaintsPage />
           ) : (
             <Navigate to="/" replace />
           )

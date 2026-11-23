@@ -1,39 +1,55 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Alert, Box, Paper, Typography, Stack, Chip, Grid, Button, useTheme } from '@mui/material';
-import { PersonRounded, CalendarMonthRounded, AttachMoneyRounded, LocalFireDepartmentRounded, AssignmentRounded, HelpOutlineRounded, EmojiEventsRounded, FamilyRestroomRounded, ArrowForwardRounded } from '@mui/icons-material';
-import ActionGrid from '../../../components/ActionGrid';
-import { parentAttendance } from '../../../utils/parentActivity';
+import { Link } from 'react-router-dom';
+import { Alert, Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { ArrowForwardRounded, ChatBubbleOutlineRounded, PersonOutlineRounded } from '@mui/icons-material';
+import { activityDate, parentAttendance } from '../../../utils/parentActivity';
 
-export default function HomeTab({ student, parentLang = 'te', onSelectTab }) {
-  const navigate = useNavigate(), theme = useTheme();
-  const text = (en, te) => parentLang === 'te' ? te : en;
+export default function HomeTab({ student, parentLang = 'te' }) {
+  const text = (english, telugu) => parentLang === 'te' ? telugu : english;
   if (!student) return <Alert severity="info">{text('No child is linked to your account. Please contact the school.', 'మీ ఖాతాకు పిల్లవాడి వివరాలు లేవు. పాఠశాలను సంప్రదించండి.')}</Alert>;
-  const records = parentAttendance(student), present = records.filter(record => record.status === 'present').length;
-  const attendance = records.length ? Math.round(present / records.length * 100) : 0;
-  const openDetails = section => navigate(`/parent/child${section ? `?section=${section}` : ''}`);
-  const actions = [
-    { title: text('My Child Details', 'నా పిల్లవాడి వివరాలు'), icon: <PersonRounded />, colorStart: '#4FACFE', colorEnd: '#00F2FE', onClick: () => openDetails() },
-    { title: text('View Attendance', 'హాజరు చూడండి'), icon: <CalendarMonthRounded />, colorStart: '#43E97B', colorEnd: '#38F9D7', onClick: () => openDetails('attendance') },
-    { title: text('Dollar History', 'డాలర్ల చరిత్ర'), icon: <AttachMoneyRounded />, colorStart: '#FF5858', colorEnd: '#F09819', onClick: () => openDetails('dollars') },
-    { title: text('Current Streak', 'వరుస హాజరు'), icon: <LocalFireDepartmentRounded />, colorStart: '#667eea', colorEnd: '#764ba2', onClick: () => openDetails('performance') },
-    { title: text('Homework', 'హోమ్‌వర్క్'), icon: <AssignmentRounded />, colorStart: '#FA709A', colorEnd: '#FEE140', onClick: () => onSelectTab(1) },
-    { title: text('Complaints & Help', 'ఫిర్యాదులు & సహాయం'), icon: <HelpOutlineRounded />, colorStart: '#4FACFE', colorEnd: '#00F2FE', onClick: () => navigate('/parent/complaints') },
-    { title: text('Leaderboard', 'ర్యాంకులు'), icon: <EmojiEventsRounded />, colorStart: '#FF5858', colorEnd: '#F09819', onClick: () => onSelectTab(2) },
-    { title: text('Family Profile', 'కుటుంబ వివరాలు'), icon: <FamilyRestroomRounded />, colorStart: '#8E2DE2', colorEnd: '#4A00E0', onClick: () => onSelectTab(3) },
+
+  const latest = parentAttendance(student)[0];
+  const date = latest && activityDate(latest.date);
+  const lastAttendance = latest?.status === 'present' ? text('Present', 'హాజరు') : text('Absent', 'గైర్హాజరు');
+  const details = [
+    [text('Latest attendance', 'తాజా హాజరు'), latest ? lastAttendance : '—',
+      date?.toLocaleDateString(parentLang === 'te' ? 'te-IN' : 'en-IN', { day: 'numeric', month: 'short', year: 'numeric' })],
+    [text('Dollar balance', 'డాలర్ల నిల్వ'), '$' + (Number(student.dollarPoints) || 0)],
   ];
-  return <Box className="parent-enter">
-    <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, mb: 3, borderRadius: 4, background: `linear-gradient(120deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`, color: '#fff' }}>
-      <Typography variant="body2" sx={{ opacity: .9 }}>{text('Welcome to your parent dashboard', 'మీ పేరెంట్ డ్యాష్‌బోర్డ్‌కు స్వాగతం')}</Typography>
-      <Typography component="h1" variant="h4" fontWeight={800} sx={{ mt: 1, overflowWrap: 'anywhere' }}>{student.name}</Typography>
-      <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mt: 2 }}>{[student.classType, student.place || student.location, student.studentId].filter(Boolean).map((value, index) => <Chip key={index} size="small" label={value} sx={{ color: '#fff', bgcolor: '#ffffff26' }} />)}</Stack>
-      <Button onClick={() => openDetails()} endIcon={<ArrowForwardRounded />} sx={{ mt: 2, color: '#fff', border: '1px solid #ffffff70' }}>{text('View full child profile', 'పిల్లవాడి పూర్తి వివరాలు')}</Button>
+
+  return <Stack spacing={{ xs: 2, sm: 3 }}>
+    <Paper elevation={0} sx={theme => ({
+      borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider',
+      backgroundImage: 'none',
+      '& .child-heading': { color: '#fff', background: `linear-gradient(115deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})` },
+    })}>
+      <Box className="child-heading" sx={{ p: { xs: 2.5, sm: 4 } }}>
+        <Typography variant="body2">{text('My child', 'నా బిడ్డ')}</Typography>
+        <Typography component="h1" variant="h4" fontWeight={800} sx={{ my: 1, overflowWrap: 'anywhere' }}>{student.name}</Typography>
+        <Stack direction="row" flexWrap="wrap" gap={1}>{[student.classType, student.place || student.location, student.studentId].filter(Boolean).map((value, index) =>
+          <Chip key={index} size="small" label={value} sx={{ color: 'inherit', bgcolor: '#ffffff26' }} />)}</Stack>
+      </Box>
+      <Box component="dl" sx={{ m: 0, py: 2.5, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+        {details.map(([label, value, note], index) => <Box key={label} sx={{ px: { xs: 2, sm: 4 }, borderLeft: index ? '1px solid' : 0, borderColor: 'divider' }}>
+          <Typography component="dt" variant="body2" color="text.secondary">{label}</Typography>
+          <Typography component="dd" sx={{ m: 0, color: 'primary.main', fontSize: { xs: 21, sm: 26 }, fontWeight: 800 }}>{value}</Typography>
+          {note && <Typography variant="caption" color="text.secondary">{note}</Typography>}
+        </Box>)}
+      </Box>
     </Paper>
-    <Grid container spacing={1.5} sx={{ mb: 3 }}>
-      {[[text('Attendance', 'హాజరు'), `${attendance}%`, 'attendance'], [text('Dollar Points', 'డాలర్లు'), `$${Number(student.dollarPoints) || 0}`, 'dollars'], [text('Current Streak', 'వరుస హాజరు'), Number(student.currentStreak) || 0, 'performance']].map(([label, value, section]) => <Grid item xs={4} key={section}><Paper component={Button} onClick={() => openDetails(section)} sx={{ width: '100%', p: { xs: 1.5, sm: 2 }, display: 'flex', flexDirection: 'column', textTransform: 'none', borderRadius: 3, color: 'text.primary', height: '100%' }}><Typography sx={{ fontSize: { xs: 22, sm: 28 }, fontWeight: 800, color: 'primary.main' }}>{value}</Typography><Typography variant="caption" sx={{ textAlign: 'center' }}>{label}</Typography></Paper></Grid>)}
-    </Grid>
-    <Typography component="h2" variant="h6" fontWeight={800}>{text('Parent options', 'తల్లిదండ్రుల ఎంపికలు')}</Typography>
-    <Typography variant="body2" color="text.secondary" sx={{ mt: .5, mb: 1.5 }}>{text('Choose an option to explore your child’s progress.', 'మీ పిల్లవాడి పురోగతి చూడటానికి ఒక ఎంపికను ఎంచుకోండి.')}</Typography>
-    <Box sx={{ mx: -2 }}><ActionGrid actions={actions} /></Box>
-  </Box>;
+    <Box component="nav" aria-label={text('Parent actions', 'తల్లిదండ్రుల ఎంపికలు')} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+      {[
+        ['/parent/child', <PersonOutlineRounded />, text('My Child Details', 'నా పిల్లవాడి వివరాలు'), text('View attendance and rewards', 'హాజరు, బహుమతులు చూడండి')],
+        ['/parent/complaints', <ChatBubbleOutlineRounded />, text('Complaints & Help', 'ఫిర్యాదులు & సహాయం'), text('Contact the school and read replies', 'పాఠశాలను సంప్రదించండి, జవాబులు చూడండి')],
+      ].map(([to, icon, title, description]) => <Button component={Link} to={to} key={to} sx={{
+        p: 2, gap: 1.5, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', textAlign: 'left', textTransform: 'none',
+        '&:focus-visible': { outline: '2px solid', outlineOffset: 2 },
+      }}>
+        <Box sx={theme => ({ display: 'grid', placeItems: 'center', flexShrink: 0, width: 42, height: 42, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, .09) })}>{icon}</Box>
+        <Box sx={{ flex: 1 }}><Typography component="span" display="block" color="text.primary" fontWeight={750}>{title}</Typography><Typography component="span" variant="body2" color="text.secondary">{description}</Typography></Box>
+        <ArrowForwardRounded fontSize="small" />
+      </Button>)}
+    </Box>
+  </Stack>;
 }
