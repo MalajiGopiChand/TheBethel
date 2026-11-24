@@ -1,0 +1,245 @@
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('/fonts/nunito-sans-latin.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+.school-illustrated {
+  --school-font: 'Nunito Sans', 'Segoe UI', sans-serif;
+  --admin-ink: #17152d;
+  --admin-surface: linear-gradient(135deg, #ffffffed, #f7f2ffed 55%, #eaeaffd9);
+  font-family: var(--school-font);
+  background: radial-gradient(ellipse at 15% 0%, #dbc9ff70, transparent 40%), radial-gradient(ellipse at 95% 70%, #edddff80, transparent 55%), linear-gradient(145deg, #f7f3ff, #f0eaff 55%, #f9effc);
+  overflow-x: clip;
+}
+.school-illustrated .MuiTypography-root, .school-illustrated .MuiButtonBase-root, .school-illustrated .MuiInputBase-root, .school-illustrated .MuiInputLabel-root,
+.school-illustrated .MuiChip-root, .school-illustrated .MuiTableCell-root, .school-illustrated .parent-portal, .school-illustrated .MuiBottomNavigationAction-label {
+  font-family: var(--school-font);
+}
+.school-illustrated .MuiTypography-h4, .school-illustrated .MuiTypography-h5, .school-illustrated .MuiTypography-h6 { letter-spacing: -.035em; font-weight: 900; }
+.school-illustrated .MuiButton-containedPrimary { border: 1px solid #ffffff75; }
+.school-illustrated .MuiButton-root { font-weight: 800; }
+.school-illustrated .MuiCard-root, .school-illustrated .MuiPaper-rounded:not(.MuiAppBar-root):not(.MuiAlert-root):not(.admin-dock):not(.MuiMenu-paper):not(.MuiPopover-paper) {
+  border: 1.5px solid #ffffffed;
+  box-shadow: inset 0 1px 2px #ffffff, 0 6px 14px #7e5fba14, 0 2px 5px #7e5fba0c;
+  border-radius: 25px;
+}
+.school-illustrated .MuiCardContent-root::after { opacity: .6; }
+.school-illustrated .MuiAlert-root { border: 1px solid #ded6f7; background-image: var(--admin-surface); box-shadow: 0 5px 12px #7453a710; border-radius: 23px; }
+.school-illustrated .MuiAlert-message { font-size: .9375rem; }
+.school-illustrated .MuiOutlinedInput-root { border-radius: 17px; background: linear-gradient(140deg, #ffffffee, #f6f3ffdd); }
+.school-illustrated .MuiOutlinedInput-notchedOutline { border-color: #c8bfdc; }
+.school-illustrated .MuiInputLabel-root { color: #686279; }
+.school-illustrated .MuiAvatar-root { background-image: linear-gradient(135deg, #b7a1ff, #7166ff); box-shadow: inset 0 1px 2px #ffffff80; }
+.school-illustrated .MuiTableCell-head { background: #f4effc; color: #26203c; }
+.school-illustrated .MuiTableRow-root:last-child .MuiTableCell-root { border-bottom: none; }
+.school-illustrated .parent-portal { background: transparent; }
+.school-illustrated .teacher-home { background: transparent; }
+.school-illustrated.school-auth #admin-main > .page-shell > .MuiBox-root { background: transparent !important; }
+.school-illustrated .portal-hero { background: linear-gradient(135deg, #a76cf3, #7750df); }
+.school-illustrated .MuiPaper-root:has(> .MuiBottomNavigation-root) { background: linear-gradient(130deg, #fffffff5, #f9f2fff0); border: 2px solid white; box-shadow: 0 10px 28px #8e62c330; }
+.school-illustrated .MuiBottomNavigation-root { background: transparent; }
+.school-illustrated .MuiBottomNavigationAction-root { color: #686177; }
+.school-illustrated .MuiBottomNavigationAction-root.Mui-selected { background: linear-gradient(140deg, #c198ff, #994bf8 55%, #792df0); border-radius: 24px; color: white; box-shadow: inset 0 2px 3px #ffffff77; }
+.school-illustrated .admin-page { background: transparent; }
+.school-illustrated .admin-page:not(.admin-dashboard) > .MuiAppBar-root,
+.school-illustrated .admin-page:not(.admin-dashboard) > .MuiPaper-root:first-child {
+  background: radial-gradient(ellipse at 95% 30%, #d8c3ff9c, transparent 50%), url('/admin-landscape.svg') right bottom / auto 100% no-repeat, linear-gradient(130deg, #fcfaff, #ece4ff) !important;
+}
+.school-illustrated .admin-page:not(.admin-dashboard) > .MuiAppBar-root { padding-top: 6px; padding-bottom: 14px; }
+.school-art { position: relative; overflow: hidden; display: block; flex-shrink: 0; pointer-events: none; user-select: none; isolation: isolate; }
+.school-art > img { position: absolute; max-width: none; object-fit: fill; margin: 0; }
+.school-art:not(.school-art--hero) { mix-blend-mode: multiply; }
+.school-illustrated .admin-page > .dashboard-hero.MuiAppBar-root {
+  background: radial-gradient(ellipse at 48% 70%, #ffe5ef, transparent 55%), linear-gradient(125deg, #e8dcff, #eee5ff 65%, #d7c4ff) !important;
+  border-radius: 0;
+  overflow: visible;
+  position: relative;
+}
+.school-illustrated .dashboard-hero .admin-header { position: relative; z-index: 1; padding: 20px 24px 12px; }
+.school-illustrated .admin-brand img { width: 70px; height: 70px; border-radius: 23px; border: 2px solid white; box-shadow: 0 7px 12px #8265b42b; }
+.school-illustrated .admin-brand-title { border-color: #9c76cc; }
+.school-illustrated .admin-brand-title h1 { font-size: clamp(1.15rem, 2.6vw, 2rem); font-weight: 900; color: #110a31; }
+.school-illustrated .admin-brand-title > p { color: #231339; font-weight: 800; }
+.school-illustrated .dashboard-hero .MuiButton-colorError { background: linear-gradient(135deg, white, #f0d5ff); border: 1px solid #fff; box-shadow: 0 5px 14px #9f75bf3b; }
+.dashboard-hero-art { width: 100%; max-width: 1100px; margin-inline: auto; }
+.dashboard-hero-art > img { filter: saturate(1.03); }
+.dashboard-hero-art > img { animation: school-scene-drift 7s ease-in-out infinite; }
+.dashboard-hero-art::after { content: '✝'; position: absolute; right: 26%; top: -20%; color: #a858b6; font-size: clamp(24px, 4.6vw, 44px); text-shadow: 2px 2px #7331a2; font-family: serif; }
+.dashboard-hero-art { overflow: visible; }
+.dashboard-hero-art > img { clip-path: inset(0); }
+.school-illustrated .admin-dashboard.is-home .admin-page-content { padding-top: 0; position: relative; margin-top: -2px; }
+.sunday-overview { display: grid; grid-template-columns: 1.45fr 1fr; gap: 18px; padding: 14px; margin-bottom: 18px; position: relative; z-index: 1; }
+.sunday-attendance { background: radial-gradient(ellipse at 0 0, #b18afa, transparent 60%), linear-gradient(130deg, #ad70f6, #7340df); color: white; border: 1px solid #dab7ff; border-radius: 23px; padding: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: inset 0 1px 5px #ffffff80, 0 6px 12px #8b51ce38; }
+.sunday-attendance .MuiTypography-root { color: white; }
+.sunday-attendance .attendance-present { font-size: clamp(1.1rem, 2.2vw, 1.7rem); font-weight: 800; white-space: nowrap; line-height: 1.3; }
+.attendance-present strong { font-size: 1.55em; }
+.attendance-ring { width: clamp(72px, 13vw, 110px); aspect-ratio: 1; border-radius: 50%; background: conic-gradient(#2cf28e calc(var(--progress) * 1%), #dac0ff87 0); display: grid; place-items: center; position: relative; flex-shrink: 0; box-shadow: inset 0 1px 2px #ffffff60; animation: school-ring-in .8s ease both; }
+.attendance-ring::before { content: ''; position: absolute; inset: 11%; border-radius: 50%; background: linear-gradient(140deg, #ab72ed, #7b40d4); }
+.attendance-ring strong { position: relative; font-size: clamp(1rem, 2.6vw, 1.8rem); }
+.sunday-mini-stats { display: grid; align-content: center; gap: 18px; border-left: 1px solid #d6c7ef; padding-left: 14px; }
+.sunday-mini-stats > div { display: flex; align-items: center; gap: 12px; }
+.sunday-mini-stats svg { color: #9b46ed; width: 36px; height: 36px; background: #f2e6ff; border-radius: 12px; padding: 4px; filter: drop-shadow(0 2px 2px #cbb0ed50); }
+.sunday-mini-stats span { font-size: .875rem; line-height: 1.3; }
+.sunday-mini-stats strong { display: block; font-size: 1.8rem; font-weight: 900; }
+.performers-panel { padding: 16px 20px 18px; margin-bottom: 20px; }
+.performers-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 24px; }
+.performers-heading h2 { font-size: 1.4rem; }
+.performers-heading .MuiButton-root { color: #8c2ce1; padding-inline: 8px; }
+.school-illustrated .admin-home .admin-podium { margin: 0; max-width: none; align-items: end; gap: 22px; padding: 0 18px; }
+.school-illustrated .admin-podium-item { position: relative; padding: 22px 8px 12px; border-radius: 25px; background: linear-gradient(145deg, #eef0ff, #e5e2ff); }
+.school-illustrated .admin-podium-item[data-rank='1'] { background: linear-gradient(145deg, #fff5d9, #ffe5b4) !important; border: 2px solid white !important; transform: translateY(-4px); }
+.school-illustrated .admin-podium-item[data-rank='3'] { background: linear-gradient(145deg, #ffe5e7, #f6ddeb); }
+.school-illustrated .admin-podium-medal { position: absolute; left: 50%; top: -24px; transform: translateX(-50%); margin: 0; font-size: 31px; filter: drop-shadow(0 3px 3px #9872b52b); animation: school-float 6s ease-in-out infinite; }
+.school-illustrated .admin-podium-item[data-rank='1'] .admin-podium-medal { font-size: 39px; top: -30px; }
+.performer-portrait { width: 70px; max-width: 80%; margin: 0 auto 4px; border-radius: 50%; }
+.school-illustrated .admin-quick-heading { margin-bottom: 12px; }
+.school-illustrated .admin-home .action-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.school-illustrated .admin-home .action-tile.MuiCard-root { min-height: 74px; border-radius: 23px; }
+.school-illustrated .admin-home .action-tile .MuiCardContent-root { min-height: 74px; padding: 14px; gap: 12px; }
+.school-illustrated .admin-home .action-tile .MuiAvatar-root { width: 35px; height: 35px; box-shadow: none; background: transparent; }
+.school-illustrated .admin-home .action-tile .action-subtitle { display: none; }
+.school-illustrated .admin-home .action-tile .MuiCardContent-root > div:first-child { display: none; }
+.school-illustrated .admin-home .action-tile .MuiTypography-root { font-weight: 800; }
+.school-illustrated .admin-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; margin-top: 18px; }
+.school-illustrated .admin-stats .admin-stat:last-child { grid-column: auto; }
+.school-illustrated .admin-stat { display: block; position: relative; min-height: 150px; overflow: hidden; padding: 20px; }
+.school-illustrated .admin-stat[data-tone='0'] { background: linear-gradient(140deg, #fff, #e2dfff); }
+.school-illustrated .admin-stat[data-tone='1'] { background: linear-gradient(140deg, #fff, #dcf4e9); }
+.school-illustrated .admin-stat[data-tone='2'] { background: linear-gradient(140deg, #fff, #fff0dd); }
+.school-illustrated .admin-stat .admin-stat-icon { background: transparent; width: 34px; height: 34px; margin-bottom: 5px; }
+.school-illustrated .admin-stat svg { font-size: 34px; filter: drop-shadow(0 3px 3px #9677b329); }
+.school-illustrated .admin-stat[data-tone='2'] svg { color: #e8a400; }
+.school-stat-number { font-size: clamp(1.7rem, 4vw, 2.9rem); letter-spacing: -.04em; }
+.stat-books { position: absolute; width: 70px; right: 5px; bottom: 0; }
+.school-illustrated .admin-dock { border: 2px solid white; background: linear-gradient(130deg, #fffffff5, #f9f2fff0); box-shadow: inset 0 2px 4px #fff, 0 12px 30px #8e62c33b; }
+.school-illustrated .admin-dock .MuiBottomNavigationAction-root.Mui-selected { background: linear-gradient(140deg, #c198ff, #994bf8 55%, #792df0); box-shadow: inset 0 2px 3px #ffffff77, 0 4px 8px #ba8bd850; border: 1px solid #cba2ff; }
+.school-illustrated .admin-dock .MuiBottomNavigationAction-label { font-weight: 700; }
+.school-illustrated .reward-page > .MuiAppBar-root { min-height: 122px; position: relative; }
+.reward-page .reward-header-art { position: absolute; width: 126px; right: 12px; bottom: 0; animation: school-float 5s ease-in-out infinite; mask-image: radial-gradient(ellipse at 53% 48%, black 46%, transparent 75%); }
+.school-illustrated .reward-page .reward-summary { margin-top: 10px; }
+.school-illustrated .reward-page .reward-student-list .MuiList-root { gap: 12px; }
+.school-illustrated .reward-page .MuiListItem-root { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; row-gap: 0; padding: 12px 16px; }
+.school-illustrated .reward-page .MuiListItem-root > .MuiBox-root { grid-column: 1; }
+.school-illustrated .reward-page .MuiListItem-root > .MuiChip-root { grid-column: 2; grid-row: 1; align-self: start; }
+.school-illustrated .reward-page .MuiListItem-root > .MuiButton-root { grid-column: 1 / -1; margin-left: 50px; margin-top: 8px; width: calc(100% - 50px); min-height: 37px; background: linear-gradient(130deg, #8881ed, #685bb9); color: white; box-shadow: inset 0 1px 2px #ffffff88, 0 3px 6px #8f75c730; border: 0; }
+.school-illustrated .reward-page .MuiListItem-root .MuiAvatar-root { width: 40px; height: 40px; }
+.school-illustrated .reward-page .reward-summary { display: none; }
+.school-illustrated .reward-page .reward-filters { grid-template-columns: 1fr 1fr 1.4fr; gap: 10px; }
+.school-illustrated .reward-page .reward-filters > * { min-width: 0; grid-column: auto; }
+.school-illustrated .reward-page .reward-filters .MuiInputBase-root { font-size: .875rem; }
+.reward-dialog .MuiDialog-paper { overflow: visible; }
+.reward-dialog .reward-dialog-heading { position: relative; padding: 112px 28px 20px; text-align: center; background: radial-gradient(ellipse at top, #eadcff, transparent 75%); border-radius: 28px 28px 0 0; }
+.reward-dialog-heading .school-art { width: 170px; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); animation: school-gift-in .5s ease both; }
+.reward-dialog-heading .school-art--gift { mask-image: radial-gradient(ellipse at 50% 50%, black 48%, transparent 76%); }
+.reward-dialog-heading h2 { margin: 0; font: 900 1.4rem/1.2 'Nunito Sans', sans-serif; color: #17152d; }
+.reward-dialog-heading h2 strong { display: block; font-size: 1.6rem; }
+.reward-dialog-heading .reward-current-balance { display: inline-block; border-radius: 20px; background: #e5dfff; color: #3b3376; padding: 5px 14px; margin-top: 12px; font-weight: 800; font-size: .9375rem; }
+.reward-dialog .reward-close { position: absolute; top: 14px; right: 14px; z-index: 2; background: #ffffffdd; box-shadow: 0 3px 8px #a48bc327; color: #35264c; }
+.reward-dialog .MuiDialogActions-root { display: flex; gap: 8px; }
+.reward-dialog .MuiDialogActions-root > .MuiButton-root { flex: 1; min-height: 46px; }
+.reward-dialog .MuiDialogActions-root > .MuiButton-root { white-space: nowrap; font-size: .875rem; padding-inline: 12px; }
+.reward-dialog .MuiTypography-root, .reward-dialog .MuiButton-root, .reward-dialog .MuiInputBase-root, .reward-dialog .MuiInputLabel-root { font-family: 'Nunito Sans', 'Segoe UI', sans-serif; }
+.school-illustrated .attendance-student-list.MuiPaper-root { border: 0; background: transparent; box-shadow: none; }
+.school-illustrated .attendance-student-list .MuiList-root { display: grid; gap: 12px; }
+.school-illustrated .attendance-student-list .MuiDivider-root { display: none; }
+.school-illustrated .attendance-student-list .MuiListItem-root { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 0 12px; padding: 14px 18px; border: 1px solid #fff; border-radius: 24px; background: var(--admin-surface); box-shadow: 0 5px 12px #8467ba13; }
+.school-illustrated .attendance-student-list .MuiListItemText-root { min-width: 0; }
+.school-illustrated .attendance-student-list .attendance-row-actions { position: static; transform: none; grid-column: 2; margin-top: 6px; }
+.school-illustrated .attendance-student-list .MuiStack-root { flex-wrap: wrap; gap: 6px; }
+.school-illustrated .attendance-student-list .MuiChip-root { flex-basis: 100%; margin: 0 0 4px; }
+.school-illustrated .attendance-student-list .MuiButton-root { flex: 1; min-width: 0; margin: 0; min-height: 33px; padding: 3px 10px; font-size: .8125rem; }
+.school-illustrated .attendance-student-list .MuiButton-containedPrimary { background: linear-gradient(#faf8ff, #e6e0f4); color: #5c566e; box-shadow: 0 2px 4px #7c6b9b22; }
+.school-illustrated .attendance-quick-stats { border: 1px solid #fff; background: var(--admin-surface); box-shadow: 0 5px 14px #9f7ac722; border-radius: 28px; }
+.school-illustrated .attendance-filters { overflow: visible; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.school-illustrated .attendance-filters > * { min-width: 0; }
+.school-illustrated .attendance-filters > :last-child { grid-column: 1 / -1; }
+.school-illustrated .summary-stat-card .MuiCardContent-root { padding: 12px 16px; gap: 12px; }
+.summary-stat-card .summary-card-art { width: 56px; margin-left: auto; mask-image: radial-gradient(ellipse at center, black 50%, transparent 78%); }
+.school-illustrated .summary-stat-card[data-tone='students'] { background: linear-gradient(130deg, #faf8ff, #e9e7ff); }
+.school-illustrated .summary-stat-card[data-tone='present'] { background: linear-gradient(130deg, #fff, #e0f6eb); }
+.school-illustrated .summary-stat-card[data-tone='absent'] { background: linear-gradient(130deg, #fff, #ffe5ea); }
+.school-illustrated .summary-stat-card[data-tone='clipboard'] { background: linear-gradient(130deg, #fff, #fff0d9); }
+.school-illustrated .summary-stat-card .MuiAvatar-root { width: 40px; height: 40px; background-image: none; }
+.school-illustrated .summary-stat-card .MuiTypography-h4 { font-size: 1.8rem; line-height: 1.15; }
+.school-illustrated .summary-page .hide-scrollbar { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); overflow: visible; padding-top: 6px; }
+.school-illustrated .summary-page .hide-scrollbar > * { min-width: 0; }
+.school-illustrated .summary-stat-grid { row-gap: 0; }
+.school-illustrated .school-page-enter { animation: school-page-in .45s ease both; }
+@keyframes school-page-in { from { opacity: .35; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+@keyframes school-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -5px; } }
+@keyframes school-gift-in { from { opacity: 0; scale: .88; } to { opacity: 1; scale: 1; } }
+@keyframes school-ring-in { from { opacity: .3; scale: .85; } to { opacity: 1; scale: 1; } }
+@keyframes school-scene-drift { 0%, 100% { translate: 0 0; } 50% { translate: 0 -2px; } }
+@media (hover: hover) {
+  .school-illustrated .action-tile:hover { box-shadow: 0 9px 20px #9259c32c; }
+  .school-illustrated .admin-podium-item:hover { translate: 0 -3px; transition: translate .2s ease; }
+}
+@media (max-width: 600px) {
+  .school-illustrated .dashboard-hero .admin-header { padding: 14px 16px 9px; gap: 6px; }
+  .school-illustrated .admin-brand { gap: 10px; }
+  .school-illustrated .admin-brand img { width: 52px; height: 52px; border-radius: 17px; }
+  .school-illustrated .admin-brand-title h1 { font-size: 1.13rem; }
+  .school-illustrated .admin-brand-title > p { font-size: .85rem; }
+  .school-illustrated .dashboard-hero .MuiButton-root { font-size: .8125rem; min-width: 0; padding: 6px 11px; }
+  .school-illustrated .dashboard-hero .MuiButton-startIcon { margin-right: 4px; }
+  .school-illustrated .admin-page-content { padding: 16px 12px; }
+  .sunday-overview { grid-template-columns: 1.55fr 1fr; gap: 9px; padding: 9px; border-radius: 25px; }
+  .sunday-attendance { padding: 12px; gap: 7px; border-radius: 20px; }
+  .sunday-attendance .MuiTypography-root { font-size: .8rem; }
+  .sunday-attendance > div:first-child > .MuiTypography-root:first-child { font-size: .75rem; white-space: nowrap; }
+  .sunday-attendance .attendance-present { font-size: .95rem; }
+  .attendance-ring { width: 62px; }
+  .attendance-ring strong { font-size: 1.05rem; }
+  .sunday-mini-stats { padding-left: 8px; gap: 12px; }
+  .sunday-mini-stats > div { gap: 6px; }
+  .sunday-mini-stats svg { width: 26px; height: 26px; padding: 2px; border-radius: 8px; }
+  .sunday-mini-stats span { font-size: .72rem; }
+  .sunday-mini-stats strong { font-size: 1.35rem; }
+  .performers-panel { padding: 12px 12px 14px; }
+  .performers-heading { margin-bottom: 26px; }
+  .performers-heading h2 { font-size: 1.2rem; }
+  .performers-heading .MuiButton-root { font-size: .8125rem; min-height: 32px; }
+  .school-illustrated .admin-home .admin-podium { gap: 14px; padding: 0 7px; }
+  .school-illustrated .admin-podium-item { padding: 16px 4px 9px; border-radius: 20px; }
+  .school-illustrated .admin-podium-item .MuiTypography-root { font-size: .75rem; line-height: 1.25; }
+  .school-illustrated .admin-podium-item .MuiTypography-root:last-child { font-size: 1.18rem; }
+  .school-illustrated .admin-podium-medal { font-size: 25px; top: -22px; }
+  .school-illustrated .admin-podium-item[data-rank='1'] .admin-podium-medal { font-size: 31px; top: -28px; }
+  .performer-portrait { width: 52px; }
+  .school-illustrated .admin-home .action-grid { gap: 9px; }
+  .school-illustrated .admin-home .action-tile.MuiCard-root { min-height: 59px; border-radius: 17px; }
+  .school-illustrated .admin-home .action-tile .MuiCardContent-root { min-height: 59px; padding: 10px 8px; gap: 6px; }
+  .school-illustrated .admin-home .action-tile .MuiAvatar-root { width: 25px; height: 29px; border-radius: 0; }
+  .school-illustrated .admin-home .action-tile .MuiTypography-root { font-size: .7rem; line-height: 1.22; overflow-wrap: normal; word-break: normal; }
+  .school-illustrated .admin-stat { padding: 13px 10px; min-height: 136px; border-radius: 22px; }
+  .school-illustrated .admin-stat .MuiTypography-root:first-child { font-size: .8rem; line-height: 1.2; }
+  .school-stat-number { font-size: clamp(1.6rem, 7vw, 2.25rem); }
+  .school-illustrated .admin-stats { gap: 10px; }
+  .school-illustrated .admin-stat .admin-stat-icon { width: 27px; height: 27px; }
+  .school-illustrated .admin-stat svg { font-size: 27px; }
+  .stat-books { width: 53px; }
+  .school-illustrated .reward-page .reward-filters { grid-template-columns: .85fr 1fr 1.4fr; gap: 8px; }
+  .school-illustrated .reward-page .reward-filters .MuiInputBase-root { font-size: .8125rem; }
+  .school-illustrated .reward-page .reward-filters .MuiSelect-select { padding-left: 10px; padding-right: 25px; }
+  .school-illustrated .reward-page .reward-filters input { padding: 12px 10px; }
+  .school-illustrated .summary-stat-grid > .MuiGrid-item { padding-top: 12px; }
+  .school-illustrated .summary-stat-card .MuiTypography-body2 { font-size: .875rem; }
+  .school-illustrated .attendance-filters .MuiInputBase-root { font-size: .8125rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .school-illustrated *, .school-illustrated *::before, .school-illustrated *::after, .reward-dialog * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+.school-illustrated.admin-dark { --admin-ink: #f6f0ff; --admin-surface: linear-gradient(135deg, #2d263e, #252137); background: #191426; }
+.school-illustrated.admin-dark .MuiOutlinedInput-root { background: #2b233b; }
+.school-illustrated.admin-dark .MuiAppBar-root, .school-illustrated.admin-dark .admin-page > .dashboard-hero.MuiAppBar-root { background: linear-gradient(135deg, #30233f, #211b35) !important; }
+.school-illustrated.admin-dark .admin-page:not(.admin-dashboard) > .MuiPaper-root:first-child,
+.school-illustrated.admin-dark .admin-page:not(.admin-dashboard) > .MuiAppBar-root { background: linear-gradient(135deg, #30233f, #211b35) !important; }
+.school-illustrated.admin-dark .admin-brand-title h1, .school-illustrated.admin-dark .admin-brand-title > p { color: #f6f0ff; }
+.school-illustrated.admin-dark .admin-stat, .school-illustrated.admin-dark .summary-stat-card { background: var(--admin-surface); }
+.school-illustrated.admin-dark .MuiPaper-root:has(> .MuiBottomNavigation-root), .school-illustrated.admin-dark .admin-dock { background: #2b223bef; border-color: #655579; }
+.school-illustrated.admin-dark .MuiBottomNavigationAction-root { color: #c4b4d7; }
+.school-illustrated.admin-dark .MuiBottomNavigationAction-root.Mui-selected { color: white; }
+.reward-dialog-dark .reward-dialog-heading { background: linear-gradient(145deg, #3e2c55, #292037); }
+.reward-dialog-dark .reward-dialog-heading h2 { color: #f9f1ff; }

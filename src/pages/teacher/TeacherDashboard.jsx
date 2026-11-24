@@ -36,6 +36,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole } from '../../types';
 import InstallButton from '../../components/InstallButton';
+import SchoolArtwork from '../../components/SchoolArtwork';
 
 // Components
 import HomeTab from './components/HomeTab';
@@ -182,7 +183,8 @@ const TeacherDashboard = () => {
     >
       {/* Top App Bar */}
       <AppBar
-        position="sticky"
+        position={currentTab === 0 ? 'static' : 'sticky'}
+        className={currentTab === 0 ? 'dashboard-hero' : ''}
         elevation={0}
         sx={{
           bgcolor: 'transparent',
@@ -269,6 +271,7 @@ const TeacherDashboard = () => {
             </Box>
           )}
         </Toolbar>
+        {currentTab === 0 && <SchoolArtwork name="hero" className="dashboard-hero-art" />}
       </AppBar>
 
       {/* Main Content Area */}

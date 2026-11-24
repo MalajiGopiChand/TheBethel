@@ -28,7 +28,8 @@ export const websitePeriodsEnabled=false;export const setActivePeriod=()=>{};exp
 export const Timestamp={fromDate:date=>({toDate:()=>date})};
 `;
 const mockAuth = `import React from 'react';
-const user={uid:'fixture-admin',name:'Admin',email:'admin@example.com',role:'ADMIN'};
+const previewRole=new URLSearchParams(window.location.search).get('qaRole')||'admin';
+const user=previewRole==='signedout'?null:{uid:'fixture-admin',name:previewRole==='parent'?'Anita Kumar':'Admin',email:'admin@example.com',role:previewRole.toUpperCase(),studentId:'STU001',studentName:'Aarav Kumar',isVerified:true,isApproved:true,approvalState:'approved'};
 export const useAuth=()=>({currentUser:user,firebaseUser:user,loading:false,error:null,clearError(){},logout:async()=>{},refreshUserProfile:async()=>{}});
 export const AuthProvider=({children})=>children;`;
 const mockNotifications = `export const retryNotifications=async()=>{};export const notifySuccess=async()=>{};export const notifyError=async()=>{};export const requestNotificationPermission=async()=>false;export const registerPushTokenForUser=async()=>{};export const listenForForegroundPushMessages=async()=>()=>{};export const showAppNotification=async()=>{};`;

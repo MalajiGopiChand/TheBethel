@@ -369,7 +369,7 @@ const HomeTab = () => {
   };
 
   return (
-    <Box 
+    <Box className="teacher-home"
       sx={{ 
         pb: isMobile ? 8 : 4, // Add padding bottom for mobile bottom bar
         minHeight: '100vh',
@@ -454,13 +454,6 @@ const HomeTab = () => {
         {/* Podium Section */}
         {overview.topStudents.length > 0 && (
           <Box sx={{ mb: 3 }}>
-            <Typography 
-              variant="subtitle1" 
-              fontWeight="600" 
-              sx={{ mb: 1.5, px: 0.5 }}
-            >
-              🏆 Top Performers
-            </Typography>
             <PodiumSection topStudents={overview.topStudents} />
           </Box>
         )}

@@ -50,6 +50,7 @@ import {
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';
+import SchoolArtwork from '../../../components/SchoolArtwork';
 
 const AttendanceSummaryPage = () => {
   const navigate = useNavigate();
@@ -140,9 +141,11 @@ const AttendanceSummaryPage = () => {
   };
 
   // Helper for Stats Cards
-  const StatCard = ({ title, value, icon, color, delay }) => (
+  const StatCard = ({ title, value, icon, color, delay, artwork }) => (
     <Grow in={!loading} timeout={delay}>
       <Card 
+        className="summary-stat-card"
+        data-tone={artwork}
         elevation={0}
         sx={{ 
           height: '100%', 
@@ -167,13 +170,14 @@ const AttendanceSummaryPage = () => {
               {value}
             </Typography>
           </Box>
+          <SchoolArtwork name={artwork} className="summary-card-art" />
         </CardContent>
       </Card>
     </Grow>
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f5f7fa', display: 'flex', flexDirection: 'column' }}>
+    <Box className="admin-page summary-page" sx={{ minHeight: '100vh', bgcolor: '#f5f7fa', display: 'flex', flexDirection: 'column' }}>
       
       {/* 1. Glass Header (Sticky) */}
       <AppBar
@@ -235,18 +239,18 @@ const AttendanceSummaryPage = () => {
         ) : (
           <>
             {/* 3. Stats Cards */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid container className="summary-stat-grid" spacing={3} sx={{ mb: 3 }}>
               <Grid item xs={12} sm={6} md={3}>
-                <StatCard title="Total Students" value={overallStats.total} icon={<TotalIcon />} color={theme.palette.primary.main} delay={200} />
+                <StatCard artwork="students" title="Total Students" value={overallStats.total} icon={<TotalIcon />} color={theme.palette.primary.main} delay={200} />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <StatCard title="Present (Selected Day)" value={overallStats.present} icon={<PresentIcon />} color={theme.palette.success.main} delay={400} />
+                <StatCard artwork="present" title="Present (Selected Day)" value={overallStats.present} icon={<PresentIcon />} color={theme.palette.success.main} delay={400} />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <StatCard title="Absent (Selected Day)" value={overallStats.absent} icon={<AbsentIcon />} color={theme.palette.error.main} delay={600} />
+                <StatCard artwork="absent" title="Absent (Selected Day)" value={overallStats.absent} icon={<AbsentIcon />} color={theme.palette.error.main} delay={600} />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <StatCard title="Unmarked (Selected Day)" value={overallStats.unmarked} icon={<AverageIcon />} color={theme.palette.warning.main} delay={800} />
+                <StatCard artwork="clipboard" title="Unmarked (Selected Day)" value={overallStats.unmarked} icon={<AverageIcon />} color={theme.palette.warning.main} delay={800} />
               </Grid>
             </Grid>
 

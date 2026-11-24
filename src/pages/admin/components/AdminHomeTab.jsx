@@ -7,6 +7,7 @@ import { db } from '../../../config/firebase';
 import { getDashboardAttendanceStats } from '../../../utils/dashboardAttendance';
 import { rewardBalance } from '../../../utils/rewards';
 import ActionGrid from '../../../components/ActionGrid';
+import SchoolArtwork from '../../../components/SchoolArtwork';
 
 export default function AdminHomeTab() {
   const navigate = useNavigate();
@@ -37,16 +38,28 @@ export default function AdminHomeTab() {
   if (loading) return <Box aria-label="Loading dashboard"><Skeleton variant="rounded" height={140} sx={{ mb: 3 }} /><Skeleton variant="rounded" height={340} /></Box>;
   const podium = [overview.top[1], overview.top[0], overview.top[2]];
   return <section className="admin-home" aria-label="School overview">
-    {overview.top.length > 0 ? <div className="admin-podium">
+    <Paper className="sunday-overview">
+      <div className="sunday-attendance">
+        <div><Typography fontWeight={750}>Sunday Attendance</Typography><Typography variant="body2">{overview.dateLabel}</Typography><Typography className="attendance-present"><strong>{overview.todayPresentCount}</strong> Present</Typography><Typography variant="body2">{overview.todayAbsentCount} Absent</Typography></div>
+        <div className="attendance-ring" style={{ '--progress': overview.attendancePercentage }} role="img" aria-label={`${overview.attendancePercentage}% attendance`}><strong>{overview.attendancePercentage}%</strong></div>
+      </div>
+      <div className="sunday-mini-stats">
+        <div><PeopleRounded /><span>Total Students<strong>{overview.totalStudents.toLocaleString()}</strong></span></div>
+        <div><BarChartRounded /><span>Attendance Rate<strong>{overview.attendancePercentage}%</strong></span></div>
+      </div>
+    </Paper>
+    {overview.top.length > 0 ? <Paper className="performers-panel">
+      <div className="performers-heading"><Typography component="h2" variant="h5"><span aria-hidden="true">🏆</span> Top Performers</Typography><Button onClick={() => navigate('/teacher/leaderboard')}>View All</Button></div>
+      <div className="admin-podium">
       {podium.map((student, index) => student && <Paper key={student.id} className="admin-podium-item" data-rank={[2, 1, 3][index]}>
-        <div className="admin-podium-medal" aria-label={`Rank ${[2, 1, 3][index]}`}>{['🥈', '🥇', '🥉'][index]}</div>
+        <div className="admin-podium-medal" aria-label={`Rank ${[2, 1, 3][index]}`}>{['🥈', '👑', '🥉'][index]}</div>
+        <SchoolArtwork name="portrait" className="performer-portrait" />
         <Typography fontWeight={750} sx={{ fontSize: { xs: '.875rem', sm: '1.2rem' } }}>{student.name || 'Student'}</Typography>
         <Typography fontWeight={800} sx={{ mt: .5, fontSize: { xs: '1.4rem', sm: '1.8rem' } }}>${student.dollars.toLocaleString()}</Typography>
       </Paper>)}
-    </div> : <Alert severity="info" sx={{ mb: 3 }}>Add your first student to start tracking attendance and rewards.</Alert>}
+    </div></Paper> : <Alert severity="info" sx={{ mb: 3 }}>Add your first student to start tracking attendance and rewards.</Alert>}
     <div className="admin-quick-heading">
-      <Typography component="h2" variant="h5">Quick Actions</Typography>
-      <Button variant="outlined" startIcon={<EmojiEventsOutlined />} onClick={() => navigate('/teacher/leaderboard')}>View Full Leaderboard</Button>
+      <Typography component="h2" variant="h5"><span aria-hidden="true">⚡</span> Quick Actions</Typography>
     </div>
     <ActionGrid actions={actions} />
     <div className="admin-stats">
@@ -54,7 +67,7 @@ export default function AdminHomeTab() {
         ['Total Students', overview.totalStudents.toLocaleString(), <PeopleRounded />],
         ['Attendance Rate', `${overview.attendancePercentage}%`, <BarChartRounded />],
         ['Total Dollars Given', `$${overview.totalDollars.toLocaleString()}`, <TollRounded />],
-      ].map(([label, value, icon]) => <Paper key={label} className="admin-stat"><div className="admin-stat-icon">{icon}</div><div><Typography color="text.secondary" sx={{ fontSize: '.875rem' }}>{label}</Typography><Typography sx={{ fontSize: { xs: '1.9rem', sm: '2.3rem' }, lineHeight: 1.25, fontWeight: 800 }}>{value}</Typography></div></Paper>)}
+      ].map(([label, value, icon], index) => <Paper key={label} className="admin-stat" data-tone={index}><div className="admin-stat-icon">{icon}</div><div><Typography color="text.secondary" sx={{ fontSize: '.875rem' }}>{label}</Typography><Typography className="school-stat-number" sx={{ lineHeight: 1.25, fontWeight: 900 }}>{value}</Typography></div>{index === 0 && <SchoolArtwork name="books" className="stat-books" />}</Paper>)}
     </div>
     <div className="admin-attendance-line"><span>{overview.dateLabel || 'Sunday attendance'}</span><Chip size="small" color="success" variant="outlined" label={`${overview.todayPresentCount} Present`} /><Chip size="small" variant="outlined" label={`${overview.todayAbsentCount} Absent`} /><Button size="small" onClick={() => navigate('/teacher/attendance-summary')}>View summary</Button></div>
   </section>;

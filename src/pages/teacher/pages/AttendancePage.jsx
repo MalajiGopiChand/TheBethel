@@ -322,7 +322,7 @@ const AttendancePage = () => {
       <Container maxWidth="lg" sx={{ pt: 3, pb: 12 }}>
           
           {/* Quick Stats Bar */}
-          <Box sx={{ display: 'flex', mb: 3, p: 2, bgcolor: 'white', borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+          <Box className="attendance-quick-stats" sx={{ display: 'flex', mb: 3, p: 2, bgcolor: 'white', borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography variant="caption" color="text.secondary" fontWeight="800" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>Total</Typography>
                 <Typography variant="h5" fontWeight="900" color="primary.main" sx={{ mt: 0.5 }}>{filteredStudents.length}</Typography>
@@ -346,7 +346,7 @@ const AttendancePage = () => {
           </Box>
 
           {/* Scrollable Filters */}
-          <Box className="hide-scrollbar" sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 2, mb: 1, '&::-webkit-scrollbar': { display: 'none' } }}>
+          <Box className="attendance-filters" sx={{ gap: 1.5, pb: 2, mb: 1 }}>
             <TextField
               type="date"
               size="small"
@@ -383,9 +383,7 @@ const AttendancePage = () => {
       )}
 
       {/* 3. Success Alert */}
-      <Fade in={showSuccess}>
-        <Alert severity="success" sx={{ mx: 2, mt: 2, mb: 0 }}>Attendance saved successfully!</Alert>
-      </Fade>
+      {showSuccess && <Alert severity="success" sx={{ mt: 2, mb: 2 }}>Attendance saved successfully!</Alert>}
 
       {/* 4. Student List */}
         {loading ? (
@@ -393,7 +391,7 @@ const AttendancePage = () => {
         ) : filteredStudents.length === 0 ? (
           <Alert severity="info">No students match your filters.</Alert>
         ) : (
-          <Paper elevation={1} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+          <Paper className="attendance-student-list" elevation={1} sx={{ borderRadius: 2, overflow: 'hidden', mt: 2 }}>
             <List disablePadding>
               {filteredStudents.map((student, index) => {
                 const savedStatus = getSavedStatusForDate(student, attendanceDate);
@@ -437,7 +435,7 @@ const AttendancePage = () => {
                         secondary={`${student.studentId} • ${student.location || student.place || 'No Location'}`}
                       />
                       
-                      <ListItemSecondaryAction>
+                      <Box className="attendance-row-actions">
                         <Stack direction="row" spacing={1} alignItems="center">
                           {savedStatus && (
                             <Chip
@@ -477,7 +475,7 @@ const AttendancePage = () => {
                             Present
                           </Button>
                         </Stack>
-                      </ListItemSecondaryAction>
+                      </Box>
                     </ListItem>
                     {index < filteredStudents.length - 1 && <Divider component="li" />}
                   </React.Fragment>

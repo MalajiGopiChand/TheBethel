@@ -9,6 +9,7 @@ import AdminAttendanceTab from './components/AdminAttendanceTab';
 import AdminManageTab from './components/AdminManageTab';
 import AdminTeachersTab from './components/AdminTeachersTab';
 import AdminMoreTab from './components/AdminMoreTab';
+import SchoolArtwork from '../../components/SchoolArtwork';
 
 const content = [AdminHomeTab, AdminAttendanceTab, AdminManageTab, AdminTeachersTab, AdminMoreTab];
 export default function AdminDashboard() {
@@ -25,8 +26,8 @@ export default function AdminDashboard() {
     catch { setError('Could not log out. Please try again.'); }
     finally { setBusy(false); }
   };
-  return <Box className="admin-page">
-    <AppBar position="sticky" elevation={0}>
+  return <Box className={`admin-page admin-dashboard ${index === 0 ? 'is-home' : ''}`}>
+    <AppBar position="static" elevation={0} className="dashboard-hero">
       <Toolbar className="admin-header" sx={{ width: '100%', py: { xs: 2, sm: 3 }, gap: 1 }}>
         <div className="admin-brand">
           <img src="/image.png" alt="Bethel Attendance App" />
@@ -38,6 +39,7 @@ export default function AdminDashboard() {
         <Tooltip title="Notification center"><IconButton aria-label="Open notification center" onClick={() => navigate('/admin/notifications')} sx={{ display: { xs: 'none', sm: 'inline-flex' }, color: 'primary.main' }}><NotificationsActiveRounded /></IconButton></Tooltip>
         <Button color="error" onClick={handleLogout} disabled={busy} startIcon={busy ? <CircularProgress size={16} /> : <LogoutRounded />} sx={{ bgcolor: '#fce7ed', px: { xs: 1.5, sm: 2.5 } }}>Logout</Button>
       </Toolbar>
+      {index === 0 && <SchoolArtwork name="hero" className="dashboard-hero-art" />}
     </AppBar>
     <main className="admin-page-content">
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

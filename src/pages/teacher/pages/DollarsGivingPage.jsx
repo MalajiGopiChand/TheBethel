@@ -50,6 +50,8 @@ import { startOfMonth, startOfWeek } from 'date-fns';
 import Chip from '@mui/material/Chip';
 import { mutateStudent } from '../../../services/studentData';
 import { rewardBalance, rewardPeriodTotal } from '../../../utils/rewards';
+import SchoolArtwork from '../../../components/SchoolArtwork';
+import { CloseRounded, RedeemRounded } from '@mui/icons-material';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';
@@ -182,7 +184,7 @@ const DollarsGivingPage = () => {
   };
 
   return (
-    <Box className="admin-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
+    <Box className="admin-page reward-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
       
       {/* 1. Glass Header (Sticky) */}
       <AppBar
@@ -197,19 +199,20 @@ const DollarsGivingPage = () => {
         }}
       >
         <Toolbar sx={{ py: 1, px: { xs: 1, sm: 2 } }}>
-           <IconButton onClick={handleBack} sx={{ mr: 1, color: '#000', bgcolor: 'rgba(0,0,0,0.04)' }}>
+           <IconButton aria-label="Go back" onClick={handleBack} sx={{ mr: 1, color: '#000', bgcolor: 'rgba(0,0,0,0.04)' }}>
               <BackIcon />
             </IconButton>
             <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: '900', color: '#000', letterSpacing: '-0.03em', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
               Give Dollars
             </Typography>
         </Toolbar>
+        <SchoolArtwork name="giftHeader" className="reward-header-art" />
       </AppBar>
 
       {/* Main Page Content */}
       <Container maxWidth="lg" sx={{ pt: 3, pb: 12 }}>
 
-          <Typography color="text.secondary" sx={{ mb: 2 }}>Give and manage dollar rewards for students</Typography>
+          <Typography color="text.secondary" sx={{ mb: 2, display: { xs: 'none', md: 'block' } }}>Give and manage dollar rewards for students</Typography>
           <Paper className="reward-summary">
             <div><Typography color="text.secondary">Total Dollars Given</Typography><Typography variant="h4" fontWeight={800}>${students.reduce((sum, student) => sum + rewardBalance(student), 0).toLocaleString()}</Typography></div>
             <div><Typography color="text.secondary">This Month</Typography><Typography variant="h4" color="success.main" fontWeight={800}>${rewardPeriodTotal(students, startOfMonth(new Date())).toLocaleString()}</Typography></div>
@@ -297,7 +300,7 @@ const DollarsGivingPage = () => {
                               {student.name}
                             </Typography>
                           }
-                          secondary={`${student.studentId || 'No ID'} • ${student.classType || ''}`}
+                          secondary={`${student.studentId || 'No ID'} • ${student.location || student.place || student.classType || ''}`}
                           secondaryTypographyProps={{ sx: { fontSize: '.8125rem' } }}
                         />
                       </Box>
@@ -328,7 +331,7 @@ const DollarsGivingPage = () => {
                           }
                         }}
                       >
-                        {canGiveDollars ? 'Give' : 'Sunday only'}
+                        {canGiveDollars ? 'Give Reward' : 'Sunday only'}
                       </Button>
                     </ListItem>
                     {index < filteredStudents.length - 1 && <Divider component="li" />}
@@ -342,6 +345,8 @@ const DollarsGivingPage = () => {
 
       {/* Reward Input Dialog */}
       <Dialog 
+        className={`reward-dialog${theme.palette.mode === 'dark' ? ' reward-dialog-dark' : ''}`}
+        aria-labelledby="reward-dialog-title"
         open={showInput} 
         onClose={() => {
           if (!saving) {
@@ -354,9 +359,12 @@ const DollarsGivingPage = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
-          Give Reward to {selectedStudent?.name || 'Student'}
-        </DialogTitle>
+        <IconButton className="reward-close" aria-label="Close reward dialog" disabled={saving} onClick={() => setShowInput(false)}><CloseRounded /></IconButton>
+        <div className="reward-dialog-heading">
+          <SchoolArtwork name="gift" />
+          <h2 id="reward-dialog-title">Give Reward to<strong>{selectedStudent?.name || 'Student'}</strong></h2>
+          <span className="reward-current-balance">Current Dollars: ${selectedStudent ? rewardBalance(selectedStudent) : 0}</span>
+        </div>
         <DialogContent>
           {saveError && <Alert severity="error" sx={{ mb: 2 }}>{saveError}</Alert>}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
@@ -398,6 +406,7 @@ const DollarsGivingPage = () => {
               setRewardReason('');
             }}
             disabled={saving}
+            variant="outlined"
           >
             Cancel
           </Button>
@@ -405,7 +414,7 @@ const DollarsGivingPage = () => {
             onClick={handleSave} 
             variant="contained"
             disabled={!canGiveDollars || saving || !rewardAmount || !rewardReason.trim()}
-            startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <DollarIcon />}
+            startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <RedeemRounded />}
           >
             {saving ? 'Saving...' : 'Save Reward'}
           </Button>
