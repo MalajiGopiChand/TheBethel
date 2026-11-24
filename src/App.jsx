@@ -1,3 +1,4 @@
+import SchoolLoader from './components/SchoolLoader';
 import React, { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
@@ -38,10 +39,11 @@ const TeacherProgressPage = lazy(() => import('./pages/teacher/pages/TeacherProg
 const TeacherLeaderboardPage = lazy(() => import('./pages/teacher/pages/TeacherLeaderboardPage'));
 const TeacherAttendancePage = lazy(() => import('./pages/teacher/pages/TeacherAttendancePage'));
 const TeacherProfilePage = lazy(() => import('./pages/teacher/pages/TeacherProfilePage'));
+const TeacherActivityPage = lazy(() => import('./pages/teacher/pages/TeacherActivityPage'));
 const PendingApprovalPage = lazy(() => import('./pages/auth/PendingApprovalPage'));
 const AdminComplaintsPage = lazy(() => import('./pages/admin/pages/AdminComplaintsPage'));
 const AdminDownloadStudentsPage = lazy(() => import('./pages/admin/pages/AdminDownloadStudentsPage'));
-import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material';
+import { Alert, Box, Button, Typography } from '@mui/material';
 
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -73,7 +75,7 @@ function App() {
         alignItems="center"
         minHeight="100vh"
       >
-        <CircularProgress />
+        <SchoolLoader role={currentUser?.role} />
       </Box>
     );
   }
@@ -91,7 +93,7 @@ function App() {
     <Box className="page-shell page-glow-background">
 
       <PWAInstallPrompt />
-      <Suspense fallback={<Box sx={{ display: "grid", placeItems: "center", minHeight: "55vh" }}><CircularProgress aria-label="Loading page" /></Box>}><Routes>
+      <Suspense fallback={<Box sx={{ display: "grid", placeItems: "center", minHeight: "55vh" }}><SchoolLoader role={currentUser?.role} /></Box>}><Routes>
       <Route
         path="/"
         element={
@@ -155,7 +157,7 @@ function App() {
               alignItems="center"
               minHeight="100vh"
             >
-              <CircularProgress />
+              <SchoolLoader role={currentUser?.role} />
             </Box>
           ) : (
             <Navigate to="/" replace />
@@ -457,11 +459,19 @@ function App() {
         path="/teacher/profile"
         element={
           currentUser && (currentUser.role === UserRole.TEACHER || currentUser.role === UserRole.ADMIN) ? (
-            <TeacherProfilePage />
+            <TeacherActivityPage />
           ) : (
             <Navigate to="/" replace />
           )
         }
+      />
+      <Route
+        path="/teacher/profile/edit"
+        element={currentUser?.role === UserRole.TEACHER ? <TeacherProfilePage /> : <Navigate to="/" replace />}
+      />
+      <Route
+        path="/admin/teacher-progress/:teacherId"
+        element={currentUser && (currentUser.role === UserRole.ADMIN || ['gop1@gmail.com', 'premkumartenali@gmail.com'].includes(currentUser.email)) ? <TeacherActivityPage /> : <Navigate to="/" replace />}
       />
       <Route
         path="/teacher/teacher-leaderboard"

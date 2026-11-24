@@ -1,3 +1,4 @@
+import SchoolLoader from '../../components/SchoolLoader';
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,8 +8,7 @@ import {
   Typography,
   Paper,
   Avatar,
-  Fade,
-  CircularProgress
+  Fade
 } from '@mui/material';
 import {
   HourglassEmpty as HourglassIcon,
@@ -121,7 +121,7 @@ const PendingApprovalPage = () => {
 
             {!isApproved && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-                <CircularProgress size={24} color="warning" />
+                <SchoolLoader inline />
                 <Typography variant="body2" color="warning.main" fontWeight="bold">
                   Checking status...
                 </Typography>

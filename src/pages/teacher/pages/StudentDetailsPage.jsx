@@ -1,8 +1,9 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import './student-details.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
-  Box, Paper, Typography, Button, CircularProgress, TextField, Grid, Chip,
+  Box, Paper, Typography, Button, TextField, Grid, Chip,
   Alert, InputAdornment, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Divider
 } from '@mui/material';
 import {
@@ -342,7 +343,7 @@ const StudentDetailsPage = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
+        <SchoolLoader />
       </Box>
     );
   }
@@ -525,7 +526,7 @@ const StudentDetailsPage = () => {
             onClick={handleSaveEdit} 
             variant="contained" 
             disabled={saving}
-            startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
+            startIcon={saving ? <SchoolLoader inline /> : <SaveIcon />}
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>

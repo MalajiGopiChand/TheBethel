@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,8 +19,7 @@ import {
   CardContent,
   IconButton,
   Divider,
-  Chip,
-  CircularProgress
+  Chip
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -294,7 +294,7 @@ const AdminSendNotificationPage = () => {
             </Box>
 
             {loading ? (
-              <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
+              <Box display="flex" justifyContent="center" p={4}><SchoolLoader /></Box>
             ) : notifications.length === 0 ? (
               <Alert severity="info">No notifications sent yet.</Alert>
             ) : (

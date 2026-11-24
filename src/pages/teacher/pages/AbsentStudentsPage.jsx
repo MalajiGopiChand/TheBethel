@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,7 +10,6 @@ import {
   Button,
   Card,
   CardContent,
-  CircularProgress,
   TextField,
   Chip,
   Alert,
@@ -240,7 +240,7 @@ const AbsentStudentsPage = () => {
               variant="contained"
               color="error"
               size="small"
-              startIcon={exportLoading === 'pdf' ? <CircularProgress size={16} color="inherit" /> : <PdfIcon />}
+              startIcon={exportLoading === 'pdf' ? <SchoolLoader inline /> : <PdfIcon />}
               onClick={handleDownloadPdf}
               disabled={!!exportLoading || loading}
               sx={{ flexShrink: 0, borderRadius: 1, textTransform: 'none', fontWeight: 'bold', px: 1.5 }}
@@ -251,7 +251,7 @@ const AbsentStudentsPage = () => {
               variant="outlined"
               color="error"
               size="small"
-              startIcon={exportLoading === 'image' ? <CircularProgress size={16} color="error" /> : <ImageIcon />}
+              startIcon={exportLoading === 'image' ? <SchoolLoader /> : <ImageIcon />}
               onClick={handleDownloadImage}
               disabled={!!exportLoading || loading}
               sx={{ flexShrink: 0, borderRadius: 1, textTransform: 'none', fontWeight: 'bold', px: 1.5, bgcolor: 'white' }}
@@ -262,7 +262,7 @@ const AbsentStudentsPage = () => {
               variant="outlined"
               color="error"
               size="small"
-              startIcon={exportLoading === 'images' ? <CircularProgress size={16} color="error" /> : <ImageIcon />}
+              startIcon={exportLoading === 'images' ? <SchoolLoader /> : <ImageIcon />}
               onClick={handleDownloadImagesByPlace}
               disabled={!!exportLoading || loading}
               sx={{ flexShrink: 0, borderRadius: 1, textTransform: 'none', fontWeight: 'bold', px: 1.5, bgcolor: 'white' }}
@@ -274,7 +274,7 @@ const AbsentStudentsPage = () => {
       {/* 2. Content Grid */}
         {loading ? (
           <Box display="flex" justifyContent="center" py={8}>
-            <CircularProgress color="error" />
+            <SchoolLoader />
           </Box>
         ) : students.length === 0 ? (
           <Fade in={true}>

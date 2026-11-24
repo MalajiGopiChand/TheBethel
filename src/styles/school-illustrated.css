@@ -243,3 +243,48 @@
 .school-illustrated.admin-dark .MuiBottomNavigationAction-root.Mui-selected { color: white; }
 .reward-dialog-dark .reward-dialog-heading { background: linear-gradient(145deg, #3e2c55, #292037); }
 .reward-dialog-dark .reward-dialog-heading h2 { color: #f9f1ff; }
+
+/* Keep important numbers on solid surfaces; shared pastel cards must not wash them out. */
+.school-illustrated .attendance-overview-card.MuiCard-root,
+.school-illustrated .school-install-banner.MuiPaper-root,
+.school-illustrated .finance-balance-card.MuiCard-root {
+  background: linear-gradient(125deg, #5830b2, #7542c5) !important;
+  color: #fff;
+  border: 1px solid #b598ef;
+  box-shadow: 0 8px 20px #6233ae30;
+}
+.school-illustrated .attendance-overview-card .MuiTypography-root,
+.school-illustrated .school-install-banner .MuiTypography-root,
+.school-illustrated .finance-balance-card .MuiTypography-root { color: #fff !important; opacity: 1; }
+.school-illustrated .finance-balance-card .MuiCardContent-root::after { display: none; }
+.school-illustrated .sunday-attendance { background: linear-gradient(125deg, #6030b6, #7d41c8); }
+.school-illustrated .attendance-ring { background: conic-gradient(#3cf3a0 calc(var(--progress) * 1%), #d6c3f5 0); }
+.school-illustrated .attendance-ring::before { background: #6131ad; }
+.school-illustrated .attendance-ring strong { color: #fff; }
+.school-illustrated .performers-panel { padding: 20px; }
+.school-illustrated .performers-heading { margin-bottom: 32px; }
+.school-illustrated .admin-home .admin-podium { align-items: stretch; gap: 16px; padding: 0; }
+.school-illustrated .admin-podium-item { display: flex; flex-direction: column; align-items: center; padding: 25px 10px 16px; min-width: 0; }
+.school-illustrated .admin-podium-item .MuiTypography-root { overflow-wrap: anywhere; font-size: 1rem; line-height: 1.35; width: 100%; }
+.school-illustrated .admin-podium-item .MuiTypography-root:not(:last-child) { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 2.7em; }
+.school-illustrated .admin-podium-item .MuiTypography-root:last-child { font-size: 1.6rem; color: #3c2371; margin-top: 6px; }
+.school-illustrated .admin-podium-item .performer-portrait { width: 64px; margin-bottom: 8px; }
+.school-illustrated.admin-dark .admin-podium-item .MuiTypography-root:last-child { color: #f4e4ff; }
+.teacher-activity-header { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; }
+.teacher-activity-page .MuiPaper-root { overflow-wrap: anywhere; }
+.school-illustrated .teacher-activity-stat { background: linear-gradient(130deg, #fff, #eee6ff); }
+.school-illustrated .teacher-activity-stat .MuiTypography-h4 { color: #6935b7; font-size: clamp(1.35rem, 3vw, 2rem); }
+.school-illustrated .teacher-offering-entry { border-left: 4px solid #9061d5; }
+.school-illustrated.admin-dark .teacher-activity-stat { background: #30253f; }
+.school-illustrated.admin-dark .teacher-activity-stat .MuiTypography-h4 { color: #d8bcff; }
+@media (max-width: 600px) {
+  .school-illustrated .performers-panel { padding: 18px 12px 14px; }
+  .school-illustrated .admin-home .admin-podium { gap: 8px; }
+  .school-illustrated .admin-podium-item { border-radius: 18px; padding: 20px 5px 12px; }
+  .school-illustrated .admin-podium-item .MuiTypography-root { font-size: .82rem; }
+  .school-illustrated .admin-podium-item .MuiTypography-root:last-child { font-size: 1.3rem; }
+  .school-illustrated .admin-podium-item .performer-portrait { width: 50px; }
+  .school-illustrated .attendance-overview-card > .MuiBox-root { padding: 20px; gap: 12px; }
+  .school-illustrated .attendance-overview-card .MuiTypography-h3 { font-size: 1.9rem; }
+  .teacher-activity-header h1 { font-size: 1.5rem; }
+}

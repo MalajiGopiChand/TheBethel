@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,7 +13,6 @@ import {
   Select,
   FormControl,
   InputLabel,
-  CircularProgress,
   Alert,
   List,
   ListItem,
@@ -154,8 +154,9 @@ const DollarsGivingPage = () => {
     try {
       setSaving(true);
       setSaveError('');
+      const reward = { id: crypto.randomUUID(), date: format(new Date(), 'yyyy-MM-dd'), createdAt: Date.now(), dollars: amount, reason: rewardReason.trim(), teacher: currentUser?.name || currentUser?.displayName || 'Teacher', teacherUid: currentUser.uid };
       await mutateStudent(doc(db, 'students', selectedStudent.id), student => ({
-        rewards: [...(student.rewards || []), { date: format(new Date(), 'yyyy-MM-dd'), dollars: amount, reason: rewardReason.trim(), teacher: currentUser?.name || 'Admin' }],
+        rewards: [...(student.rewards || []), reward],
         dollarPoints: rewardBalance(student) + amount,
       }));
       setShowSuccess(true);
@@ -261,7 +262,7 @@ const DollarsGivingPage = () => {
 
       {/* Student List */}
         {loading ? (
-          <Box display="flex" justifyContent="center" py={8}><CircularProgress /></Box>
+          <Box display="flex" justifyContent="center" py={8}><SchoolLoader /></Box>
         ) : filteredStudents.length === 0 ? (
           <Alert severity="info">No students match your filters.</Alert>
         ) : (
@@ -414,7 +415,7 @@ const DollarsGivingPage = () => {
             onClick={handleSave} 
             variant="contained"
             disabled={!canGiveDollars || saving || !rewardAmount || !rewardReason.trim()}
-            startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <RedeemRounded />}
+            startIcon={saving ? <SchoolLoader inline /> : <RedeemRounded />}
           >
             {saving ? 'Saving...' : 'Save Reward'}
           </Button>

@@ -1,3 +1,4 @@
+import SchoolLoader from './SchoolLoader';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -5,7 +6,6 @@ import {
   Toolbar,
   IconButton,
   Tooltip,
-  CircularProgress,
   Box,
   Typography
 } from '@mui/material';
@@ -79,7 +79,7 @@ const TopBarWithLogout = ({ title, showInstall = false }) => {
                 '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.2)' }
               }}
             >
-              {loadingLogout ? <CircularProgress size={20} /> : <LogoutIcon />}
+              {loadingLogout ? <SchoolLoader /> : <LogoutIcon />}
             </IconButton>
           </Tooltip>
         </Box>

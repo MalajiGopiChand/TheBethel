@@ -1,348 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  Alert,
-  Grid,
-  Tooltip,
-  Avatar,
-  Stack,
-  Container  // Moved Container import here
-} from '@mui/material';
-import {
-  ArrowBack as BackIcon,
-  TrendingUp as ProgressIcon,
-  CheckCircle as VerifiedIcon,
-  People as PeopleIcon,
-  PendingActions as PendingIcon,
-  School as SchoolIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon
-} from '@mui/icons-material';
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot
-} from "../../../services/notifyingFirestore";
+import { Alert, Box, Button, Container, Paper, Stack, TextField, Typography } from '@mui/material';
+import { ArrowBack, ArrowForward } from '@mui/icons-material';
+import { collection, onSnapshot } from '../../../services/notifyingFirestore';
 import { db } from '../../../config/firebase';
-import { format } from 'date-fns';
-import { handleBackNavigation } from '../../../utils/navigation';
-import { isTeacherVerifiedProfile } from '../../../utils/teacherVerification';
+import { useAuth } from '../../../contexts/AuthContext';
+import { isActivityAdmin } from '../../../utils/teacherActivity';
+import SchoolLoader from '../../../components/SchoolLoader';
 
-const TeacherProgressPage = () => {
+export default function TeacherProgressPage() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    total: 0,
-    verified: 0,
-    pending: 0
-  });
-
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [retry, setRetry] = useState(0);
+  const admin = isActivityAdmin(currentUser);
   useEffect(() => {
-    // Real-time listener for teachers
-    const teachersQuery = query(collection(db, 'teachers'), orderBy('name'));
-    const unsubscribe = onSnapshot(teachersQuery, (snapshot) => {
-      const teachersData = snapshot.docs.map(doc => ({
-        uid: doc.id,
-        ...doc.data()
-      }));
-      
-      setTeachers(teachersData);
-      
-      // Calculate stats
-      const total = teachersData.length;
-      const verified = teachersData.filter((t) => isTeacherVerifiedProfile(t)).length;
-      setStats({
-        total,
-        verified,
-        pending: total - verified
-      });
-
+    setLoading(true); setError('');
+    return onSnapshot(collection(db, 'teachers'), snapshot => {
+      setTeachers(snapshot.docs.map(item => ({ ...item.data(), uid: item.id })).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
       setLoading(false);
-    }, (error) => {
-      console.error('Error fetching teachers:', error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const handleViewProgress = (teacherId) => {
-    // Navigate to individual progress details page
-    navigate(`/admin/teacher-progress/${teacherId}`);
-  };
-
-  const handleBack = () => {
-    handleBackNavigation(navigate);
-  };
-
-  // Helper function to format date consistently
-  const formatDate = (dateValue) => {
-    if (!dateValue) return '-';
-    
-    try {
-      let date;
-      if (typeof dateValue?.toDate === 'function') {
-        date = dateValue.toDate();
-      } else if (dateValue instanceof Date) {
-        date = dateValue;
-      } else {
-        date = new Date(dateValue);
-      }
-      
-      // Check if date is valid
-      if (isNaN(date.getTime())) return '-';
-      
-      return format(date, 'MMM dd, yyyy');
-    } catch (error) {
-      console.error('Date formatting error:', error);
-      return '-';
-    }
-  };
-
-  // Get initials for avatar
-  const getInitials = (name) => {
-    if (!name) return 'T';
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      minHeight: '100vh', 
-      bgcolor: '#f5f5f5'
-    }}>
-      {/* Header Section */}
-      <Paper 
-        elevation={2} 
-        sx={{ 
-          p: 2, 
-          mb: 3, 
-          borderRadius: 0,
-          borderBottom: '1px solid #e0e0e0'
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', maxWidth: 1400, mx: 'auto', width: '100%' }}>
-          <Button 
-            startIcon={<BackIcon />} 
-            onClick={handleBack}
-            variant="text"
-            sx={{ minWidth: 100 }}
-          >
-            Back
-          </Button>
-          <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
-            Teacher Progress & Reports
-          </Typography>
-          <Box sx={{ width: 100 }} /> {/* Spacer for alignment */}
-        </Box>
-      </Paper>
-
-      <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3 } }}>
-        {/* Stats Cards Section - Fixed with 3 cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ 
-              bgcolor: '#e3f2fd', 
-              height: '100%',
-              transition: 'transform 0.2s',
-              '&:hover': { transform: 'translateY(-4px)', boxShadow: 3 }
-            }}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', p: 3 }}>
-                <Avatar sx={{ bgcolor: '#1976d2', width: 56, height: 56, mr: 2 }}>
-                  <PeopleIcon sx={{ fontSize: 32 }} />
-                </Avatar>
-                <Box>
-                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                    Total Teachers
-                  </Typography>
-                  <Typography variant="h3" fontWeight="bold" color="#1976d2">
-                    {stats.total}
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ 
-              bgcolor: '#e8f5e9', 
-              height: '100%',
-              transition: 'transform 0.2s',
-              '&:hover': { transform: 'translateY(-4px)', boxShadow: 3 }
-            }}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', p: 3 }}>
-                <Avatar sx={{ bgcolor: '#2e7d32', width: 56, height: 56, mr: 2 }}>
-                  <VerifiedIcon sx={{ fontSize: 32 }} />
-                </Avatar>
-                <Box>
-                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                    Verified
-                  </Typography>
-                  <Typography variant="h3" fontWeight="bold" color="#2e7d32">
-                    {stats.verified}
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ 
-              bgcolor: '#fff3e0', 
-              height: '100%',
-              transition: 'transform 0.2s',
-              '&:hover': { transform: 'translateY(-4px)', boxShadow: 3 }
-            }}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', p: 3 }}>
-                <Avatar sx={{ bgcolor: '#ed6c02', width: 56, height: 56, mr: 2 }}>
-                  <PendingIcon sx={{ fontSize: 32 }} />
-                </Avatar>
-                <Box>
-                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                    Pending Verification
-                  </Typography>
-                  <Typography variant="h3" fontWeight="bold" color="#ed6c02">
-                    {stats.pending}
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Table Section */}
-        <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-          <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
-            <Typography variant="h6" fontWeight="600">
-              Teachers List
-            </Typography>
-          </Box>
-          
-          {loading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" py={8}>
-              <CircularProgress />
-            </Box>
-          ) : teachers.length === 0 ? (
-            <Alert severity="info" sx={{ m: 2 }}>No teachers found</Alert>
-          ) : (
-            <TableContainer sx={{ maxHeight: 'calc(100vh - 350px)' }}>
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell><strong>Teacher</strong></TableCell>
-                    <TableCell><strong>Contact</strong></TableCell>
-                    <TableCell><strong>Subject</strong></TableCell>
-                    <TableCell><strong>Status</strong></TableCell>
-                    <TableCell><strong>Join Date</strong></TableCell>
-                    <TableCell align="center"><strong>Actions</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {teachers.map((teacher) => (
-                    <TableRow 
-                      key={teacher.uid} 
-                      hover
-                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                    >
-                      <TableCell>
-                        <Stack direction="row" spacing={2} alignItems="center">
-                          <Avatar sx={{ bgcolor: isTeacherVerifiedProfile(teacher) ? '#2e7d32' : '#ed6c02' }}>
-                            {getInitials(teacher.name)}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="body1" fontWeight="500">
-                              {teacher.name || 'Unnamed Teacher'}
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              ID: {teacher.uid?.slice(-6) || 'N/A'}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      </TableCell>
-                      <TableCell>
-                        <Stack spacing={0.5}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <EmailIcon fontSize="small" color="action" />
-                            <Typography variant="body2">{teacher.email || '-'}</Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <PhoneIcon fontSize="small" color="action" />
-                            <Typography variant="body2">{teacher.phone || '-'}</Typography>
-                          </Box>
-                        </Stack>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          icon={<SchoolIcon />}
-                          label={teacher.subject || 'Not Assigned'}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={isTeacherVerifiedProfile(teacher) ? 'Verified' : 'Pending'}
-                          color={isTeacherVerifiedProfile(teacher) ? 'success' : 'warning'}
-                          size="medium"
-                          variant={isTeacherVerifiedProfile(teacher) ? 'filled' : 'outlined'}
-                          sx={{ minWidth: 80 }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {formatDate(teacher.joinDate || teacher.createdAt)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Tooltip title="View Progress Report" arrow>
-                          <Button
-                            variant="contained"
-                            size="small"
-                            color="primary"
-                            startIcon={<ProgressIcon />}
-                            onClick={() => handleViewProgress(teacher.uid)}
-                            sx={{ 
-                              borderRadius: 2,
-                              textTransform: 'none',
-                              px: 2
-                            }}
-                          >
-                            View
-                          </Button>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </Paper>
-      </Container>
-    </Box>
-  );
-};
-
-export default TeacherProgressPage;
+    }, () => { setError('Unable to load teachers. Check your connection and retry.'); setLoading(false); });
+  }, [retry]);
+  const list = teachers.filter(teacher => (admin || teacher.uid === currentUser?.uid) && (teacher.name || '').toLowerCase().includes(search.toLowerCase()));
+  return <Box className="admin-page" sx={{ py: 3, minHeight: '100vh' }}><Container maxWidth="md">
+    <Button startIcon={<ArrowBack />} onClick={() => navigate(admin ? '/admin/dashboard?tab=staff' : '/teacher/dashboard?tab=3')}>Dashboard</Button>
+    <Typography component="h1" variant="h4" fontWeight={900} sx={{ mt: 2 }}>Teacher Progress & Reports</Typography>
+    <Typography color="text.secondary" sx={{ mt: 1, mb: 3 }}>Choose View to see rewards, reports, homework, Sunday attendance and offerings.</Typography>
+    <TextField label="Search teacher name" fullWidth value={search} onChange={event => setSearch(event.target.value)} sx={{ mb: 2 }} />
+    {error && <Alert severity="error" action={<Button color="inherit" onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{error}</Alert>}
+    {loading ? <SchoolLoader message="Preparing the teachers list" /> : <Paper sx={{ p: 2 }}><Stack spacing={1}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, pb: 1 }}><Typography fontWeight={800}>Teacher name</Typography><Typography fontWeight={800}>Action</Typography></Box>
+      {list.map(teacher => <Box key={teacher.uid} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, p: 1.5, borderTop: '1px solid', borderColor: 'divider' }}><Typography fontWeight={800} sx={{ overflowWrap: 'anywhere' }}>{teacher.name || 'Unnamed teacher'}</Typography><Button variant="contained" endIcon={<ArrowForward />} aria-label={`View ${teacher.name || 'teacher'} activity`} onClick={() => navigate(admin ? `/admin/teacher-progress/${encodeURIComponent(teacher.uid)}` : '/teacher/profile')}>View</Button></Box>)}
+      {!list.length && !error && <Typography sx={{ p: 3 }}>No teachers found.</Typography>}
+    </Stack></Paper>}
+  </Container></Box>;
+}

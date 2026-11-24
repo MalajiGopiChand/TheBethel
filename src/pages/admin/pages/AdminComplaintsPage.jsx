@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -8,7 +9,6 @@ import {
   IconButton,
   Container,
   Paper,
-  CircularProgress,
   Alert,
   Card,
   CardContent,
@@ -89,7 +89,7 @@ const AdminComplaintsPage = () => {
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
+            <SchoolLoader />
           </Box>
         ) : items.length === 0 ? (
           <Paper sx={{ p: 3, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>

@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,8 +13,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Grid,
-  CircularProgress
+  Grid
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -274,7 +274,7 @@ const DownloadRecordsPage = () => {
                 <Button
                   variant="contained"
                   fullWidth
-                  startIcon={loading ? <CircularProgress size={20} /> : <DownloadIcon />}
+                  startIcon={loading ? <SchoolLoader inline /> : <DownloadIcon />}
                   onClick={handleDownload}
                   disabled={loading}
                   sx={{ mt: 2 }}

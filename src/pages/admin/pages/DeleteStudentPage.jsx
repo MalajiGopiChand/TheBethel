@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,7 +10,6 @@ import {
   Card,
   CardContent,
   CardActions,
-  CircularProgress,
   FormControl,
   InputLabel,
   Select,
@@ -147,7 +147,7 @@ const DeleteStudentPage = () => {
 
         {loading ? (
           <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
+            <SchoolLoader />
           </Box>
         ) : filteredStudents.length === 0 ? (
           <Alert severity="info">No students found</Alert>

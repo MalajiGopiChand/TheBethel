@@ -1,6 +1,7 @@
+import SchoolLoader from './SchoolLoader';
 import React, { useEffect, useState } from 'react';
 import { collection, query, onSnapshot, orderBy, limit, updateDoc, doc } from "../services/notifyingFirestore";
-import { Box, IconButton, Badge, Drawer, Typography, Button, Alert, Stack, List, ListItemButton, ListItemText, Divider, CircularProgress, Tooltip } from '@mui/material';
+import { Box, IconButton, Badge, Drawer, Typography, Button, Alert, Stack, List, ListItemButton, ListItemText, Divider, Tooltip } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/NotificationsOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
@@ -60,7 +61,7 @@ export default function GlobalNotificationListener() {
         {pushMessage && <Alert sx={{ mt: 2 }} severity={pushEnabled ? 'success' : 'warning'}>{pushMessage}</Alert>}
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       </Box><Divider />
-      {loading ? <CircularProgress sx={{ m: 3 }} /> : !items.length && !error ? <Typography sx={{ p: 3 }} color="text.secondary">No updates yet. New activity will appear here.</Typography> : <List>{items.map(item => <ListItemButton key={item.id} onClick={() => openNotification(item)} sx={{ alignItems: 'flex-start', bgcolor: item.read ? 'transparent' : 'action.hover' }}>
+      {loading ? <SchoolLoader /> : !items.length && !error ? <Typography sx={{ p: 3 }} color="text.secondary">No updates yet. New activity will appear here.</Typography> : <List>{items.map(item => <ListItemButton key={item.id} onClick={() => openNotification(item)} sx={{ alignItems: 'flex-start', bgcolor: item.read ? 'transparent' : 'action.hover' }}>
         <ListItemText primary={item.title} secondary={<>{item.body}<br />{item.createdAt?.toDate?.().toLocaleString() || 'Just now'}</>} primaryTypographyProps={{ fontWeight: item.read ? 400 : 700 }} secondaryTypographyProps={{ sx: { overflowWrap: 'anywhere' } }} />
       </ListItemButton>)}</List>}
     </Drawer>

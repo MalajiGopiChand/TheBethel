@@ -41,6 +41,7 @@ const InstallBanner = () => {
 
   return (
     <Paper
+      className="school-install-banner"
       elevation={3}
       sx={{
         p: 2,

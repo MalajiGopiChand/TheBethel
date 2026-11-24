@@ -1,9 +1,10 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TextField, FormControl,
-  InputLabel, Select, MenuItem, CircularProgress, Alert, Chip,
+  InputLabel, Select, MenuItem, Alert, Chip,
   Grid, IconButton, Menu, MenuItem as ContextMenuItem, Dialog,
   DialogTitle, DialogContent, DialogActions, List, ListItem, 
   ListItemText, ListItemSecondaryAction, Fade, Grow, Zoom,
@@ -337,7 +338,7 @@ const DollarHistoryPage = () => {
         <Fade in={!loading}>
           <Box>
             {loading ? (
-               <Box p={4} display="flex" justifyContent="center"><CircularProgress /></Box>
+               <Box p={4} display="flex" justifyContent="center"><SchoolLoader /></Box>
             ) : filteredData.length === 0 ? (
                <Box p={6} textAlign="center">
                  <Typography variant="h6" color="text.secondary">No records found matching your filters.</Typography>

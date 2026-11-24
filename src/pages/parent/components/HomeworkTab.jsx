@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -5,7 +6,6 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   Alert,
   Fade,
   Grow,
@@ -213,7 +213,7 @@ const HomeworkTab = ({ student, parentLang = 'te' }) => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" py={8}>
-        <CircularProgress />
+        <SchoolLoader />
       </Box>
     );
   }

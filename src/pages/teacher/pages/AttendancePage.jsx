@@ -1,5 +1,7 @@
+import { attendanceUpdate, savedAttendance } from '../../../utils/attendanceSave';
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -13,7 +15,6 @@ import {
   Select,
   FormControl,
   InputLabel,
-  CircularProgress,
   Alert,
   Fade,
   List,
@@ -45,7 +46,7 @@ import {
   onSnapshot,
   query,
   orderBy,
-  writeBatch,
+  mutateStudents,
   deleteField,
   serverTimestamp
 } from '../../../services/studentData';
@@ -75,17 +76,24 @@ const AttendancePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Date & State
-  const [attendanceDate, setAttendanceDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [dateParams, setDateParams] = useSearchParams();
+  const candidateDate = dateParams.get('date') || '';
+  const attendanceDate = /^\d{4}-\d{2}-\d{2}$/.test(candidateDate) && !Number.isNaN(new Date(candidateDate).getTime()) ? candidateDate : format(new Date(), 'yyyy-MM-dd');
   // Local state per student for the selected date: 'present' | 'absent' | null (unmarked)
   const [attendance, setAttendance] = useState({});
+  const [expectedStatuses, setExpectedStatuses] = useState({});
+  useEffect(() => { setAttendance({}); setExpectedStatuses({}); }, [attendanceDate]);
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [retry, setRetry] = useState(0);
 
   const classOptions = ['All', 'Beginner', 'Primary', 'Secondary'];
   const placeOptions = ['All', 'Kandrika', 'Krishna Lanka', 'Gandhiji Conly', 'Other'];
 
   // Fetch Students
   useEffect(() => {
+    setLoading(true); setLoadError('');
     requestNotificationPermission();
     const studentsQuery = query(collection(db, 'students'), orderBy('studentId'));
     const unsubscribe = onSnapshot(studentsQuery, (snapshot) => {
@@ -95,28 +103,12 @@ const AttendancePage = () => {
       }));
       setStudents(studentsData);
       setLoading(false);
-    });
+    }, () => { setLoading(false); setLoadError('Unable to load students. Retry before saving attendance.'); });
 
     return () => unsubscribe();
-  }, []);
+  }, [retry]);
 
-  const getSavedStatusForDate = (student, dateStr) => {
-    const byDate = student.attendanceByDate || {};
-    const record = byDate?.[dateStr];
-    if (record?.status === 'present' || record?.status === 'absent') return record.status;
-
-    // Backward compatibility: legacy arrays without teacher name
-    const attendanceList = student.attendance || [];
-    const absentDates = student.absentDates || [];
-    
-    const isPresent = attendanceList.some(v => v === dateStr || (typeof v === 'string' && v.startsWith(`${dateStr}::`)));
-    if (isPresent) return 'present';
-    
-    const isAbsent = absentDates.some(v => v === dateStr || (typeof v === 'string' && v.startsWith(`${dateStr}::`)));
-    if (isAbsent) return 'absent';
-    
-    return null;
-  };
+  const getSavedStatusForDate = savedAttendance;
 
   const getSavedTeacherForDate = (student, dateStr) => {
     const byDate = student.attendanceByDate || {};
@@ -143,46 +135,16 @@ const AttendancePage = () => {
       ? !['Kandrika', 'Krishna Lanka', 'Gandhiji Conly'].includes(loc)
       : loc === selectedPlace;
     const searchFilter = searchQuery === '' || 
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.studentId.toLowerCase().includes(searchQuery.toLowerCase());
+      (student.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (student.studentId || '').toLowerCase().includes(searchQuery.toLowerCase());
     return classFilter && placeFilter && searchFilter;
   });
 
-  // Keep local state in sync with saved records without overwriting user edits
-  useEffect(() => {
-    if (loading) return;
-    setAttendance((prev) => {
-      const next = { ...prev };
-      for (const s of filteredStudents) {
-        if (Object.prototype.hasOwnProperty.call(prev, s.id)) continue;
-        next[s.id] = getSavedStatusForDate(s, attendanceDate);
-      }
-      return next;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, attendanceDate, filteredStudents.length]);
-
-  // Streak Logic
-  const calculateStreak = (dates, today) => {
-    if (dates.length === 0) return 0;
-    
-    // Extract exact date string ignoring the appended '::TeacherName'
-    const extractDateStr = (entry) => typeof entry === 'string' ? entry.split('::')[0] : entry;
-    
-    const sorted = dates.map(extractDateStr).sort().reverse();
-    let streak = 0;
-    for (let i = 0; i < sorted.length; i++) {
-      if (sorted[i] <= today) {
-        streak++;
-      } else {
-        break;
-      }
-    }
-    return streak;
-  };
+  // Only unsaved edits live here. Saved values always come from the latest snapshot.
 
   // Save Handler (internal, called by handleSaveWithCheck)
   const handleSave = async () => {
+    if (saving || loading || loadError || !currentUser?.uid) return;
     try {
       setSaving(true);
       const dateStr = attendanceDate;
@@ -192,57 +154,23 @@ const AttendancePage = () => {
         currentUser?.email ||
         'Unknown';
 
-      const batch = writeBatch(db);
-      for (const student of filteredStudents) {
-        const status = attendance[student.id] ?? getSavedStatusForDate(student, dateStr);
-        const studentRef = doc(db, 'students', student.id);
-        
-        // Preserve original teacher's name if the status hasn't changed
-        const existingEntry = student.attendanceByDate?.[dateStr];
-        let finalTeacherName = teacherName;
-        if (existingEntry && existingEntry.status === status) {
-            finalTeacherName = existingEntry.teacherName || teacherName;
-        }
-
-        // Always store the canonical one-record-per-day structure:
-        // attendanceByDate[yyyy-MM-dd] = { status, teacherName, teacherId, updatedAt }
-        if (status === 'present' || status === 'absent') {
-          batch.update(studentRef, {
-            [`attendanceByDate.${dateStr}`]: {
-              status,
-              teacherName: finalTeacherName,
-              teacherId: currentUser?.uid || 'Unknown',
-              updatedAt: serverTimestamp()
-            }
-          });
-        } else {
-          // Unmark -> remove the record for that date
-          batch.update(studentRef, {
-            [`attendanceByDate.${dateStr}`]: deleteField()
-          });
-        }
-
-        // Keep legacy arrays consistent (so old parts of app keep working)
-        // by removing that date from both and re-adding based on status.
-        const legacyAttendance = (student.attendance || []).filter((d) => d !== dateStr && !(typeof d === 'string' && d.startsWith(`${dateStr}::`)));
-        const legacyAbsent = (student.absentDates || []).filter((d) => d !== dateStr && !(typeof d === 'string' && d.startsWith(`${dateStr}::`)));
-        
-        // Push strictly as "yyyy-MM-dd" to perfectly sync with Android App schema and avoid duplicates
-        if (status === 'present') legacyAttendance.push(dateStr);
-        if (status === 'absent') legacyAbsent.push(dateStr);
-
-        const extractDateStr = (entry) => typeof entry === 'string' ? entry.split('::')[0] : entry;
-        const sortedAttendance = [...legacyAttendance].sort((a, b) => extractDateStr(a).localeCompare(extractDateStr(b)));
-        const newStreak = status === 'present' ? calculateStreak(sortedAttendance, dateStr) : 0;
-
-        batch.update(studentRef, {
-          attendance: legacyAttendance,
-          absentDates: legacyAbsent,
-          currentStreak: newStreak
-        });
-      }
-
-      await batch.commit();
+      const changes = filteredStudents.flatMap(student => {
+        if (!Object.prototype.hasOwnProperty.call(attendance, student.id)) return [];
+        const status = attendance[student.id];
+        const expected = Object.prototype.hasOwnProperty.call(expectedStatuses, student.id) ? expectedStatuses[student.id] : getSavedStatusForDate(student, dateStr);
+        if (status === expected) return [];
+        return [[doc(db, 'students', student.id), fresh => attendanceUpdate(fresh, {
+          date: dateStr, status, expected, teacher: { uid: currentUser.uid, name: teacherName },
+          updatedAt: serverTimestamp(), removed: deleteField()
+        })]];
+      });
+      const markedCount = filteredStudents.filter(student => Object.prototype.hasOwnProperty.call(attendance, student.id) && attendance[student.id] && attendance[student.id] !== getSavedStatusForDate(student, dateStr)).length;
+      const sessions = markedCount > 0 && currentUser.role === 'TEACHER' ? [[doc(db, 'teachers', currentUser.uid), {
+        [`attendanceSessions.${dateStr}`]: { marked: true, date: dateStr, markedAt: serverTimestamp(), changedRecords: markedCount, place: selectedPlace, classType: selectedClass }
+      }]] : [];
+      await mutateStudents(changes, sessions);
+      setAttendance(previous => Object.fromEntries(Object.entries(previous).filter(([id]) => !filteredStudents.some(student => student.id === id))));
+      setExpectedStatuses(previous => Object.fromEntries(Object.entries(previous).filter(([id]) => !filteredStudents.some(student => student.id === id))));
 
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -262,11 +190,17 @@ const AttendancePage = () => {
       newAttendance[student.id] = 'present';
     });
     setAttendance(prev => ({ ...prev, ...newAttendance }));
+    setExpectedStatuses(previous => ({ ...previous, ...Object.fromEntries(filteredStudents.map(student => [student.id, getSavedStatusForDate(student, attendanceDate)])) }));
+  };
+  const markStudent = (student, status) => {
+    setExpectedStatuses(previous => ({ ...previous, [student.id]: getSavedStatusForDate(student, attendanceDate) }));
+    setAttendance(previous => ({ ...previous, [student.id]: status }));
   };
 
   // Stats
-  const currentPresentCount = Object.values(attendance).filter(v => v === 'present').length;
-  const currentAbsentCount = Object.values(attendance).filter(v => v === 'absent').length;
+  const draftStatus = student => Object.prototype.hasOwnProperty.call(attendance, student.id) ? attendance[student.id] : getSavedStatusForDate(student, attendanceDate);
+  const currentPresentCount = filteredStudents.filter(student => draftStatus(student) === 'present').length;
+  const currentAbsentCount = filteredStudents.filter(student => draftStatus(student) === 'absent').length;
 
   // Check if selected date is Sunday (0 = Sunday)
   const isSelectedDateSunday = new Date(attendanceDate).getDay() === 0;
@@ -307,7 +241,7 @@ const AttendancePage = () => {
               <Button 
                 variant="contained" 
                 color="primary" 
-                startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                startIcon={saving ? <SchoolLoader inline /> : <SaveIcon />}
                 onClick={handleSaveWithCheck} 
                 disabled={saving || !isSelectedDateSunday}
                 sx={{ borderRadius: 999, fontWeight: 'bold', px: { xs: 2 }, boxShadow: '0 4px 14px rgba(59,130,246,0.35)' }}
@@ -351,7 +285,7 @@ const AttendancePage = () => {
               type="date"
               size="small"
               value={attendanceDate}
-              onChange={(e) => setAttendanceDate(e.target.value)}
+              onChange={(e) => { setAttendance({}); setExpectedStatuses({}); setDateParams({ date: e.target.value }); }}
               sx={{ minWidth: 150, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}
             />
             <FormControl size="small" sx={{ minWidth: 130, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}>
@@ -386,8 +320,9 @@ const AttendancePage = () => {
       {showSuccess && <Alert severity="success" sx={{ mt: 2, mb: 2 }}>Attendance saved successfully!</Alert>}
 
       {/* 4. Student List */}
+        {loadError && <Alert severity="error" action={<Button color="inherit" onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{loadError}</Alert>}
         {loading ? (
-          <Box display="flex" justifyContent="center" py={8}><CircularProgress /></Box>
+          <Box display="flex" justifyContent="center" py={8}><SchoolLoader /></Box>
         ) : filteredStudents.length === 0 ? (
           <Alert severity="info">No students match your filters.</Alert>
         ) : (
@@ -400,7 +335,7 @@ const AttendancePage = () => {
                   Object.prototype.hasOwnProperty.call(attendance, student.id)
                     ? attendance[student.id]
                     : savedStatus;
-                const effectiveStatus = localStatus ?? savedStatus ?? null;
+                const effectiveStatus = localStatus;
                 const isPresent = effectiveStatus === 'present';
                 const isAbsent = effectiveStatus === 'absent';
                 
@@ -450,7 +385,7 @@ const AttendancePage = () => {
                             variant={isAbsent ? 'contained' : 'outlined'}
                             color="error"
                             disabled={!isSelectedDateSunday}
-                            onClick={() => setAttendance((prev) => ({ ...prev, [student.id]: isAbsent ? null : 'absent' }))}
+                            onClick={() => markStudent(student, isAbsent ? null : 'absent')}
                             sx={{ minWidth: 80, borderRadius: 2 }}
                           >
                             Absent
@@ -459,7 +394,7 @@ const AttendancePage = () => {
                             size="small"
                             variant={effectiveStatus === null ? 'contained' : 'outlined'}
                             disabled={!isSelectedDateSunday}
-                            onClick={() => setAttendance((prev) => ({ ...prev, [student.id]: null }))}
+                            onClick={() => markStudent(student, null)}
                             sx={{ minWidth: 80, borderRadius: 2 }}
                           >
                             Unmark
@@ -469,7 +404,7 @@ const AttendancePage = () => {
                             variant={isPresent ? 'contained' : 'outlined'}
                             color="success"
                             disabled={!isSelectedDateSunday}
-                            onClick={() => setAttendance((prev) => ({ ...prev, [student.id]: isPresent ? null : 'present' }))}
+                            onClick={() => markStudent(student, isPresent ? null : 'present')}
                             sx={{ minWidth: 80, borderRadius: 2 }}
                           >
                             Present

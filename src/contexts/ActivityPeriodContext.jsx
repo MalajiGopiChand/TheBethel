@@ -1,6 +1,7 @@
+import SchoolLoader from '../components/SchoolLoader';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onSnapshot } from "../services/notifyingFirestore";
-import { Alert, Box, Button, CircularProgress } from '@mui/material';
+import { Alert, Box, Button } from '@mui/material';
 import { useAuth } from './AuthContext';
 import { periodSettingsRef, setActivePeriod, websitePeriodsEnabled } from '../services/studentData';
 
@@ -24,7 +25,7 @@ export default function ActivityPeriodProvider({ children }) {
     });
   }, [currentUser?.uid, retry]);
   if (currentUser && (state.uid !== currentUser.uid || !state.ready)) return <Box sx={{ p: 3 }}>
-    {state.error ? <Alert severity="error" action={<Button color="inherit" onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{state.error}</Alert> : <CircularProgress aria-label="Loading website data" />}
+    {state.error ? <Alert severity="error" action={<Button color="inherit" onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{state.error}</Alert> : <SchoolLoader role={currentUser.role} />}
   </Box>;
   return <ActivityPeriodContext.Provider value={state}><React.Fragment key={`${state.uid}:${state.period || 'original'}`}>{children}</React.Fragment></ActivityPeriodContext.Provider>;
 }

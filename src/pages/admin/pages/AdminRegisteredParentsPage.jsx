@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -8,7 +9,6 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   Alert,
   Table,
   TableBody,
@@ -148,7 +148,7 @@ const AdminRegisteredParentsPage = () => {
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         {loading ? (
           <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
+            <SchoolLoader />
           </Box>
         ) : filteredParents.length === 0 ? (
           <Alert severity="info">No parents found.</Alert>

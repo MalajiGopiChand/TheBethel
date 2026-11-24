@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useActivityPeriod } from '../../../contexts/ActivityPeriodContext';
 import { startNewActivityPeriod, websitePeriodsEnabled } from '../../../services/studentData';
@@ -14,7 +15,7 @@ import {
   FormControlLabel,
   Divider,
   Alert,
-  Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress
+  Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -110,7 +111,7 @@ const SettingsPage = () => {
           </DialogContent>
           <DialogActions>
             <Button disabled={resetting} onClick={() => setConfirmReset(false)}>Cancel</Button>
-            <Button variant="contained" color="warning" disabled={resetting} onClick={resetData}>{resetting ? <CircularProgress size={20} /> : 'Start fresh — keep database history'}</Button>
+            <Button variant="contained" color="warning" disabled={resetting} onClick={resetData}>{resetting ? <SchoolLoader /> : 'Start fresh — keep database history'}</Button>
           </DialogActions>
         </Dialog>
         <Card sx={{ mt: 2 }}>

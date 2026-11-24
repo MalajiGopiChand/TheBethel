@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,7 +10,6 @@ import {
   Button,
   Card,
   CardContent,
-  CircularProgress,
   FormControl,
   InputLabel,
   Select,
@@ -234,7 +234,7 @@ const AttendanceSummaryPage = () => {
 
         {loading ? (
           <Box display="flex" justifyContent="center" py={10}>
-            <CircularProgress thickness={4} />
+            <SchoolLoader />
           </Box>
         ) : (
           <>

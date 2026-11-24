@@ -34,6 +34,16 @@ const TeachersTab = () => {
 
   const actions = [
     {
+      title: 'Student Details', description: 'Search students and view their details',
+      icon: <ReportIcon />, colorStart: '#a18cd1', colorEnd: '#fbc2eb', isEnabled: true,
+      onClick: () => navigate('/teacher/student-details')
+    },
+    {
+      title: 'Teacher Profile', description: 'My rewards, reports and Sunday activity',
+      icon: <ReportIcon />, colorStart: '#c3a0f5', colorEnd: '#d8e6ff', isEnabled: true,
+      onClick: () => navigate('/teacher/profile')
+    },
+    {
       title: 'Teacher Leaderboard',
       icon: <LeaderboardIcon />,
       colorStart: '#FFE53B',

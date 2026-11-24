@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import '../parent.css';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
@@ -10,7 +11,6 @@ import {
   Button,
   Alert,
   Stack,
-  CircularProgress,
   MenuItem,
   Chip
 } from '@mui/material';
@@ -174,7 +174,7 @@ const ParentComplaintsPage = () => {
               />
 
               <Button startIcon={!submitting && <SendRounded />} type="submit" variant="contained" disabled={submitting}>
-                {submitting ? <CircularProgress size={20} color="inherit" /> : (parentLang === 'te' ? 'ఫిర్యాదు పంపు' : 'Submit Complaint')}
+                {submitting ? <SchoolLoader inline /> : (parentLang === 'te' ? 'ఫిర్యాదు పంపు' : 'Submit Complaint')}
               </Button>
             </Stack>
       </form>
@@ -183,7 +183,7 @@ const ParentComplaintsPage = () => {
             {!historyLoading && !historyError && <small>{history.length} {label(history.length === 1 ? 'Complaint' : 'Complaints', 'ఫిర్యాదులు')}</small>}
           </h2>
           {historyError && <Alert severity="error">{historyError}</Alert>}
-          {historyLoading ? <CircularProgress size={24} /> : history.length === 0 && !historyError ? <Typography color="text.secondary">{label('You have not submitted any complaints yet.', 'మీరు ఇంకా ఫిర్యాదులు పంపలేదు.')}</Typography> : (
+          {historyLoading ? <SchoolLoader /> : history.length === 0 && !historyError ? <Typography color="text.secondary">{label('You have not submitted any complaints yet.', 'మీరు ఇంకా ఫిర్యాదులు పంపలేదు.')}</Typography> : (
             <Stack spacing={2}>{history.map(item => <Paper key={item.id} variant="outlined" className="complaint-entry"><DescriptionOutlined aria-hidden="true" /><div>
               <Stack direction="row" justifyContent="space-between" gap={2}>
                 <Typography fontWeight="bold" sx={{ overflowWrap: 'anywhere' }}>{item.title}</Typography>

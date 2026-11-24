@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -6,7 +7,6 @@ import {
   Grid,
   Card,
   CardContent,
-  CircularProgress,
   Container,
   useTheme,
   useMediaQuery,
@@ -31,6 +31,7 @@ import {
 import { format } from 'date-fns';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
+import { rewardBalance } from '../../../utils/rewards';
 import AttendanceCard from '../../../components/AttendanceCard';
 import { getDashboardAttendanceStats } from '../../../utils/dashboardAttendance';
 import PodiumSection from '../../../components/PodiumSection';
@@ -195,22 +196,7 @@ const HomeTab = () => {
     }
   }, [currentUser?.name]);
 
-  // Helper function to calculate dollar points
-  const calculateDollarPoints = (studentData) => {
-    const rewardsList = studentData.rewards || [];
-    let calculatedPoints = 0;
-    
-    for (const reward of rewardsList) {
-      const points = reward.dollars;
-      if (typeof points === 'number') {
-        calculatedPoints += points;
-      } else if (typeof points === 'string') {
-        calculatedPoints += parseInt(points) || 0;
-      }
-    }
-    
-    return calculatedPoints > 0 ? calculatedPoints : (studentData.dollarPoints || 0);
-  };
+  const calculateDollarPoints = rewardBalance;
 
   // Fetch students data
   useEffect(() => {
@@ -243,19 +229,7 @@ const HomeTab = () => {
         sum + (student.rewards?.length || 0), 0
       );
 
-      // Calculate top students (unique names with total points)
-      const studentDollarMap = new Map();
-      students.forEach(student => {
-        if (student.name && student.name !== 'Unknown Student') {
-          const current = studentDollarMap.get(student.name) || 0;
-          studentDollarMap.set(student.name, current + (student.dollarPoints || 0));
-        }
-      });
-
-      const topStudents = Array.from(studentDollarMap.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([name, dollars]) => ({ name, dollars }));
+      const topStudents = [...students].sort((a, b) => b.dollarPoints - a.dollarPoints).slice(0, 3).map(student => ({ id: student.id, name: student.name, dollars: student.dollarPoints }));
 
       setOverview({
         totalStudents,
@@ -270,7 +244,7 @@ const HomeTab = () => {
       
       setLoading(false);
     }, (error) => {
-      console.error('Error fetching overview:', error);
+      setError('Could not load your classroom overview. Check your connection and retry.');
       setLoading(false);
     });
 
@@ -356,7 +330,7 @@ const HomeTab = () => {
         alignItems="center" 
         minHeight="60vh"
       >
-        <CircularProgress />
+        <SchoolLoader />
       </Box>
     );
   }

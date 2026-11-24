@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import useFinanceRecords from '../../../hooks/useFinanceRecords';
+import SchoolLoader from '../../../components/SchoolLoader';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -18,7 +20,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  CircularProgress,
   Alert,
   Chip,
   Tab,
@@ -57,9 +58,10 @@ const OfferingsPage = () => {
   };
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedPlace, setSelectedPlace] = useState('Kandrika');
-  const [loading, setLoading] = useState(false);
-  const [records, setRecords] = useState([]);
-  const [balance, setBalance] = useState({ totalOfferings: 0, totalExpenses: 0, balance: 0 });
+  const [submitting, setLoading] = useState(false);
+  const finance = useFinanceRecords(selectedPlace);
+  const { records, balance } = finance;
+  const loading = submitting || finance.loading;
   
   const places = ['Kandrika', 'Krishna Lanka', 'Gandhiji Conly', 'Other'];
   
@@ -73,100 +75,13 @@ const OfferingsPage = () => {
     reason: ''
   });
   
-  const [expenses, setExpenses] = useState([]);
-
-  useEffect(() => {
-    setLoading(true);
-    
-    // Query for Offerings
-    const offeringsQuery = query(
-      collection(db, 'offerings'),
-      where('place', '==', selectedPlace)
-    );
-
-    // Query for Expenses
-    const expensesQuery = query(
-      collection(db, 'expenses'),
-      where('place', '==', selectedPlace)
-    );
-
-    // Query for Legacy Records
-    const legacyQuery = query(
-      collection(db, 'financial_records'),
-      where('place', '==', selectedPlace)
-    );
-
-    let offeringsData = [];
-    let expensesData = [];
-    let legacyData = [];
-
-    const updateState = () => {
-      const allRecords = [...offeringsData, ...expensesData, ...legacyData];
-      
-      let totalOfferings = 0;
-      offeringsData.forEach(r => totalOfferings += (r.amount || 0));
-      
-      let totalExpenses = 0;
-      expensesData.forEach(r => totalExpenses += (r.amount || 0));
-
-      // Add legacy data to totals
-      legacyData.forEach(r => {
-        const amt = typeof r.amount === 'string' ? parseFloat(r.amount) : (r.amount || 0);
-        const type = r.type ? r.type.toLowerCase() : '';
-        if (type === 'offering') totalOfferings += amt;
-        else if (type === 'expense') totalExpenses += amt;
-      });
-
-      const sortedRecords = allRecords.sort((a, b) => {
-        const aTime = a.timestamp?.toDate?.() || a.timestamp || a.createdAt?.toDate?.() || 0;
-        const bTime = b.timestamp?.toDate?.() || b.timestamp || b.createdAt?.toDate?.() || 0;
-        return bTime - aTime;
-      });
-
-      setExpenses([...expensesData, ...legacyData.filter(r => r.type?.toLowerCase() === 'expense')]);
-      setBalance({
-        totalOfferings,
-        totalExpenses,
-        balance: totalOfferings - totalExpenses
-      });
-      setRecords(sortedRecords);
-      setLoading(false);
-    };
-
-    const unsubOfferings = onSnapshot(offeringsQuery, (snapshot) => {
-      offeringsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'offering' }));
-      updateState();
-    }, (error) => {
-      console.error('Offerings snapshot error:', error);
-    });
-
-    const unsubExpenses = onSnapshot(expensesQuery, (snapshot) => {
-      expensesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'expense' }));
-      updateState();
-    }, (error) => {
-      console.error('Expenses snapshot error:', error);
-    });
-
-    const unsubLegacy = onSnapshot(legacyQuery, (snapshot) => {
-      legacyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      updateState();
-    }, (error) => {
-      console.error('Legacy snapshot error:', error);
-    });
-
-    return () => {
-      unsubOfferings();
-      unsubExpenses();
-      unsubLegacy();
-    };
-  }, [selectedPlace]);
 
   const handleSubmitOffering = async (e) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || finance.error || !currentUser?.uid) return;
     
     const amountValue = Number(offeringForm.amount);
-    if (isNaN(amountValue) || amountValue <= 0) {
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
       notifyError('Invalid amount', 'Please enter a valid number greater than zero.');
       return;
     }
@@ -174,11 +89,6 @@ const OfferingsPage = () => {
     try {
       setLoading(true);
       
-      console.log('DEBUG: Attempting to save offering...', {
-        amount: amountValue,
-        place: selectedPlace,
-        user: currentUser?.uid
-      });
       
       // Fetch name directly from Firestore database
       let creatorName = 'Teacher';
@@ -211,11 +121,9 @@ const OfferingsPage = () => {
         createdAt: serverTimestamp()
       };
 
-      console.log('DEBUG: Payload to Firestore:', payload);
 
       const docRef = await addDoc(collection(db, 'offerings'), payload);
       
-      console.log('DEBUG: Successfully saved to offerings with ID:', docRef.id);
       
       setOfferingForm({ amount: '', reason: '' });
       notifySuccess('Offering submitted', 'Offering recorded successfully.');
@@ -229,10 +137,10 @@ const OfferingsPage = () => {
 
   const handleSubmitExpense = async (e) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || finance.error || !currentUser?.uid) return;
     
     const amountValue = Number(expenseForm.amount);
-    if (isNaN(amountValue) || amountValue <= 0) {
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
       notifyError('Invalid amount', 'Please enter a valid number.');
       return;
     }
@@ -301,6 +209,7 @@ const OfferingsPage = () => {
         <FormControl fullWidth sx={{ mb: 2 }}>
           <InputLabel>Place</InputLabel>
           <Select
+              disabled={submitting}
             value={selectedPlace}
             onChange={(e) => setSelectedPlace(e.target.value)}
             label="Place"
@@ -311,13 +220,13 @@ const OfferingsPage = () => {
           </Select>
         </FormControl>
 
-        <Card sx={{ bgcolor: 'primary.main', color: 'primary', mb: 2 }}>
+        <Card className="finance-balance-card" sx={{ bgcolor: 'primary.main', color: 'primary', mb: 2 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>Balance Summary - {selectedPlace}</Typography>
-            <Typography variant="body2">Total Offerings: ₹{balance.totalOfferings.toFixed(2)}</Typography>
-            <Typography variant="body2">Total Expenses: ₹{balance.totalExpenses.toFixed(2)}</Typography>
+            <Typography variant="body2">Total Offerings: {finance.error ? 'Unavailable' : finance.loading ? 'Preparing…' : `₹${balance.totalOfferings.toFixed(2)}`}</Typography>
+            <Typography variant="body2">Total Expenses: {finance.error ? 'Unavailable' : finance.loading ? 'Preparing…' : `₹${balance.totalExpenses.toFixed(2)}`}</Typography>
             <Typography variant="h5" sx={{ mt: 1, fontWeight: 'bold' }}>
-              Balance: ₹{balance.balance.toFixed(2)}
+              Balance: {finance.error ? 'Unavailable' : finance.loading ? 'Preparing…' : `₹${balance.balance.toFixed(2)}`}
             </Typography>
           </CardContent>
         </Card>
@@ -377,9 +286,10 @@ const OfferingsPage = () => {
       </Paper>
 
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-        {loading && selectedTab !== 2 ? (
+        {finance.error && <Alert severity="error" action={<Button color="inherit" onClick={finance.retry}>Retry</Button>}>{finance.error}</Alert>}
+        {loading ? (
           <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
+            <SchoolLoader />
           </Box>
         ) : selectedTab === 0 ? (
           <Paper sx={{ p: 3 }}>
@@ -411,7 +321,7 @@ const OfferingsPage = () => {
         ) : selectedTab === 1 ? (
           <Paper sx={{ p: 3 }}>
             <Alert severity="info" sx={{ mb: 2 }}>
-              Available Balance: ₹{balance.balance.toFixed(2)}
+              Available Balance: {finance.error ? 'Unavailable' : finance.loading ? 'Preparing…' : `₹${balance.balance.toFixed(2)}`}
             </Alert>
             <form onSubmit={handleSubmitExpense}>
               <TextField
@@ -446,7 +356,7 @@ const OfferingsPage = () => {
               </Typography>
             ) : (
               records.map((record) => (
-                <Card key={record.id} elevation={1} sx={{ borderRadius: 2 }}>
+                <Card key={`${record.sourceCollection}:${record.id}`} elevation={1} sx={{ borderRadius: 2 }}>
                   <CardContent sx={{ p: '16px !important' }}>
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
                       <Typography variant="caption" color="text.secondary" fontWeight="medium">

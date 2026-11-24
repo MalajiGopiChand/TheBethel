@@ -1,7 +1,8 @@
+import SchoolLoader from '../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { Outlet, useMatch, useNavigate } from 'react-router-dom';
 import './parent.css';
-import { Box, Container, AppBar, Toolbar, Button, CircularProgress, Avatar, Select, MenuItem } from '@mui/material';
+import { Box, Container, AppBar, Toolbar, Button, Avatar, Select, MenuItem } from '@mui/material';
 import { LogoutRounded as LogoutIcon } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { doc, collection, query, where, onSnapshot } from '../../services/studentData';
@@ -106,7 +107,7 @@ const ParentDashboard = () => {
             <MenuItem value={ParentLang.TE}>తెలుగు</MenuItem>
           </Select>
           <Button className="portal-logout" aria-label={logoutLabel} onClick={handleLogout} disabled={loadingLogout}>
-            {loadingLogout ? <CircularProgress size={16} /> : <LogoutIcon fontSize="small" />}<span>{logoutLabel}</span>
+            {loadingLogout ? <SchoolLoader /> : <LogoutIcon fontSize="small" />}<span>{logoutLabel}</span>
           </Button>
         </Toolbar>
       </AppBar>

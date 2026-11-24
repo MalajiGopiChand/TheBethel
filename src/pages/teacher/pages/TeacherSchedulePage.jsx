@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
@@ -10,7 +11,6 @@ import {
   Button,
   Card,
   CardContent,
-  CircularProgress,
   Alert,
   TextField,
   FormControl,
@@ -484,7 +484,7 @@ const TeacherSchedulePage = () => {
         {pageError && <Alert severity="error" sx={{ mb: 2 }}>{pageError}</Alert>}
         {loading ? (
           <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
+            <SchoolLoader />
           </Box>
         ) : currentSundaySchedules.length === 0 ? (
           <Alert severity="info" sx={{ borderRadius: 2 }}>No schedules found for this Sunday.</Alert>

@@ -1,3 +1,4 @@
+import SchoolLoader from '../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -11,8 +12,7 @@ import {
   Link as MuiLink,
   InputAdornment,
   Avatar,
-  Fade,
-  CircularProgress
+  Fade
 } from '@mui/material';
 import {
   Email as EmailIcon,
@@ -183,7 +183,7 @@ const AdminLogin = () => {
                 }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Access Dashboard'}
+                {loading ? <SchoolLoader inline /> : 'Access Dashboard'}
               </Button>
 
               <Box textAlign="center" mt={2}>

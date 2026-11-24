@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,7 +12,6 @@ import {
   Chip,
   Tab,
   Tabs,
-  CircularProgress,
   Alert,
   Dialog,
   DialogTitle,
@@ -140,7 +140,7 @@ const AdminVerifyTeachersPage = () => {
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         {loading ? (
           <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
+            <SchoolLoader />
           </Box>
         ) : displayTeachers.length === 0 ? (
           <Alert severity="info">

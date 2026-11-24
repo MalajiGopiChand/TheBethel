@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -6,7 +7,6 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   Container,
   Dialog,
   DialogActions,
@@ -16,6 +16,7 @@ import {
   Paper,
   Stack,
   TextField,
+  MenuItem,
   Typography,
 } from '@mui/material';
 import {
@@ -40,6 +41,7 @@ import {
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';
+import { activityDate, activityDay, belongsToTeacher, isActivityAdmin, newestActivity } from '../../../utils/teacherActivity';
 
 const ADMIN_EMAILS = ['gop1@gmail.com', 'premkumartenali@gmail.com', 'admin@gmail.com'];
 
@@ -54,6 +56,9 @@ const TeacherAttendancePage = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [teachers, setTeachers] = useState([]);
+  const [selectedTeacher, setSelectedTeacher] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState(''); // yyyy-MM-dd
   const [showDialog, setShowDialog] = useState(false);
@@ -70,7 +75,7 @@ const TeacherAttendancePage = () => {
   const [pointsInput, setPointsInput] = useState('');
   const [deleteDialogReport, setDeleteDialogReport] = useState(null);
 
-  const isAdmin = ADMIN_EMAILS.includes(currentUser?.email || '');
+  const isAdmin = isActivityAdmin(currentUser);
 
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0=Sunday
@@ -85,20 +90,7 @@ const TeacherAttendancePage = () => {
     setLoading(true);
     setError('');
 
-    let q = query(collection(db, 'teacherProgress'), orderBy('createdAt', 'desc'));
-
-    if (selectedDate) {
-      const [year, month, day] = selectedDate.split('-').map((v) => parseInt(v, 10));
-      const start = new Date(year, month - 1, day, 0, 0, 0, 0).getTime();
-      const end = new Date(year, month - 1, day + 1, 0, 0, 0, 0).getTime();
-
-      q = query(
-        collection(db, 'teacherProgress'),
-        where('createdAt', '>=', start),
-        where('createdAt', '<', end),
-        orderBy('createdAt', 'desc')
-      );
-    }
+    const q = collection(db, 'teacherProgress');
 
     const unsubscribe = onSnapshot(
       q,
@@ -117,7 +109,11 @@ const TeacherAttendancePage = () => {
     );
 
     return () => unsubscribe();
-  }, [selectedDate]);
+  }, []);
+
+  useEffect(() => onSnapshot(collection(db, 'teachers'), snapshot => {
+    setTeachers(snapshot.docs.map(item => ({ ...item.data(), uid: item.id })).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+  }, () => setError('Unable to load teacher accounts. Retry the page before submitting a report.')), []);
 
   const handleOpenNew = () => {
     if (!isModificationAllowed) {
@@ -134,6 +130,7 @@ const TeacherAttendancePage = () => {
       teachingMethodsUsed: '',
     };
     setEditingReport(null);
+    setSelectedTeacher(isAdmin ? '' : currentUserUid);
     setDialogValues({
       teacherName: base.teacherName,
       className: base.className,
@@ -156,6 +153,7 @@ const TeacherAttendancePage = () => {
     }
 
     setEditingReport(report);
+    setSelectedTeacher(report.teacherUid || '');
     setDialogValues({
       teacherName: report.teacherName || '',
       className: report.className || '',
@@ -167,19 +165,25 @@ const TeacherAttendancePage = () => {
   };
 
   const handleSaveDialog = async () => {
+    if (saving || !isModificationAllowed || (!isAdmin && editingReport && editingReport.teacherUid !== currentUserUid)) return;
+    const owner = teachers.find(teacher => teacher.uid === selectedTeacher);
+    if (!editingReport && isAdmin && !owner) { setError('Select a teacher account for this report.'); return; }
+    if (!dialogValues.className.trim() || !dialogValues.lessonTopicsCovered.trim()) { setError('Enter a class and the lesson topics covered.'); return; }
     const now = Date.now();
     const payload = {
-      teacherName: dialogValues.teacherName || currentUserName || 'Teacher',
-      teacherUid: editingReport?.teacherUid || currentUserUid,
+      teacherName: editingReport ? (editingReport.teacherName || owner?.name || 'Teacher') : (isAdmin ? owner.name : currentUserName) || 'Teacher',
+      ...(!editingReport ? { teacherUid: isAdmin ? owner.uid : currentUserUid } : {}),
       className: dialogValues.className,
       teachingPlace: dialogValues.teachingPlace,
       lessonTopicsCovered: dialogValues.lessonTopicsCovered,
       teachingMethodsUsed: dialogValues.teachingMethodsUsed,
       createdAt: editingReport?.createdAt || now,
       points: editingReport?.points || 0,
+      updatedAt: now,
     };
 
     try {
+      setSaving(true); setError('');
       if (editingReport) {
         await updateDoc(doc(db, 'teacherProgress', editingReport.id), payload);
       } else {
@@ -189,7 +193,7 @@ const TeacherAttendancePage = () => {
       setEditingReport(null);
     } catch (err) {
       setError(err.message || 'Failed to save report.');
-    }
+    } finally { setSaving(false); }
   };
 
   const canModifyReport = (report) => {
@@ -235,12 +239,11 @@ const TeacherAttendancePage = () => {
     }
   };
 
-  const filteredReports = useMemo(() => reports, [reports]);
+  const filteredReports = useMemo(() => reports.filter(report => (isAdmin || belongsToTeacher(report, { ...currentUser, uid: currentUserUid }, teachers)) && (!selectedDate || activityDay(report.createdAt) === selectedDate)).sort(newestActivity), [reports, teachers, currentUser, isAdmin, currentUserUid, selectedDate]);
 
   const formatDateTime = (createdAt) => {
     if (!createdAt) return '';
-    const date = new Date(createdAt);
-    return date.toLocaleString();
+    return activityDate(createdAt)?.toLocaleString('en-IN') || 'Date not recorded';
   };
 
   return (
@@ -306,7 +309,7 @@ const TeacherAttendancePage = () => {
 
         {loading ? (
           <Box display="flex" justifyContent="center" py={6}>
-            <CircularProgress />
+            <SchoolLoader />
           </Box>
         ) : filteredReports.length === 0 ? (
           <Typography color="text.secondary">No reports found.</Typography>
@@ -358,12 +361,12 @@ const TeacherAttendancePage = () => {
                         Points
                       </Button>
                     )}
-                    <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => handleOpenEdit(report)}>
+                    {canModifyReport(report) && <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => handleOpenEdit(report)}>
                       Edit
-                    </Button>
-                    <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => handleDelete(report)}>
+                    </Button>}
+                    {isAdmin && <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => handleDelete(report)}>
                       Delete
-                    </Button>
+                    </Button>}
                   </Box>
                 </CardContent>
               </Card>
@@ -372,10 +375,12 @@ const TeacherAttendancePage = () => {
         )}
 
         {/* Add/Edit Dialog */}
-        <Dialog open={showDialog} onClose={() => setShowDialog(false)} maxWidth="sm" fullWidth>
+        <Dialog open={showDialog} onClose={() => !saving && setShowDialog(false)} maxWidth="sm" fullWidth>
           <DialogTitle>{editingReport ? 'Edit Progress Report' : 'Add Progress Report'}</DialogTitle>
           <DialogContent dividers>
             <Stack spacing={2} sx={{ mt: 1 }}>
+              {error && <Alert severity="error">{error}</Alert>}
+              {isAdmin && !editingReport && <TextField select label="Teacher account" value={selectedTeacher} onChange={event => { setSelectedTeacher(event.target.value); setDialogValues(previous => ({ ...previous, teacherName: teachers.find(teacher => teacher.uid === event.target.value)?.name || '' })); }} required fullWidth>{teachers.map(teacher => <MenuItem key={teacher.uid} value={teacher.uid}>{teacher.name || teacher.email} · {teacher.email}</MenuItem>)}</TextField>}
               <TextField
                 label="Teacher Name"
                 value={dialogValues.teacherName}
@@ -383,7 +388,7 @@ const TeacherAttendancePage = () => {
                   setDialogValues((prev) => ({ ...prev, teacherName: e.target.value }))
                 }
                 fullWidth
-                disabled={!isAdmin && !!currentUserName}
+                disabled
               />
               <TextField
                 label="Class / Group"
@@ -424,9 +429,9 @@ const TeacherAttendancePage = () => {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setShowDialog(false)}>Cancel</Button>
-            <Button onClick={handleSaveDialog} variant="contained">
-              Save
+            <Button disabled={saving} onClick={() => setShowDialog(false)}>Cancel</Button>
+            <Button disabled={saving} onClick={handleSaveDialog} variant="contained">
+              {saving ? 'Saving report…' : 'Save'}
             </Button>
           </DialogActions>
         </Dialog>

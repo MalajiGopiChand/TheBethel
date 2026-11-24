@@ -1,6 +1,7 @@
+import SchoolLoader from '../../components/SchoolLoader';
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Alert, AppBar, Box, Button, CircularProgress, IconButton, Toolbar, Tooltip, Typography } from '@mui/material';
+import { Alert, AppBar, Box, Button, IconButton, Toolbar, Tooltip, Typography } from '@mui/material';
 import { LogoutRounded, NotificationsActiveRounded } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { ADMIN_TABS } from '../../utils/adminNavigation';
@@ -37,7 +38,7 @@ export default function AdminDashboard() {
           </div>
         </div>
         <Tooltip title="Notification center"><IconButton aria-label="Open notification center" onClick={() => navigate('/admin/notifications')} sx={{ display: { xs: 'none', sm: 'inline-flex' }, color: 'primary.main' }}><NotificationsActiveRounded /></IconButton></Tooltip>
-        <Button color="error" onClick={handleLogout} disabled={busy} startIcon={busy ? <CircularProgress size={16} /> : <LogoutRounded />} sx={{ bgcolor: '#fce7ed', px: { xs: 1.5, sm: 2.5 } }}>Logout</Button>
+        <Button color="error" onClick={handleLogout} disabled={busy} startIcon={busy ? <SchoolLoader inline /> : <LogoutRounded />} sx={{ bgcolor: '#fce7ed', px: { xs: 1.5, sm: 2.5 } }}>Logout</Button>
       </Toolbar>
       {index === 0 && <SchoolArtwork name="hero" className="dashboard-hero-art" />}
     </AppBar>

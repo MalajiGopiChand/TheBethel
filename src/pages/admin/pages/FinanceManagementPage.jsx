@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import useFinanceRecords from '../../../hooks/useFinanceRecords';
+import SchoolLoader from '../../../components/SchoolLoader';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -22,7 +24,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  CircularProgress,
   Alert,
   Chip,
   IconButton
@@ -62,9 +63,10 @@ const FinanceManagementPage = () => {
   };
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedPlace, setSelectedPlace] = useState('Kandrika');
-  const [loading, setLoading] = useState(false);
-  const [records, setRecords] = useState([]);
-  const [balance, setBalance] = useState({ totalOfferings: 0, totalExpenses: 0, balance: 0 });
+  const [submitting, setLoading] = useState(false);
+  const finance = useFinanceRecords(selectedPlace);
+  const { records, balance } = finance;
+  const loading = submitting || finance.loading;
   
   const places = ['Kandrika', 'Krishna Lanka', 'Gandhiji Conly', 'Other'];
   
@@ -78,98 +80,17 @@ const FinanceManagementPage = () => {
     reason: ''
   });
 
-  useEffect(() => {
-    fetchBalanceAndRecords();
-  }, [selectedPlace]);
-
-  const fetchBalanceAndRecords = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch offerings
-      const offeringsQuery = query(
-        collection(db, 'offerings'),
-        where('place', '==', selectedPlace)
-      );
-      const offeringsSnapshot = await getDocs(offeringsQuery);
-      const offeringsData = offeringsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        type: 'offering'
-      }));
-      const totalOfferings = offeringsData.reduce((sum, item) => {
-        const amt = item.amount;
-        return sum + (typeof amt === 'string' ? parseFloat(amt) : (amt || 0));
-      }, 0);
-      
-      // Fetch expenses
-      const expensesQuery = query(
-        collection(db, 'expenses'),
-        where('place', '==', selectedPlace)
-      );
-      const expensesSnapshot = await getDocs(expensesQuery);
-      const expensesData = expensesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        type: 'expense'
-      }));
-      const totalExpenses = expensesData.reduce((sum, item) => {
-        const amt = item.amount;
-        return sum + (typeof amt === 'string' ? parseFloat(amt) : (amt || 0));
-      }, 0);
-      
-      // Fetch legacy records
-      const legacyQuery = query(
-        collection(db, 'financial_records'),
-        where('place', '==', selectedPlace)
-      );
-      const legacySnapshot = await getDocs(legacyQuery);
-      const legacyData = legacySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      // Merge and sort for history
-      const allRecords = [...offeringsData, ...expensesData, ...legacyData].sort((a, b) => {
-        const aTime = a.timestamp?.toDate?.() || a.timestamp || 0;
-        const bTime = b.timestamp?.toDate?.() || b.timestamp || 0;
-        return bTime - aTime;
-      });
-
-      // Calculate totals including legacy
-      let finalOfferings = totalOfferings;
-      let finalExpenses = totalExpenses;
-      legacyData.forEach(r => {
-        const amt = typeof r.amount === 'string' ? parseFloat(r.amount) : (r.amount || 0);
-        const type = r.type ? r.type.toLowerCase() : '';
-        if (type === 'offering') finalOfferings += amt;
-        else if (type === 'expense') finalExpenses += amt;
-      });
-      
-      setBalance({
-        totalOfferings: finalOfferings,
-        totalExpenses: finalExpenses,
-        balance: finalOfferings - finalExpenses
-      });
-      setRecords(allRecords);
-    } catch (error) {
-      console.error('Error fetching finance data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmitOffering = async (e) => {
     e.preventDefault();
+    if (loading || finance.error || !currentUser?.uid) return;
     const amountValue = Number(offeringForm.amount);
-    if (isNaN(amountValue) || amountValue <= 0) {
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
       notifyError('Invalid amount', 'Please enter a valid number.');
       return;
     }
 
     try {
       setLoading(true);
-      console.log('DEBUG: Admin saving offering...', { amount: amountValue, place: selectedPlace });
       
       // For admins, use email as name (since admin emails are hardcoded)
       const creatorName = currentUser?.email || currentUser?.name || 'Admin';
@@ -188,13 +109,10 @@ const FinanceManagementPage = () => {
         createdAt: serverTimestamp()
       };
 
-      console.log('DEBUG: Admin payload:', payload);
 
       const docRef = await addDoc(collection(db, 'offerings'), payload);
-      console.log('DEBUG: Success ID in offerings:', docRef.id);
       
       setOfferingForm({ amount: '', reason: '' });
-      fetchBalanceAndRecords();
       notifySuccess('Offering submitted', 'Offering recorded successfully.');
     } catch (error) {
       console.error('CRITICAL: Admin offering write failed:', error);
@@ -206,8 +124,9 @@ const FinanceManagementPage = () => {
 
   const handleSubmitExpense = async (e) => {
     e.preventDefault();
+    if (loading || finance.error || !currentUser?.uid) return;
     const amountValue = Number(expenseForm.amount);
-    if (isNaN(amountValue) || amountValue <= 0) {
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
       notifyError('Invalid amount', 'Please enter a valid number.');
       return;
     }
@@ -240,7 +159,6 @@ const FinanceManagementPage = () => {
       await addDoc(collection(db, 'expenses'), payload);
       
       setExpenseForm({ amount: '', reason: '' });
-      fetchBalanceAndRecords();
       notifySuccess('Expense submitted', 'Expense recorded successfully.');
     } catch (error) {
       console.error('CRITICAL ERROR:', error);
@@ -251,16 +169,16 @@ const FinanceManagementPage = () => {
     }
   };
 
-  const handleDeleteRecord = async (recordId, type) => {
+  const handleDeleteRecord = async (record) => {
+    if (loading || record.sourceCollection === 'financial_records') return;
     if (!window.confirm('Are you sure you want to delete this record?')) {
       return;
     }
 
     try {
       setLoading(true);
-      const collectionName = type?.toLowerCase() === 'offering' ? 'offerings' : 'expenses';
-      await deleteDoc(doc(db, collectionName, recordId));
-      fetchBalanceAndRecords();
+      const collectionName = record.sourceCollection;
+      await deleteDoc(doc(db, collectionName, record.id));
       notifySuccess('Deleted', 'Record deleted successfully.');
     } catch (error) {
       console.error('Error deleting record:', error);
@@ -270,46 +188,9 @@ const FinanceManagementPage = () => {
     }
   };
 
-  const handleSyncLegacyRecords = async () => {
-    if (!window.confirm('Sync legacy records? This will assign "Admin (Legacy)" to all older records that have "Unknown" authors.')) {
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const snapshot = await getDocs(collection(db, 'financial_records'));
-      let updateCount = 0;
-      
-      const promises = [];
-      snapshot.forEach((document) => {
-        const data = document.data();
-        const hasCreator = data.createdBy || data.createdByName || data.recordedBy || data.uploadedBy || data.userName || data.name || data.createdByUid;
-        
-        if (!hasCreator) {
-          promises.push(updateDoc(doc(db, 'financial_records', document.id), {
-            createdBy: 'Admin (Legacy)'
-          }));
-          updateCount++;
-        }
-      });
-      
-      if (promises.length > 0) {
-        await Promise.all(promises);
-        notifySuccess('Sync Complete', `Successfully updated ${updateCount} legacy records.`);
-        fetchBalanceAndRecords();
-      } else {
-        notifySuccess('Up to date', 'No legacy records found to sync.');
-      }
-    } catch (error) {
-      console.error('Error syncing records:', error);
-      notifyError('Sync Failed', error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Box className="admin-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa', pb: 4 }}>
+      {finance.error && <Alert severity="error" action={<Button color="inherit" onClick={finance.retry}>Retry</Button>}>{finance.error}</Alert>}
       {/* Glass Header (Sticky) */}
       <AppBar
         position="sticky"
@@ -336,6 +217,7 @@ const FinanceManagementPage = () => {
         <FormControl fullWidth sx={{ mb: 3 }}>
           <InputLabel id="place-select-label">Location</InputLabel>
           <Select
+              disabled={submitting}
             labelId="place-select-label"
             value={selectedPlace}
             onChange={(e) => setSelectedPlace(e.target.value)}
@@ -348,7 +230,7 @@ const FinanceManagementPage = () => {
           </Select>
         </FormControl>
 
-        <Card sx={{ 
+        <Card className="finance-balance-card" sx={{
           background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)', 
           color: 'white', 
           mb: 3,
@@ -364,17 +246,17 @@ const FinanceManagementPage = () => {
                {selectedPlace} Summary
             </Typography>
             <Typography variant="h3" sx={{ fontWeight: '900', mb: 3, wordBreak: 'break-word' }}>
-              ₹{balance.balance.toFixed(2)}
+              {finance.error ? 'Unavailable' : finance.loading ? 'Preparing…' : `₹${balance.balance.toFixed(2)}`}
             </Typography>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.2)', pt: 2 }}>
                <Box>
                   <Typography variant="caption" sx={{ opacity: 0.8 }}>Total Offerings</Typography>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>₹{balance.totalOfferings.toFixed(2)}</Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{finance.error ? 'Unavailable' : finance.loading ? 'Preparing…' : `₹${balance.totalOfferings.toFixed(2)}`}</Typography>
                </Box>
                <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="caption" sx={{ opacity: 0.8 }}>Total Expenses</Typography>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>₹{balance.totalExpenses.toFixed(2)}</Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{finance.error ? 'Unavailable' : finance.loading ? 'Preparing…' : `₹${balance.totalExpenses.toFixed(2)}`}</Typography>
                </Box>
             </Box>
           </CardContent>
@@ -418,9 +300,9 @@ const FinanceManagementPage = () => {
         </Tabs>
 
         <Box sx={{ pt: 3 }}>
-        {loading && selectedTab !== 2 ? (
+        {loading ? (
           <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
+            <SchoolLoader />
           </Box>
         ) : selectedTab === 0 ? (
           <Box>
@@ -452,7 +334,7 @@ const FinanceManagementPage = () => {
         ) : selectedTab === 1 ? (
           <Box>
             <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-              Available Balance: <strong>₹{balance.balance.toFixed(2)}</strong>
+              Available Balance: <strong>{finance.error ? 'Unavailable' : finance.loading ? 'Preparing…' : `₹${balance.balance.toFixed(2)}`}</strong>
             </Alert>
             <form onSubmit={handleSubmitExpense}>
               <TextField
@@ -482,15 +364,6 @@ const FinanceManagementPage = () => {
         ) : (
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-              <Button 
-                variant="outlined" 
-                color="secondary" 
-                size="small" 
-                onClick={handleSyncLegacyRecords}
-                startIcon={<HistoryIcon />}
-              >
-                Sync Legacy Records
-              </Button>
             </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {records.length === 0 ? (
@@ -499,7 +372,7 @@ const FinanceManagementPage = () => {
               </Typography>
             ) : (
               records.map((record) => (
-                <Card key={record.id} elevation={1} sx={{ borderRadius: 2, border: '1px solid #eee' }}>
+                <Card key={`${record.sourceCollection}:${record.id}`} elevation={1} sx={{ borderRadius: 2, border: '1px solid #eee' }}>
                   <CardContent sx={{ p: '16px !important' }}>
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
                       <Typography variant="caption" color="text.secondary" fontWeight="medium">
@@ -558,7 +431,7 @@ const FinanceManagementPage = () => {
                        <Typography variant="h6" fontWeight="900" sx={{ color: (record.type && record.type.toUpperCase() === 'OFFERING') ? '#2e7d32' : '#d32f2f' }}>
                          ₹{parseFloat(record.amount || 0).toFixed(2)}
                        </Typography>
-                       <IconButton size="small" color="error" onClick={() => handleDeleteRecord(record.id, record.type)} sx={{ bgcolor: 'error.main', color: 'white', '&:hover': { bgcolor: 'error.dark' }, width: 28, height: 28 }}>
+                       <IconButton size="small" color="error" disabled={record.sourceCollection === 'financial_records'} onClick={() => handleDeleteRecord(record)} sx={{ bgcolor: 'error.main', color: 'white', '&:hover': { bgcolor: 'error.dark' }, width: 28, height: 28 }}>
                          <DeleteIcon sx={{ fontSize: 16 }} />
                        </IconButton>
                     </Box>

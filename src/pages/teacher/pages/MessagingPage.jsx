@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,7 +8,6 @@ import {
   IconButton,
   Paper,
   Avatar,
-  CircularProgress,
   Menu,
   MenuItem,
   AppBar,
@@ -563,7 +563,7 @@ const MessagingPage = () => {
   if (loading || authLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
+        <SchoolLoader />
       </Box>
     );
   }
@@ -810,7 +810,7 @@ const MessagingPage = () => {
                  boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
                }}
              >
-               {sending ? <CircularProgress size={22} color="inherit" /> : editingMessage ? <EditIcon /> : <SendIcon sx={{ ml: 0.5 }} />}
+               {sending ? <SchoolLoader inline /> : editingMessage ? <EditIcon /> : <SendIcon sx={{ ml: 0.5 }} />}
              </IconButton>
           ) : isRecording ? (
              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>

@@ -1,10 +1,10 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Card,
   CardContent,
-  CircularProgress,
   Avatar,
   Chip
 } from '@mui/material';
@@ -112,7 +112,7 @@ const LeaderboardTab = ({ student, parentLang = 'te' }) => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" py={4}>
-        <CircularProgress />
+        <SchoolLoader />
       </Box>
     );
   }

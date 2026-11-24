@@ -1,5 +1,6 @@
+import SchoolLoader from '../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -10,7 +11,6 @@ import {
   BottomNavigation,
   BottomNavigationAction,
   Paper,
-  CircularProgress,
   Tooltip,
   useTheme,
   Fade,
@@ -43,7 +43,6 @@ import HomeTab from './components/HomeTab';
 import AttendanceTab from './components/AttendanceTab';
 import RewardsTab from './components/RewardsTab';
 import TeachersTab from './components/TeachersTab';
-import StudentsTab from './components/StudentsTab';
 
 const TeacherDashboard = () => {
   const { currentUser, logout, loading: authLoading } = useAuth();
@@ -51,14 +50,9 @@ const TeacherDashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const [currentTab, setCurrentTab] = useState(() => {
-    const savedTab = sessionStorage.getItem('TeacherDashboard_currentTab');
-    return savedTab ? parseInt(savedTab, 10) : 0;
-  });
-
-  useEffect(() => {
-    sessionStorage.setItem('TeacherDashboard_currentTab', currentTab.toString());
-  }, [currentTab]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = Number(searchParams.get('tab') || 0);
+  const currentTab = Number.isInteger(requestedTab) && requestedTab >= 0 && requestedTab <= 3 ? requestedTab : 0;
   const [loadingLogout, setLoadingLogout] = useState(false);
 
   // Redirect if not authenticated or not a teacher - improved for PWA
@@ -112,7 +106,7 @@ const TeacherDashboard = () => {
           bgcolor: 'background.default'
         }}
       >
-        <CircularProgress />
+        <SchoolLoader />
       </Box>
     );
   }
@@ -129,7 +123,7 @@ const TeacherDashboard = () => {
           bgcolor: 'background.default'
         }}
       >
-        <CircularProgress />
+        <SchoolLoader />
       </Box>
     );
   }
@@ -147,7 +141,8 @@ const TeacherDashboard = () => {
   };
 
   const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
+    if (newValue === 4) { navigate('/teacher/profile'); return; }
+    setSearchParams({ tab: String(newValue) });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -158,7 +153,6 @@ const TeacherDashboard = () => {
         case 1: return <AttendanceTab />;
         case 2: return <RewardsTab />;
         case 3: return <TeachersTab />;
-        case 4: return <StudentsTab />;
         default: return <HomeTab />;
       }
     })();
@@ -242,7 +236,7 @@ const TeacherDashboard = () => {
                 startIcon={!loadingLogout && <LogoutIcon />}
                 sx={{ borderRadius: 999, px: 2.5, color: '#000', fontWeight: 'bold' }}
               >
-                {loadingLogout ? <CircularProgress size={18} color="inherit" /> : 'Logout'}
+                {loadingLogout ? <SchoolLoader inline /> : 'Logout'}
               </Button>
             </Box>
           )}
@@ -265,7 +259,7 @@ const TeacherDashboard = () => {
                   }}
                   startIcon={!loadingLogout && <LogoutIcon sx={{ width: 18, height: 18 }} />}
                 >
-                  {loadingLogout ? <CircularProgress size={16} color="inherit" /> : 'Logout'}
+                  {loadingLogout ? <SchoolLoader inline /> : 'Logout'}
                 </Button>
               </Tooltip>
             </Box>
@@ -309,9 +303,9 @@ const TeacherDashboard = () => {
             '& .MuiBottomNavigationAction-root': {
               minWidth: 'auto',
               padding: '8px 6px',
-              color: 'rgba(148,163,184,0.75)',
+              color: '#635775',
               '&.Mui-selected': {
-                color: theme.palette.primary.main,
+                color: '#fff',
               },
               '& .MuiSvgIcon-root': {
                 transition: 'all 0.25s ease',
@@ -343,7 +337,7 @@ const TeacherDashboard = () => {
             icon={currentTab === 3 ? <PeopleIcon /> : <PeopleOutlinedIcon />}
           />
           <BottomNavigationAction
-            label="Students"
+            label="Profile"
             icon={currentTab === 4 ? <SchoolIcon /> : <SchoolOutlinedIcon />}
           />
         </BottomNavigation>

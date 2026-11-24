@@ -24,13 +24,13 @@ const StudentsTab = () => {
       onClick: () => navigate('/teacher/leaderboard')
     },
     {
-      title: 'Manage Students',
-      description: 'Add, Edit, View List',
+      title: 'Student Details',
+      description: 'Search & View Details',
       icon: <StudentIcon />,
       colorStart: '#a18cd1',
       colorEnd: '#fbc2eb',
       isEnabled: true,
-      onClick: () => navigate('/teacher/students-manage')
+      onClick: () => navigate('/teacher/student-details')
     },
     {
       title: 'Student Profile',
@@ -48,7 +48,7 @@ const StudentsTab = () => {
       colorStart: '#ff9a9e',
       colorEnd: '#fecfef',
       isEnabled: true,
-      onClick: () => navigate('/teacher/students-absent')
+      onClick: () => navigate('/teacher/absent-students')
     },
     {
       title: 'Download Data',
@@ -57,7 +57,7 @@ const StudentsTab = () => {
       colorStart: '#84fab0',
       colorEnd: '#8fd3f4',
       isEnabled: true,
-      onClick: () => navigate('/teacher/students-download')
+      onClick: () => navigate('/teacher/download-records')
     }
   ];
 

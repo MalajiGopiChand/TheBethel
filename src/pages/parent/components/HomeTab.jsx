@@ -1,6 +1,7 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Typography, Box, CircularProgress } from '@mui/material';
+import { Typography, Box } from '@mui/material';
 import { CalendarMonth as CalendarIcon, ChatOutlined as ChatIcon, CampaignOutlined as NewsIcon } from '@mui/icons-material';
 import { parentAttendance, parentRewards } from '../../../utils/parentActivity';
 import ParentHistoryDialog from './ParentHistoryDialog';
@@ -17,7 +18,7 @@ const HomeTab = ({ student, parentLang = 'te' }) => {
         <Typography variant="h6" color="text.secondary">
           Loading student data...
         </Typography>
-        <CircularProgress sx={{ mt: 2 }} />
+        <SchoolLoader />
       </Box>
     );
   }

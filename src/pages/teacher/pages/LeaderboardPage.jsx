@@ -1,9 +1,10 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AppBar, Toolbar, IconButton, Fade, Grow, Stack,
   Box, Paper, Typography, Card, CardContent,
-  Avatar, Chip, CircularProgress, FormControl, InputLabel,
+  Avatar, Chip, FormControl, InputLabel,
   Select, MenuItem, Grid, Alert, Container
 } from '@mui/material';
 import {
@@ -231,7 +232,7 @@ const LeaderboardPage = () => {
           </FormControl>
         </Box>
         {loading ? (
-          <Box display="flex" justifyContent="center" py={10}><CircularProgress /></Box>
+          <Box display="flex" justifyContent="center" py={10}><SchoolLoader /></Box>
         ) : students.length === 0 ? (
           <Alert severity="info" sx={{ borderRadius: 2 }}>No students found in this area/class.</Alert>
         ) : (

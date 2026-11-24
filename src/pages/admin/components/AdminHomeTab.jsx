@@ -6,6 +6,8 @@ import { collection, query, orderBy, onSnapshot } from '../../../services/studen
 import { db } from '../../../config/firebase';
 import { getDashboardAttendanceStats } from '../../../utils/dashboardAttendance';
 import { rewardBalance } from '../../../utils/rewards';
+import PodiumSection from '../../../components/PodiumSection';
+import SchoolLoader from '../../../components/SchoolLoader';
 import ActionGrid from '../../../components/ActionGrid';
 import SchoolArtwork from '../../../components/SchoolArtwork';
 
@@ -17,7 +19,7 @@ export default function AdminHomeTab() {
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     setError(''); setLoading(true);
-    return onSnapshot(query(collection(db, 'students'), orderBy('studentId')), snapshot => {
+    return onSnapshot(collection(db, 'students'), snapshot => {
       setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     }, () => { setError('Could not load the dashboard. Check your connection and try again.'); setLoading(false); });
@@ -35,8 +37,7 @@ export default function AdminHomeTab() {
     ['Give Dollars', 'Student rewards', <AttachMoneyRounded />, '#dc726e', '#ffdddd', '/teacher/dollars-giving'],
   ].map(([title, subtitle, icon, colorStart, colorEnd, path]) => ({ title, subtitle, icon, colorStart, colorEnd, onClick: () => navigate(path) }));
   if (error) return <Alert severity="error" action={<Button onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{error}</Alert>;
-  if (loading) return <Box aria-label="Loading dashboard"><Skeleton variant="rounded" height={140} sx={{ mb: 3 }} /><Skeleton variant="rounded" height={340} /></Box>;
-  const podium = [overview.top[1], overview.top[0], overview.top[2]];
+  if (loading) return <SchoolLoader role="admin" />;
   return <section className="admin-home" aria-label="School overview">
     <Paper className="sunday-overview">
       <div className="sunday-attendance">
@@ -48,16 +49,7 @@ export default function AdminHomeTab() {
         <div><BarChartRounded /><span>Attendance Rate<strong>{overview.attendancePercentage}%</strong></span></div>
       </div>
     </Paper>
-    {overview.top.length > 0 ? <Paper className="performers-panel">
-      <div className="performers-heading"><Typography component="h2" variant="h5"><span aria-hidden="true">🏆</span> Top Performers</Typography><Button onClick={() => navigate('/teacher/leaderboard')}>View All</Button></div>
-      <div className="admin-podium">
-      {podium.map((student, index) => student && <Paper key={student.id} className="admin-podium-item" data-rank={[2, 1, 3][index]}>
-        <div className="admin-podium-medal" aria-label={`Rank ${[2, 1, 3][index]}`}>{['🥈', '👑', '🥉'][index]}</div>
-        <SchoolArtwork name="portrait" className="performer-portrait" />
-        <Typography fontWeight={750} sx={{ fontSize: { xs: '.875rem', sm: '1.2rem' } }}>{student.name || 'Student'}</Typography>
-        <Typography fontWeight={800} sx={{ mt: .5, fontSize: { xs: '1.4rem', sm: '1.8rem' } }}>${student.dollars.toLocaleString()}</Typography>
-      </Paper>)}
-    </div></Paper> : <Alert severity="info" sx={{ mb: 3 }}>Add your first student to start tracking attendance and rewards.</Alert>}
+    {overview.top.length > 0 ? <PodiumSection topStudents={overview.top} /> : <Alert severity="info" sx={{ mb: 3 }}>Add your first student to start tracking attendance and rewards.</Alert>}
     <div className="admin-quick-heading">
       <Typography component="h2" variant="h5"><span aria-hidden="true">⚡</span> Quick Actions</Typography>
     </div>

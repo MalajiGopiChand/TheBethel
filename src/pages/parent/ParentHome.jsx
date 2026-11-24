@@ -1,6 +1,7 @@
+import SchoolLoader from '../../components/SchoolLoader';
 import React from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
-import { Box, Container, Typography, Alert, BottomNavigation, BottomNavigationAction, Paper, CircularProgress, Fade } from '@mui/material';
+import { Box, Container, Typography, Alert, BottomNavigation, BottomNavigationAction, Paper, Fade } from '@mui/material';
 import {
   HomeRounded as HomeIcon,
   HomeOutlined as HomeOutlinedIcon,
@@ -39,7 +40,7 @@ const ParentHome = () => {
     if (loadingStudent) {
       return (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-          <CircularProgress size={40} thickness={4} />
+          <SchoolLoader />
         </Box>
       );
     }

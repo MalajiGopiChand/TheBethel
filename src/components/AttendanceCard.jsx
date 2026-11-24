@@ -22,6 +22,7 @@ const AttendanceCard = ({ data, canEdit }) => {
 
   return (
     <Card
+      className="attendance-overview-card"
       sx={{
         width: '100%',
         height: 200,
@@ -101,7 +102,7 @@ const AttendanceCard = ({ data, canEdit }) => {
             thickness={8}
             sx={{
               position: 'absolute',
-              color: alpha('#fff', 0.2),
+              color: '#d6c3f5',
             }}
           />
           <CircularProgress
@@ -110,7 +111,7 @@ const AttendanceCard = ({ data, canEdit }) => {
             size={90}
             thickness={8}
             sx={{
-              color: canEdit ? '#00E676' : '#9CA3AF',
+              color: '#38f4a0',
               position: 'relative',
             }}
           />

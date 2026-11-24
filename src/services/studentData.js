@@ -120,6 +120,37 @@ export function writeBatch(database) {
   // Attendance uses update-only batches. Keep all updates in a single atomic transaction.
   return { update(reference, data) { updates.push([reference, data]); return this; }, commit() { return commitUpdates(updates, period); } };
 }
+// Attendance reads fresh records before any writes. A single transaction keeps
+// student changes and the teacher's Sunday session together, including retries.
+export async function mutateStudents(changes, extraUpdates = []) {
+  if (!changes.length) return;
+  const period = activePeriod;
+  const targets = [...changes.flatMap(([ref]) => period ? [ref, activityDoc(period, ref.id)] : [ref]), ...extraUpdates.map(([ref]) => ref)];
+  return withNotifications(targets, () => firestore.runTransaction(db, async transaction => {
+    if (websitePeriodsEnabled) {
+      const settings = await transaction.get(periodSettingsRef());
+      if ((settings.data()?.activePeriod || null) !== period) throw new Error('The school data period changed. Reopen attendance before saving.');
+    }
+    const records = [];
+    for (const [reference, updater] of changes) {
+      const base = await transaction.get(reference);
+      if (!base.exists()) throw new Error('A student in this form no longer exists. Reload attendance.');
+      const activity = period ? await transaction.get(activityDoc(period, reference.id)) : null;
+      records.push([reference, updater(projectStudent(base.data(), activity?.data(), period))]);
+    }
+    const attribution = { activityUpdatedBy: auth.currentUser?.uid || '', activityUpdatedByName: auth.currentUser?.displayName || 'Staff' };
+    let changed = false;
+    for (const [reference, update] of records) {
+      if (!update) continue;
+      changed = true;
+      if (!period) { transaction.update(reference, { ...update, ...attribution }); continue; }
+      const { profile, activity } = splitStudentUpdate(update);
+      if (Object.keys(profile).length) transaction.update(reference, profile);
+      if (Object.keys(activity).length) transaction.set(activityDoc(period, reference.id), { ...expandFieldPaths(activity), ...attribution }, { merge: true });
+    }
+    if (changed) for (const [reference, update] of extraUpdates) transaction.update(reference, update);
+  }));
+}
 export async function startNewActivityPeriod(userId) {
   if (!websitePeriodsEnabled) throw new Error('Website periods must be enabled after deploying Firestore rules.');
   const newPeriod = firestore.doc(firestore.collection(db, 'website_activity'));

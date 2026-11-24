@@ -60,7 +60,7 @@ export function mapTeacherDocToCurrentUser(teacherData, firebaseUser) {
     ...teacherData,
     uid: firebaseUser.uid,
     role: teacherData.role || UserRole.TEACHER,
-    email: teacherData.email || firebaseUser.email || '',
+    email: firebaseUser.email || teacherData.email || '',
     name: teacherData.name || firebaseUser.displayName || 'Teacher',
     isVerified: verified
   };

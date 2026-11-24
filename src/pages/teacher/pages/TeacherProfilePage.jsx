@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,7 +10,6 @@ import {
   Button,
   Avatar,
   TextField,
-  CircularProgress,
   Alert,
   Card,
   CardContent,
@@ -32,12 +32,12 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { handleBackNavigation } from '../../../utils/navigation';
 
 const TeacherProfilePage = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, refreshUserProfile } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   
   const handleBack = () => {
-    handleBackNavigation(navigate, currentUser);
+    navigate('/teacher/profile');
   };
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -51,19 +51,23 @@ const TeacherProfilePage = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     const loadProfile = async () => {
       if (!currentUser?.uid) return;
+      let timeout;
       
       try {
         setLoading(true);
-        const teacherDoc = await getDoc(doc(db, 'teachers', currentUser.uid));
+        setLoadError('');
+        const teacherDoc = await Promise.race([getDoc(doc(db, 'teachers', currentUser.uid)), new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('The profile is taking too long to load. Check your connection and retry.')), 15000); })]);
         if (teacherDoc.exists()) {
           const data = teacherDoc.data();
           setProfileData({
             name: data.name || currentUser.name || '',
-            email: data.email || currentUser.email || '',
+            email: currentUser.email || '',
             phone: data.phone || '',
             profileImageUrl: data.profileImageUrl || ''
           });
@@ -80,14 +84,15 @@ const TeacherProfilePage = () => {
           });
         }
       } catch (error) {
-        console.error('Error loading profile:', error);
+        setLoadError(error.message || 'Unable to load your profile.');
       } finally {
+        clearTimeout(timeout);
         setLoading(false);
       }
     };
 
     loadProfile();
-  }, [currentUser]);
+  }, [currentUser?.uid, retry]);
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
@@ -122,18 +127,18 @@ const TeacherProfilePage = () => {
   };
 
   const handleSave = async () => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid || saving || uploading || selectedFile || loadError || !profileData.name.trim()) return;
 
     try {
       setSaving(true);
       const updateData = {
         name: profileData.name,
-        email: profileData.email,
         phone: profileData.phone,
         profileImageUrl: profileData.profileImageUrl
       };
 
       await updateDoc(doc(db, 'teachers', currentUser.uid), updateData);
+      await refreshUserProfile();
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
@@ -161,10 +166,11 @@ const TeacherProfilePage = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
+        <SchoolLoader />
       </Box>
     );
   }
+  if (loadError) return <Box sx={{ p: 3 }}><Alert severity="error" action={<Button onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{loadError}</Alert></Box>;
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5' }}>
@@ -253,7 +259,7 @@ const TeacherProfilePage = () => {
                     color="success"
                     onClick={handleImageUpload}
                     disabled={uploading}
-                    startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                    startIcon={uploading ? <SchoolLoader inline /> : <SaveIcon />}
                     sx={{ mt: 1, ml: 1, borderRadius: 999, px: 3, fontWeight: 'bold', boxShadow: '0 4px 14px rgba(46,125,50,0.4)' }}
                   >
                     {uploading ? 'Uploading...' : 'Confirm Upload'}
@@ -284,7 +290,8 @@ const TeacherProfilePage = () => {
                   fullWidth
                   label="Email Address"
                   value={profileData.email}
-                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                  InputProps={{ readOnly: true }}
+                  helperText="Your sign-in email"
                   type="email"
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                 />
@@ -304,8 +311,8 @@ const TeacherProfilePage = () => {
                   variant="contained"
                   fullWidth
                   onClick={handleSave}
-                  disabled={saving}
-                  startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                  disabled={saving || uploading || !!selectedFile || !profileData.name.trim()}
+                  startIcon={saving ? <SchoolLoader inline /> : <SaveIcon />}
                   sx={{ 
                     py: 1.5, 
                     borderRadius: 999, 

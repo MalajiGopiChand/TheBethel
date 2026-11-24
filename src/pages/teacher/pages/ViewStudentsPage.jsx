@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -10,7 +11,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  CircularProgress,
   Alert,
   Chip,
   IconButton,
@@ -200,7 +200,7 @@ const ViewStudentsPage = () => {
           <Button
             variant="contained"
             size="medium"
-            startIcon={exportLoading === 'image' ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />}
+            startIcon={exportLoading === 'image' ? <SchoolLoader inline /> : <DownloadIcon />}
             onClick={() => runExport('image', downloadStudentListImageAll)}
             disabled={!!exportLoading || loading || students.length === 0}
             sx={{ textTransform: 'none', fontWeight: 'bold', whiteSpace: 'nowrap' }}
@@ -210,7 +210,7 @@ const ViewStudentsPage = () => {
           <Button
             variant="outlined"
             size="medium"
-            startIcon={exportLoading === 'byPlace' ? <CircularProgress size={16} color="primary" /> : <ImageIcon />}
+            startIcon={exportLoading === 'byPlace' ? <SchoolLoader /> : <ImageIcon />}
             onClick={() => runExport('byPlace', downloadStudentListImagesByPlace)}
             disabled={!!exportLoading || loading || students.length === 0}
             sx={{ textTransform: 'none', fontWeight: 'bold', whiteSpace: 'nowrap', bgcolor: 'background.paper' }}
@@ -223,7 +223,7 @@ const ViewStudentsPage = () => {
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         {loading ? (
           <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
+            <SchoolLoader />
           </Box>
         ) : filteredStudents.length === 0 ? (
           <Alert severity="info">No students found matching your criteria.</Alert>

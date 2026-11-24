@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,7 +13,6 @@ import {
   Button,
   Card,
   CardContent,
-  CircularProgress,
   Grid,
   Avatar,
   useTheme,
@@ -187,7 +187,7 @@ const TeacherLeaderboardPage = () => {
       <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 }, pt: 3 }}>
         {loading ? (
           <Box display="flex" justifyContent="center" py={8}>
-            <CircularProgress />
+            <SchoolLoader />
           </Box>
         ) : leaders.length === 0 ? (
           <Box textAlign="center" py={4}>

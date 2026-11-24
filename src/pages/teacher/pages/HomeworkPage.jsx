@@ -1,3 +1,4 @@
+import SchoolLoader from '../../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,7 +14,6 @@ import {
   TextField,
   IconButton,
   Chip,
-  CircularProgress,
   Alert,
   Grid,
   Container,
@@ -62,6 +62,8 @@ const HomeworkPage = () => {
   };
   const [homeworks, setHomeworks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [editingHomework, setEditingHomework] = useState(null);
   const [formData, setFormData] = useState({
@@ -72,38 +74,6 @@ const HomeworkPage = () => {
     place: '',
     dueDate: ''
   });
-
-  // Auto-delete expired homework
-  const deleteExpiredHomework = async (homeworksData) => {
-    const now = new Date();
-    const expiredHomework = homeworksData.filter(hw => {
-      if (!hw.dueDate) return false;
-      let dueDateObj = null;
-      if (typeof hw.dueDate.toDate === 'function') {
-        dueDateObj = hw.dueDate.toDate();
-      } else if (hw.dueDate instanceof Date) {
-        dueDateObj = hw.dueDate;
-      }
-      if (!dueDateObj) return false;
-      // Delete if due date has passed (more than 1 day ago to allow viewing on due date)
-      const oneDayAfter = new Date(dueDateObj);
-      oneDayAfter.setDate(oneDayAfter.getDate() + 1);
-      return now > oneDayAfter;
-    });
-
-    if (expiredHomework.length > 0) {
-      try {
-        const batch = writeBatch(db);
-        expiredHomework.forEach(hw => {
-          batch.delete(doc(db, 'homeworks', hw.id));
-        });
-        await batch.commit();
-        console.log(`Deleted ${expiredHomework.length} expired homework assignments`);
-      } catch (error) {
-        console.error('Error deleting expired homework:', error);
-      }
-    }
-  };
 
   useEffect(() => {
     requestNotificationPermission();
@@ -118,30 +88,11 @@ const HomeworkPage = () => {
         ...doc.data()
       }));
       
-      // Auto-delete expired homework
-      await deleteExpiredHomework(homeworksData);
-      
-      // Filter out expired homework from display (they will be deleted)
-      const now = new Date();
-      const activeHomeworks = homeworksData.filter(hw => {
-        if (!hw.dueDate) return true; // Keep homework without due date
-        let dueDateObj = null;
-        if (typeof hw.dueDate.toDate === 'function') {
-          dueDateObj = hw.dueDate.toDate();
-        } else if (hw.dueDate instanceof Date) {
-          dueDateObj = hw.dueDate;
-        }
-        if (!dueDateObj) return true;
-        // Show until 1 day after due date
-        const oneDayAfter = new Date(dueDateObj);
-        oneDayAfter.setDate(oneDayAfter.getDate() + 1);
-        return now <= oneDayAfter;
-      });
-      
-      setHomeworks(activeHomeworks);
+      // Keep completed assignments for teacher activity history.
+      setHomeworks(homeworksData);
       setLoading(false);
     }, (error) => {
-      console.error('Error fetching homeworks:', error);
+      setLoadError('Unable to load homework. Reload to try again.');
       setLoading(false);
     });
 
@@ -188,11 +139,12 @@ const HomeworkPage = () => {
   };
 
   const handleSave = async () => {
+    if (saving || !currentUser?.uid) return;
+    setSaving(true);
     try {
       const homeworkData = {
         ...formData,
-        teacherId: currentUser?.uid,
-        teacherName: currentUser?.displayName || currentUser?.name || currentUser?.email || 'Teacher',
+        ...(!editingHomework ? { teacherId: currentUser.uid, teacherName: currentUser?.name || currentUser?.displayName || currentUser?.email || 'Teacher' } : {}),
         ...(editingHomework ? { updatedAt: serverTimestamp() } : { createdAt: serverTimestamp() }),
         dueDate: formData.dueDate ? new Date(formData.dueDate) : null
       };
@@ -209,7 +161,7 @@ const HomeworkPage = () => {
       console.error('Error saving homework:', error);
       notifyError('Homework failed', error.message || 'Failed to save homework.');
       alert('Failed to save homework: ' + error.message);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async (homework) => {
@@ -257,8 +209,9 @@ const HomeworkPage = () => {
 
       {/* 2. Content Grid */}
       <Container maxWidth="lg" sx={{ flex: 1, py: 3 }}>
+        {loadError && <Alert severity="error">{loadError}</Alert>}
         {loading ? (
-          <Box display="flex" justifyContent="center" py={8}><CircularProgress /></Box>
+          <Box display="flex" justifyContent="center" py={8}><SchoolLoader /></Box>
         ) : homeworks.length === 0 ? (
           <Box display="flex" flexDirection="column" alignItems="center" py={8} sx={{ opacity: 0.6 }}>
             <AssignIcon sx={{ fontSize: 60, mb: 2, color: 'text.disabled' }} />
@@ -442,7 +395,7 @@ const HomeworkPage = () => {
           <Button 
             onClick={handleSave} 
             variant="contained" 
-            disabled={!formData.title || !formData.description}
+            disabled={saving || !formData.title.trim() || !formData.description.trim()}
             sx={{ borderRadius: 2 }}
           >
             {editingHomework ? 'Update Assignment' : 'Post Assignment'}
