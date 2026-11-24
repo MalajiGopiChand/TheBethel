@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ThemeContextProvider } from './contexts/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import AdminExperience from './components/AdminExperience';
+import { AppLaunchStatus } from './components/AppLaunch';
 import './styles/animations.css';
 import { registerPushTokenForUser, listenForForegroundPushMessages } from './services/notificationService';
 import { useAuth } from './contexts/AuthContext';
@@ -21,6 +22,7 @@ root.render(
     <ErrorBoundary>
       <BrowserRouter future={{ v7_startTransition: true }}>
         <AuthProvider>
+          <AppLaunchStatus />
           <ThemeContextProvider>
             <CssBaseline />
             <PushBootstrap />

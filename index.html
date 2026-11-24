@@ -9,7 +9,8 @@
 
     <!-- PWA Meta Tags -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
-    <meta name="theme-color" content="#667eea" />
+    <meta name="theme-color" content="#f4edff" />
+    <link rel="stylesheet" href="/launch.css" />
     <meta name="description" content="The Bethel Church - School Management System for Parents, Teachers, and Admins" />
     
     <!-- iOS PWA Meta Tags -->
@@ -33,7 +34,26 @@
     <title>The Bethel AMS</title>
   </head>
   <body>
+    <div id="app-launch-screen" class="app-launch-screen" role="status" aria-live="polite" aria-label="Opening Bethel Attendance App">
+      <span class="launch-orb" aria-hidden="true"></span><span class="launch-star" aria-hidden="true">✦</span><span class="launch-star" aria-hidden="true">✧</span>
+      <div class="launch-card">
+        <img class="launch-logo" src="/image.png" alt="" width="100" height="100" />
+        <h1>Bethel</h1><p class="launch-subtitle">Attendance App</p>
+        <img class="launch-landscape" src="/art/hero.jpg" alt="" width="941" height="209" />
+        <p id="app-launch-message" class="launch-message">A new day to learn and grow</p>
+        <div class="launch-track" aria-hidden="true"><i></i></div>
+        <div id="app-launch-slow" class="launch-slow" hidden>Taking a little longer. Check your connection.<button type="button" onclick="window.location.reload()">Try opening again</button></div>
+      </div>
+      <span class="launch-footer">THE BETHEL CHURCH · SUNDAY SCHOOL</span>
+    </div>
     <div id="root"></div>
+    <script>
+      window.setTimeout(() => {
+        const launch = document.getElementById('app-launch-screen');
+        if (launch && !launch.dataset.dismissed) document.getElementById('app-launch-slow').hidden = false;
+      }, 12000);
+    </script>
+    <noscript><style>.app-launch-screen{display:none}</style><p>Please enable JavaScript to open Bethel Attendance App.</p></noscript>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       // Register Service Worker for PWA

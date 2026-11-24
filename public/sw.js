@@ -1,8 +1,8 @@
 // Only cache the application shell and same-origin static assets. Firebase,
 // notification APIs and user data must always use their own network behavior.
-const CACHE_NAME = 'bethel-ams-v5';
+const CACHE_NAME = 'bethel-ams-v6';
 const APP_CACHE_PREFIX = 'bethel-ams-';
-const SHELL = ['/index.html', '/manifest.json', '/image.png', '/admin-landscape.svg'];
+const SHELL = ['/index.html', '/manifest.json', '/image.png', '/admin-landscape.svg', '/launch.css', '/art/hero.jpg'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)));

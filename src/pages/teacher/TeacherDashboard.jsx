@@ -277,7 +277,7 @@ const TeacherDashboard = () => {
 
       {/* Bottom Navigation – glass floating dock */}
       <Paper
-        className="page-card-enter"
+        className="page-card-enter teacher-dock"
         sx={{
           position: 'fixed',
           bottom: 16,

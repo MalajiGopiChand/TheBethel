@@ -38,7 +38,7 @@ export default function AdminHomeTab() {
   ].map(([title, subtitle, icon, colorStart, colorEnd, path]) => ({ title, subtitle, icon, colorStart, colorEnd, onClick: () => navigate(path) }));
   if (error) return <Alert severity="error" action={<Button onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{error}</Alert>;
   if (loading) return <SchoolLoader role="admin" />;
-  return <section className="admin-home" aria-label="School overview">
+  return <section className="admin-home admin-overview-layout" aria-label="School overview">
     <Paper className="sunday-overview">
       <div className="sunday-attendance">
         <div><Typography fontWeight={750}>Sunday Attendance</Typography><Typography variant="body2">{overview.dateLabel}</Typography><Typography className="attendance-present"><strong>{overview.todayPresentCount}</strong> Present</Typography><Typography variant="body2">{overview.todayAbsentCount} Absent</Typography></div>

@@ -1,3 +1,4 @@
+import AuthLayout, { AuthPasswordField } from '../../components/AuthLayout';
 import SchoolLoader from '../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -36,10 +37,10 @@ const TeacherLogin = () => {
     clearError();
     // Redirect if already logged in - ensure user has role before redirecting
     if (!authLoading && currentUser && currentUser.role) {
-      const isAdmin = currentUser.role === UserRole.ADMIN || 
-        currentUser.email === 'gop1@gmail.com' || 
+      const isAdmin = currentUser.role === UserRole.ADMIN ||
+        currentUser.email === 'gop1@gmail.com' ||
         currentUser.email === 'premkumartenali@gmail.com';
-      
+
       if (isAdmin) {
         // Use window.location for PWA compatibility
         if (window.location.pathname !== '/admin/dashboard') {
@@ -58,10 +59,10 @@ const TeacherLogin = () => {
   useEffect(() => {
     // Only navigate if we're in loading state (just logged in) and user is loaded
     if (loading && !authLoading && currentUser && currentUser.role) {
-      const isAdmin = currentUser.role === UserRole.ADMIN || 
-        currentUser.email === 'gop1@gmail.com' || 
+      const isAdmin = currentUser.role === UserRole.ADMIN ||
+        currentUser.email === 'gop1@gmail.com' ||
         currentUser.email === 'premkumartenali@gmail.com';
-      
+
       if (isAdmin) {
         setLoading(false);
         // Use setTimeout to ensure navigation happens after state update
@@ -84,6 +85,7 @@ const TeacherLogin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     clearError();
 
@@ -98,51 +100,8 @@ const TeacherLogin = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', // Soft professional gradient
-        py: 4
-      }}
-    >
-      <Container maxWidth="xs">
-        <Fade in={true} timeout={800}>
-          <Paper
-            elevation={6}
-            sx={{
-              p: 4,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              borderRadius: 4,
-              position: 'relative'
-            }}
-          >
-            {/* Header Icon */}
-            <Avatar
-              sx={{
-                m: 1,
-                bgcolor: 'primary.main',
-                width: 56,
-                height: 56,
-                boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
-              }}
-            >
-              
-              <SchoolIcon fontSize="large" />
-            </Avatar>
-
-            <Typography component="h1" variant="h5" fontWeight="bold" sx={{ mt: 1 }}>
-              Teacher Login
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              The Bethel Church School System
-            </Typography>
-
-            {error && (
+    <AuthLayout role="teacher">
+      {error && (
               <Alert severity="error" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={clearError}>
                 {error}
               </Alert>
@@ -155,9 +114,9 @@ const TeacherLogin = () => {
                 fullWidth
                 id="email"
                 label="Email Address"
+                type="email"
                 name="email"
                 autoComplete="email"
-                autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 InputProps={{
@@ -169,13 +128,13 @@ const TeacherLogin = () => {
                 }}
                 sx={{ mb: 2 }}
               />
-              <TextField
+              <AuthPasswordField
                 margin="normal"
                 required
                 fullWidth
                 name="password"
                 label="Password"
-                type="password"
+
                 id="password"
                 autoComplete="current-password"
                 value={password}
@@ -210,18 +169,18 @@ const TeacherLogin = () => {
               </Button>
 
               <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
-                <MuiLink 
-                  component={Link} 
-                  to="/" 
-                  variant="body2" 
+                <MuiLink
+                  component={Link}
+                  to="/"
+                  variant="body2"
                   sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
                 >
                   <ArrowBackIcon sx={{ fontSize: 16, mr: 0.5 }} /> Back
                 </MuiLink>
 
-                <MuiLink 
-                  component={Link} 
-                  to="/auth/teacher/signup" 
+                <MuiLink
+                  component={Link}
+                  to="/auth/teacher/signup"
                   variant="body2"
                   fontWeight="bold"
                 >
@@ -229,10 +188,7 @@ const TeacherLogin = () => {
                 </MuiLink>
               </Box>
             </Box>
-          </Paper>
-        </Fade>
-      </Container>
-    </Box>
+    </AuthLayout>
   );
 };
 

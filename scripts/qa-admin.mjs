@@ -30,7 +30,7 @@ export const Timestamp={fromDate:date=>({toDate:()=>date})};
 const mockAuth = `import React from 'react';
 const previewRole=new URLSearchParams(window.location.search).get('qaRole')||sessionStorage.getItem('qaRole')||'admin'; sessionStorage.setItem('qaRole',previewRole);
 const user=previewRole==='signedout'?null:{uid:previewRole==='teacher'?'t1':'fixture-admin',name:previewRole==='parent'?'Anita Kumar':previewRole==='teacher'?'Mary Joseph':'Admin',email:previewRole==='teacher'?'mary@example.com':'admin@example.com',role:previewRole.toUpperCase(),studentId:'STU001',studentName:'Aarav Kumar',isVerified:true,isApproved:true,approvalState:'approved'};
-export const useAuth=()=>({currentUser:user,firebaseUser:user,loading:false,error:null,clearError(){},logout:async()=>{},refreshUserProfile:async()=>{}});
+export const useAuth=()=>({currentUser:user,firebaseUser:user,loading:new URLSearchParams(window.location.search).get('qaLoading')==='1',error:null,clearError(){},logout:async()=>{},refreshUserProfile:async()=>{}});
 export const AuthProvider=({children})=>children;`;
 const mockNotifications = `export const retryNotifications=async()=>{};export const notifySuccess=async()=>{};export const notifyError=async()=>{};export const requestNotificationPermission=async()=>false;export const registerPushTokenForUser=async()=>{};export const listenForForegroundPushMessages=async()=>()=>{};export const showAppNotification=async()=>{};`;
 const server=await createServer({ server: { host:'127.0.0.1',port:5175,strictPort:true }, plugins:[{name:'read-only-admin-fixtures',enforce:'pre',load(id){

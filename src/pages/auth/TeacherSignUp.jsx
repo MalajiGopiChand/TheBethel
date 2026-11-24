@@ -1,3 +1,4 @@
+import AuthLayout, { AuthPasswordField } from '../../components/AuthLayout';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -45,7 +46,8 @@ const TeacherSignUp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    if (loading) return;
+
     setValidationError('');
     if (password !== confirmPassword) {
       setValidationError('Passwords do not match. Please check both password fields.');
@@ -69,50 +71,8 @@ const TeacherSignUp = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-        py: 4
-      }}
-    >
-      <Container maxWidth="sm">
-        <Fade in={true} timeout={800}>
-          <Paper
-            elevation={6}
-            sx={{
-              p: 4,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              borderRadius: 4,
-              position: 'relative'
-            }}
-          >
-            {/* Header Icon */}
-            <Avatar
-              sx={{
-                m: 1,
-                bgcolor: 'secondary.main', // Different color to distinguish from Login
-                width: 56,
-                height: 56,
-                boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
-              }}
-            >
-              <RegIcon fontSize="large" />
-            </Avatar>
-
-            <Typography component="h1" variant="h5" fontWeight="bold" sx={{ mt: 1 }}>
-              Teacher Registration
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Join The Bethel Church School System
-            </Typography>
-
-            {(validationError || error) && (
+    <AuthLayout role="teacher" signup>
+      {(validationError || error) && (
               <Alert severity="error" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={() => { setValidationError(''); clearError(); }}>
                 {validationError || error}
               </Alert>
@@ -142,12 +102,13 @@ const TeacherSignUp = () => {
                     }}
                   />
                 </Grid>
-                
+
                 <Grid item xs={12} sm={6}>
                   <TextField
                     required
                     fullWidth
                     label="Email Address"
+                autoComplete="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -180,11 +141,11 @@ const TeacherSignUp = () => {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <TextField
+                  <AuthPasswordField
                     required
                     fullWidth
                     label="Password"
-                    type="password"
+                    newPassword
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     helperText="At least 6 characters"
@@ -199,11 +160,11 @@ const TeacherSignUp = () => {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <TextField
+                  <AuthPasswordField
                     required
                     fullWidth
                     label="Confirm Password"
-                    type="password"
+                    newPassword
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     error={password !== confirmPassword && confirmPassword.length > 0}
@@ -248,10 +209,10 @@ const TeacherSignUp = () => {
               </Button>
 
               <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
-                <MuiLink 
-                  component={Link} 
-                  to="/" 
-                  variant="body2" 
+                <MuiLink
+                  component={Link}
+                  to="/"
+                  variant="body2"
                   sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
                 >
                   <ArrowBackIcon sx={{ fontSize: 16, mr: 0.5 }} /> Back
@@ -261,9 +222,9 @@ const TeacherSignUp = () => {
                   <Typography variant="body2" component="span" color="text.secondary">
                     Already registered?{' '}
                   </Typography>
-                  <MuiLink 
-                    component={Link} 
-                    to="/auth/teacher/login" 
+                  <MuiLink
+                    component={Link}
+                    to="/auth/teacher/login"
                     variant="body2"
                     fontWeight="bold"
                     color="secondary.main"
@@ -273,10 +234,7 @@ const TeacherSignUp = () => {
                 </Box>
               </Box>
             </Box>
-          </Paper>
-        </Fade>
-      </Container>
-    </Box>
+    </AuthLayout>
   );
 };
 

@@ -1,4 +1,5 @@
 import SchoolLoader from '../components/SchoolLoader';
+import { LaunchReady } from '../components/AppLaunch';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onSnapshot } from "../services/notifyingFirestore";
 import { Alert, Box, Button } from '@mui/material';
@@ -25,7 +26,7 @@ export default function ActivityPeriodProvider({ children }) {
     });
   }, [currentUser?.uid, retry]);
   if (currentUser && (state.uid !== currentUser.uid || !state.ready)) return <Box sx={{ p: 3 }}>
-    {state.error ? <Alert severity="error" action={<Button color="inherit" onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{state.error}</Alert> : <SchoolLoader role={currentUser.role} />}
+    {state.error ? <><LaunchReady /><Alert severity="error" action={<Button color="inherit" onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{state.error}</Alert></> : <SchoolLoader role={currentUser.role} />}
   </Box>;
   return <ActivityPeriodContext.Provider value={state}><React.Fragment key={`${state.uid}:${state.period || 'original'}`}>{children}</React.Fragment></ActivityPeriodContext.Provider>;
 }

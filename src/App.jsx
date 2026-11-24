@@ -1,4 +1,5 @@
 import SchoolLoader from './components/SchoolLoader';
+import { LaunchReady } from './components/AppLaunch';
 import React, { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
@@ -80,7 +81,7 @@ function App() {
     );
   }
 
-  if (sessionError) return <Box className="page-shell page-glow-background" sx={{ display: 'grid', placeItems: 'center', p: 3 }}><Box sx={{ maxWidth: 480 }}><Typography variant="h5" sx={{ mb: 2 }}>Reconnect to your account</Typography><Alert severity="warning">{sessionError}</Alert><Button variant="contained" onClick={retrySession} sx={{ mt: 2 }}>Retry connection</Button><Button onClick={() => logout()} sx={{ mt: 2 }}>Sign out</Button></Box></Box>;
+  if (sessionError) return <Box className="page-shell page-glow-background" sx={{ display: 'grid', placeItems: 'center', p: 3 }}><Box sx={{ maxWidth: 480 }}><LaunchReady /><Typography variant="h5" sx={{ mb: 2 }}>Reconnect to your account</Typography><Alert severity="warning">{sessionError}</Alert><Button variant="contained" onClick={retrySession} sx={{ mt: 2 }}>Retry connection</Button><Button onClick={() => logout()} sx={{ mt: 2 }}>Sign out</Button></Box></Box>;
 
   // Guard every teacher URL, including direct links and bookmarked pages.
   if (isTeacherPendingAccess(currentUser) &&
@@ -93,7 +94,7 @@ function App() {
     <Box className="page-shell page-glow-background">
 
       <PWAInstallPrompt />
-      <Suspense fallback={<Box sx={{ display: "grid", placeItems: "center", minHeight: "55vh" }}><SchoolLoader role={currentUser?.role} /></Box>}><Routes>
+      <Suspense fallback={<Box sx={{ display: "grid", placeItems: "center", minHeight: "55vh" }}><SchoolLoader role={currentUser?.role} /></Box>}><LaunchReady /><Routes>
       <Route
         path="/"
         element={

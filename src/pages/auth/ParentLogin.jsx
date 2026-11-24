@@ -1,3 +1,4 @@
+import AuthLayout, { AuthPasswordField } from '../../components/AuthLayout';
 import SchoolLoader from '../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -48,6 +49,7 @@ const ParentLogin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     clearError();
 
@@ -62,50 +64,8 @@ const ParentLogin = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #e3f2fd 100%)', // Subtle gradient
-        py: 4
-      }}
-    >
-      <Container maxWidth="xs">
-        <Fade in={true} timeout={800}>
-          <Paper
-            elevation={6}
-            sx={{
-              p: 4,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              borderRadius: 4,
-              position: 'relative'
-            }}
-          >
-            {/* Header Icon */}
-            <Avatar
-              sx={{
-                m: 1,
-                bgcolor: 'secondary.main', // Purple to distinguish Parent from Teacher
-                width: 56,
-                height: 56,
-                boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
-              }}
-            >
-              <FamilyIcon fontSize="large" />
-            </Avatar>
-
-            <Typography component="h1" variant="h5" fontWeight="bold" sx={{ mt: 1 }}>
-              Parent Login
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Monitor your child's progress
-            </Typography>
-
-            {error && (
+    <AuthLayout role="parent">
+      {error && (
               <Alert severity="error" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={clearError}>
                 {error}
               </Alert>
@@ -118,9 +78,9 @@ const ParentLogin = () => {
                 fullWidth
                 id="email"
                 label="Email Address"
+                type="email"
                 name="email"
                 autoComplete="email"
-                autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 InputProps={{
@@ -132,13 +92,13 @@ const ParentLogin = () => {
                 }}
                 sx={{ mb: 2 }}
               />
-              <TextField
+              <AuthPasswordField
                 margin="normal"
                 required
                 fullWidth
                 name="password"
                 label="Password"
-                type="password"
+
                 id="password"
                 autoComplete="current-password"
                 value={password}
@@ -177,18 +137,18 @@ const ParentLogin = () => {
               </Button>
 
               <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
-                <MuiLink 
-                  component={Link} 
-                  to="/" 
-                  variant="body2" 
+                <MuiLink
+                  component={Link}
+                  to="/"
+                  variant="body2"
                   sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'text.secondary', '&:hover': { color: 'secondary.main' } }}
                 >
                   <ArrowBackIcon sx={{ fontSize: 16, mr: 0.5 }} /> Back
                 </MuiLink>
 
-                <MuiLink 
-                  component={Link} 
-                  to="/auth/parent/signup" 
+                <MuiLink
+                  component={Link}
+                  to="/auth/parent/signup"
                   variant="body2"
                   fontWeight="bold"
                   color="secondary.main"
@@ -197,10 +157,7 @@ const ParentLogin = () => {
                 </MuiLink>
               </Box>
             </Box>
-          </Paper>
-        </Fade>
-      </Container>
-    </Box>
+    </AuthLayout>
   );
 };
 

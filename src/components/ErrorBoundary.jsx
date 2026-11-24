@@ -1,4 +1,5 @@
 import React from 'react';
+import { dismissLaunchScreen } from '../utils/launchScreen';
 import { Box, Typography, Button, Paper } from '@mui/material';
 import { ErrorOutline as ErrorIcon } from '@mui/icons-material';
 
@@ -13,6 +14,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    dismissLaunchScreen();
     console.error('ErrorBoundary caught an error:', error, errorInfo);
     this.setState({
       error,

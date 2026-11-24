@@ -1,3 +1,4 @@
+import AuthLayout, { AuthPasswordField } from '../../components/AuthLayout';
 import SchoolLoader from '../../components/SchoolLoader';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -38,8 +39,8 @@ const AdminLogin = () => {
   // Redirect if already logged in as admin
   useEffect(() => {
     if (currentUser) {
-      const isAdmin = currentUser.role === UserRole.ADMIN || 
-        currentUser.email === 'gop1@gmail.com' || 
+      const isAdmin = currentUser.role === UserRole.ADMIN ||
+        currentUser.email === 'gop1@gmail.com' ||
         currentUser.email === 'premkumartenali@gmail.com';
       if (isAdmin) {
         navigate('/admin/dashboard');
@@ -49,6 +50,7 @@ const AdminLogin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     clearError();
 
@@ -56,7 +58,7 @@ const AdminLogin = () => {
       // Check if email is admin before attempting login
       const normalizedEmail = email.trim().toLowerCase();
       const isAdminEmail = normalizedEmail === 'gop1@gmail.com' || normalizedEmail === 'premkumartenali@gmail.com';
-      
+
       if (!isAdminEmail) {
         setLoading(false);
         alert('Access denied. Admin login is restricted to authorized administrators only.');
@@ -72,50 +74,8 @@ const AdminLogin = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'transparent',
-        py: 4
-      }}
-    >
-      <Container maxWidth="xs">
-        <Fade in={true} timeout={800}>
-          <Paper
-            elevation={6}
-            sx={{
-              p: 4,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              borderRadius: 4,
-              position: 'relative'
-            }}
-          >
-            {/* Header Icon */}
-            <Avatar
-              sx={{
-                m: 1,
-                bgcolor: 'primary.main',
-                width: 60,
-                height: 60,
-                boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
-              }}
-            >
-              <AdminIcon fontSize="large" />
-            </Avatar>
-
-            <Typography component="h1" variant="h5" fontWeight="bold" sx={{ mt: 1 }}>
-              Admin Login
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Authorized Personnel Only
-            </Typography>
-
-            {error && (
+    <AuthLayout role="admin">
+      {error && (
               <Alert severity="error" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={clearError}>
                 {error}
               </Alert>
@@ -128,9 +88,9 @@ const AdminLogin = () => {
                 fullWidth
                 id="email"
                 label="Email Address"
+                type="email"
                 name="email"
                 autoComplete="email"
-                autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 InputProps={{
@@ -142,13 +102,13 @@ const AdminLogin = () => {
                 }}
                 sx={{ mb: 2 }}
               />
-              <TextField
+              <AuthPasswordField
                 margin="normal"
                 required
                 fullWidth
                 name="password"
                 label="Password"
-                type="password"
+
                 id="password"
                 autoComplete="current-password"
                 value={password}
@@ -187,20 +147,17 @@ const AdminLogin = () => {
               </Button>
 
               <Box textAlign="center" mt={2}>
-                <MuiLink 
-                  component={Link} 
-                  to="/" 
-                  variant="body2" 
+                <MuiLink
+                  component={Link}
+                  to="/"
+                  variant="body2"
                   sx={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', color: 'text.secondary', '&:hover': { color: 'warning.main' } }}
                 >
                   <ArrowBackIcon sx={{ fontSize: 16, mr: 0.5 }} /> Back to Home
                 </MuiLink>
               </Box>
             </Box>
-          </Paper>
-        </Fade>
-      </Container>
-    </Box>
+    </AuthLayout>
   );
 };
 

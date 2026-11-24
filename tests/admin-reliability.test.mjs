@@ -136,7 +136,7 @@ function workerHarness() {
   const store = new Map([['/index.html', new Response('offline shell')]]);
   let network = async () => new Response('network', { headers: { 'Content-Type': 'text/html' } });
   const cache = { addAll: async () => {}, put: async (key, response) => { cached.push(key); store.set(key, response); } };
-  const caches = { open: async () => cache, keys: async () => ['bethel-ams-v4', 'bethel-ams-v5', 'unrelated-cache'], delete: async key => deleted.push(key), match: async key => store.get(key) };
+  const caches = { open: async () => cache, keys: async () => ['bethel-ams-v4', 'bethel-ams-v5', 'bethel-ams-v6', 'unrelated-cache'], delete: async key => deleted.push(key), match: async key => store.get(key) };
   const self = { location: { origin: 'https://school.example' }, addEventListener: (name, fn) => { listeners[name] = fn; }, clients: { claim: async () => claimed.push(true) }, skipWaiting() {} };
   vm.runInNewContext(readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8'), { self, caches, fetch: (...args) => network(...args), URL, Response });
   return { listeners, deleted, cached, claimed, setNetwork: fn => { network = fn; }, request: (url, mode = 'cors') => {
@@ -148,7 +148,7 @@ function workerHarness() {
 test('worker activation preserves unrelated caches and the current cache', async () => {
   const h = workerHarness(); let result;
   h.listeners.activate({ waitUntil: promise => { result = promise; } }); await result;
-  assert.deepEqual(h.deleted, ['bethel-ams-v4']); assert.equal(h.claimed.length, 1);
+  assert.deepEqual(h.deleted, ['bethel-ams-v4', 'bethel-ams-v5']); assert.equal(h.claimed.length, 1);
 });
 test('worker does not intercept APIs or cross-origin Firebase requests', () => {
   const h = workerHarness();

@@ -1,3 +1,4 @@
+import AuthLayout, { AuthPasswordField } from '../../components/AuthLayout';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -46,7 +47,8 @@ const ParentSignUp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    if (loading) return;
+
     setValidationError('');
     if (password !== confirmPassword) {
       setValidationError('Passwords do not match. Please check both password fields.');
@@ -71,50 +73,8 @@ const ParentSignUp = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #e3f2fd 100%)',
-        py: 4
-      }}
-    >
-      <Container maxWidth="sm">
-        <Fade in={true} timeout={800}>
-          <Paper
-            elevation={6}
-            sx={{
-              p: 4,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              borderRadius: 4,
-              position: 'relative'
-            }}
-          >
-            {/* Header Icon */}
-            <Avatar
-              sx={{
-                m: 1,
-                bgcolor: 'secondary.main', // Purple for Parents
-                width: 56,
-                height: 56,
-                boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
-              }}
-            >
-              <PersonAddIcon fontSize="large" />
-            </Avatar>
-
-            <Typography component="h1" variant="h5" fontWeight="bold" sx={{ mt: 1 }}>
-              Parent Registration
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Connect with your child's progress
-            </Typography>
-
-            {(validationError || error) && (
+    <AuthLayout role="parent" signup>
+      {(validationError || error) && (
               <Alert severity="error" sx={{ width: '100%', mb: 2, borderRadius: 2 }} onClose={() => { setValidationError(''); clearError(); }}>
                 {validationError || error}
               </Alert>
@@ -145,6 +105,7 @@ const ParentSignUp = () => {
                     required
                     fullWidth
                     label="Email Address"
+                autoComplete="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -214,11 +175,11 @@ const ParentSignUp = () => {
 
                 {/* Security */}
                 <Grid item xs={12} sm={6}>
-                  <TextField
+                  <AuthPasswordField
                     required
                     fullWidth
                     label="Password"
-                    type="password"
+                    newPassword
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     InputProps={{
@@ -232,11 +193,11 @@ const ParentSignUp = () => {
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
-                  <TextField
+                  <AuthPasswordField
                     required
                     fullWidth
                     label="Confirm Password"
-                    type="password"
+                    newPassword
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     error={password !== confirmPassword && confirmPassword.length > 0}
@@ -276,10 +237,10 @@ const ParentSignUp = () => {
               </Button>
 
               <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
-                <MuiLink 
-                  component={Link} 
-                  to="/" 
-                  variant="body2" 
+                <MuiLink
+                  component={Link}
+                  to="/"
+                  variant="body2"
                   sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'text.secondary', '&:hover': { color: 'secondary.main' } }}
                 >
                   <ArrowBackIcon sx={{ fontSize: 16, mr: 0.5 }} /> Back
@@ -289,9 +250,9 @@ const ParentSignUp = () => {
                   <Typography variant="body2" component="span" color="text.secondary">
                     Already have an account?{' '}
                   </Typography>
-                  <MuiLink 
-                    component={Link} 
-                    to="/auth/parent/login" 
+                  <MuiLink
+                    component={Link}
+                    to="/auth/parent/login"
                     variant="body2"
                     fontWeight="bold"
                     color="secondary.main"
@@ -301,10 +262,7 @@ const ParentSignUp = () => {
                 </Box>
               </Box>
             </Box>
-          </Paper>
-        </Fade>
-      </Container>
-    </Box>
+    </AuthLayout>
   );
 };
 

@@ -355,7 +355,7 @@ const HomeTab = () => {
         <InstallBanner />
         
         {/* Attendance Card */}
-        <Box sx={{ mb: 2.5 }}>
+        <Box className="teacher-home-attendance" sx={{ mb: 2.5 }}>
           <AttendanceCard data={overview} canEdit={true} />
         </Box>
 
@@ -411,7 +411,7 @@ const HomeTab = () => {
 
         {/* Announcements */}
         {announcements.length > 0 && (
-          <Box sx={{ mb: 3 }}>
+          <Box className="teacher-home-announcements" sx={{ mb: 3 }}>
             <Typography 
               variant="subtitle1" 
               fontWeight="600" 
@@ -427,7 +427,7 @@ const HomeTab = () => {
 
         {/* Podium Section */}
         {overview.topStudents.length > 0 && (
-          <Box sx={{ mb: 3 }}>
+          <Box className="teacher-home-podium" sx={{ mb: 3 }}>
             <PodiumSection topStudents={overview.topStudents} />
           </Box>
         )}

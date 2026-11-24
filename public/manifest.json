@@ -7,8 +7,8 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
-  "background_color": "#ffffff",
-  "theme_color": "#667eea",
+  "background_color": "#f4edff",
+  "theme_color": "#f4edff",
   "orientation": "any",
   "prefer_related_applications": false,
   "icons": [
