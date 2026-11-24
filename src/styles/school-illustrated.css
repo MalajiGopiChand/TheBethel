@@ -287,4 +287,6 @@
   .school-illustrated .attendance-overview-card > .MuiBox-root { padding: 20px; gap: 12px; }
   .school-illustrated .attendance-overview-card .MuiTypography-h3 { font-size: 1.9rem; }
   .teacher-activity-header h1 { font-size: 1.5rem; }
+  .teacher-activity-header > .MuiBox-root { flex-basis: calc(100% - 82px); }
+  .teacher-activity-header > .MuiButton-root { margin-left: 82px; padding-top: 0; }
 }
