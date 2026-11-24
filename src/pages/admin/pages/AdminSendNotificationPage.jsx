@@ -44,6 +44,7 @@ import {
 } from "../../../services/notifyingFirestore";
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
+import useSessionDraft from '../../../hooks/useSessionDraft';
 import { handleBackNavigation } from '../../../utils/navigation';
 
 const AdminSendNotificationPage = () => {
@@ -57,7 +58,7 @@ const AdminSendNotificationPage = () => {
   // --- States ---
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useSessionDraft(`notification-draft:${currentUser.uid}`, {
     title: '',
     message: '',
     audience: 'All',
@@ -65,7 +66,7 @@ const AdminSendNotificationPage = () => {
   });
   
   // State for Editing
-  const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useSessionDraft(`notification-edit:${currentUser.uid}`, null);
   const [saving, setSaving] = useState(false);
   const [alertMsg, setAlertMsg] = useState({ type: '', text: '' });
 
@@ -81,6 +82,9 @@ const AdminSendNotificationPage = () => {
       }));
       setNotifications(data);
       setLoading(false);
+    }, () => {
+      setLoading(false);
+      setAlertMsg({ type: 'error', text: 'Could not load sent history. Check your connection and reopen this page.' });
     });
 
     return () => unsubscribe();
@@ -89,6 +93,7 @@ const AdminSendNotificationPage = () => {
   // --- 2. Handle Form Submit (Create OR Update) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     if (!formData.title.trim() || !formData.message.trim()) {
       setAlertMsg({ type: 'error', text: 'Please fill in all required fields' });
       return;
@@ -102,7 +107,7 @@ const AdminSendNotificationPage = () => {
         audience: formData.audience,
         isImportant: formData.isImportant,
         // FIX: Using 'createdAt' to ensure consistency across the app
-        createdAt: serverTimestamp(), 
+        ...(editingId ? { updatedAt: serverTimestamp() } : { createdAt: serverTimestamp() }),
         sender: currentUser?.name || 'Admin'
       };
 
@@ -168,7 +173,7 @@ const AdminSendNotificationPage = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
+    <Box className="admin-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
       
       {/* --- Top Bar --- */}
       <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
@@ -179,7 +184,7 @@ const AdminSendNotificationPage = () => {
           <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
             <CampaignIcon color="primary" /> Notification Center
           </Typography>
-          <Box sx={{ width: 100 }} />
+          <Box sx={{ width: { xs: 0, sm: 100 } }} />
         </Box>
       </Paper>
 
@@ -201,6 +206,7 @@ const AdminSendNotificationPage = () => {
                 {editingId ? 'Edit Message' : 'Compose New Message'}
               </Typography>
               <Divider sx={{ mb: 2 }} />
+              {(formData.title || formData.message) && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>Draft saved in this tab. Refreshing will keep your message.</Typography>}
 
               <form onSubmit={handleSubmit}>
                 <TextField
@@ -235,6 +241,7 @@ const AdminSendNotificationPage = () => {
                     <MenuItem value="Teachers">Teachers Only</MenuItem>
                     <MenuItem value="Parents">Parents Only</MenuItem>
                     <MenuItem value="All Students">All Students</MenuItem>
+                    {!['All', 'Teachers', 'Parents', 'All Students'].includes(formData.audience) && <MenuItem value={formData.audience}>{formData.audience} (assigned teacher)</MenuItem>}
                   </Select>
                 </FormControl>
 
@@ -314,10 +321,10 @@ const AdminSendNotificationPage = () => {
                           </Box>
                         </Box>
                         <Box>
-                          <IconButton size="small" color="primary" onClick={() => handleEdit(note)}>
+                          <IconButton aria-label={`Edit ${note.title}`} size="small" color="primary" disabled={saving} onClick={() => handleEdit(note)}>
                             <EditIcon />
                           </IconButton>
-                          <IconButton size="small" color="error" onClick={() => handleDelete(note.id)}>
+                          <IconButton aria-label={`Delete ${note.title}`} size="small" color="error" disabled={saving} onClick={() => handleDelete(note.id)}>
                             <DeleteIcon />
                           </IconButton>
                         </Box>

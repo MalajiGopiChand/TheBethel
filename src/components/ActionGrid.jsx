@@ -11,30 +11,8 @@ import {
 
 const ActionGrid = ({ actions }) => {
   return (
-    <Box sx={{ px: 2, py: 1 }}>
-      {actions.reduce((rows, action, index) => {
-        if (index % 2 === 0) {
-          rows.push([action]);
-        } else {
-          rows[rows.length - 1].push(action);
-        }
-        return rows;
-      }, []).map((row, rowIndex) => (
-        <Box
-          key={rowIndex}
-          sx={{
-            display: 'flex',
-            gap: 1.5,
-            mb: 1.5,
-            '&:last-child': { mb: 0 }
-          }}
-        >
-          {row.map((item, itemIndex) => (
-            <ActionTile key={itemIndex} item={item} />
-          ))}
-          {row.length === 1 && <Box sx={{ flex: 1 }} />}
-        </Box>
-      ))}
+    <Box className="action-grid" sx={{ px: 2, py: 1, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
+      {actions.map(item => <ActionTile key={item.title} item={item} />)}
     </Box>
   );
 };
@@ -44,6 +22,8 @@ const ActionTile = ({ item }) => {
 
   return (
     <Card
+      className="action-tile"
+      style={{ '--tile-tint': alpha(item.colorEnd, 0.22) }}
       sx={{
         flex: 1,
         minWidth: 0,
@@ -127,7 +107,7 @@ const ActionTile = ({ item }) => {
         </Avatar>
 
         {/* Title */}
-        <Typography
+        <Box sx={{ minWidth: 0 }}><Typography
           variant="body2"
           sx={{
             fontWeight: 600,
@@ -143,6 +123,8 @@ const ActionTile = ({ item }) => {
         >
           {item.title}
         </Typography>
+        {item.subtitle && <Typography className="action-subtitle" sx={{ display: 'none', '.admin-experience &': { display: 'block' } }}>{item.subtitle}</Typography>}
+        </Box>
       </CardContent>
       </CardActionArea>
     </Card>

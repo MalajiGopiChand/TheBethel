@@ -38,7 +38,7 @@ const AdminMoreTab = () => {
     },
     {
       title: 'Downloads',
-      subtitle: 'Export PDF',
+      subtitle: 'Export CSV',
       icon: <DownloadIcon />,
       colorStart: '#80CBC4',
       colorEnd: '#B2DFDB',

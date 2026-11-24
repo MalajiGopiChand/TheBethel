@@ -223,7 +223,7 @@ const DownloadRecordsPage = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box className="admin-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <Button startIcon={<BackIcon />} onClick={handleBack}>

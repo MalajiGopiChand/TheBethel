@@ -12,7 +12,7 @@ export const handleBackNavigation = (navigate, currentUser = null, fallbackPath 
   }
 
   // A directly opened page has no in-app history. Stay in the application.
-  const role = currentUser?.role?.toLowerCase();
+  const role = currentUser?.role?.toLowerCase() || (typeof document !== 'undefined' ? document.documentElement.dataset.appRole || '' : '').toLowerCase();
   const section = window.location.pathname.split('/')[1];
   const dashboardRole = role || section;
   const dashboard = ['admin', 'teacher', 'parent'].includes(dashboardRole)

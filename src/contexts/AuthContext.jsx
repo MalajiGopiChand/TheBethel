@@ -31,109 +31,51 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const signupInProgress = useRef(false);
 
+  const [sessionError, setSessionError] = useState('');
+  const [sessionRetry, setSessionRetry] = useState(0);
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    let disposed = false;
+    let generation = 0;
+    const unsubscribe = onAuthStateChanged(auth, async user => {
+      const request = ++generation;
       setFirebaseUser(user);
-      // Signup publishes the profile only after student validation and saving finish.
       if (signupInProgress.current) return;
-      
-      if (user) {
-        // Check if admin
-        if (user.email === 'gop1@gmail.com' || user.email === 'premkumartenali@gmail.com') {
-          setCurrentUser({
-            uid: user.uid,
-            name: 'Admin',
-            email: user.email || '',
-            phone: '',
-            role: UserRole.ADMIN
-          });
-          setLoading(false);
+      setLoading(true);
+      setSessionError('');
+      const isCurrent = () => !disposed && request === generation;
+      let timeout;
+      try {
+        if (!user) { setCurrentUser(null); return; }
+        if (['gop1@gmail.com', 'premkumartenali@gmail.com'].includes(user.email?.toLowerCase())) {
+          setCurrentUser({ uid: user.uid, name: user.displayName || 'Admin', email: user.email, phone: '', role: UserRole.ADMIN });
           return;
         }
-
-        // Try to fetch user from Firestore
-        try {
-          // Try teachers collection first
-          const teacherDoc = await getDoc(doc(db, 'teachers', user.uid));
-          if (teacherDoc.exists()) {
-            const teacherData = teacherDoc.data();
-            setCurrentUser(mapTeacherDocToCurrentUser(teacherData, user));
-            setLoading(false);
-            return;
-          }
-
-          // Try parents collection
-          const parentDoc = await getDoc(doc(db, 'parents', user.uid));
-          if (parentDoc.exists()) {
-            const parentData = parentDoc.data();
-            const userData = { 
-              ...parentData, 
-              uid: user.uid,
-              role: parentData.role || UserRole.PARENT,
-              email: parentData.email || user.email || '',
-              name: parentData.name || user.displayName || 'Parent'
-            };
-            setCurrentUser(userData);
-            setLoading(false);
-            return;
-          }
-
-          // User not found in Firestore - allow retry
-          console.warn('User not found in Firestore, will retry...');
-          // Only set to null if this is not a brand new signup (to avoid race conditions)
-          const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
-          if (!isNewUser) {
-            setCurrentUser(null);
-          }
-          // We don't set loading to false yet if it's a new user, to prevent UI flicker
-          if (!isNewUser) {
-            setLoading(false);
-          }
-        } catch (err) {
-          console.error('Error fetching user:', err);
-          // On network error, retry after a delay
-          if (err.code === 'unavailable' || err.message?.includes('network')) {
-            console.log('Network error, retrying in 2 seconds...');
-            setTimeout(async () => {
-              try {
-                const teacherDoc = await getDoc(doc(db, 'teachers', user.uid));
-                if (teacherDoc.exists()) {
-                  const teacherData = teacherDoc.data();
-                  setCurrentUser(mapTeacherDocToCurrentUser(teacherData, user));
-                  setLoading(false);
-                  return;
-                }
-                const parentDoc = await getDoc(doc(db, 'parents', user.uid));
-                if (parentDoc.exists()) {
-                  const parentData = parentDoc.data();
-                  setCurrentUser({ 
-                    ...parentData, 
-                    uid: user.uid,
-                    role: parentData.role || UserRole.PARENT
-                  });
-                  setLoading(false);
-                  return;
-                }
-                setCurrentUser(null);
-                setLoading(false);
-              } catch (retryErr) {
-                console.error('Retry failed:', retryErr);
-                setCurrentUser(null);
-                setLoading(false);
-              }
-            }, 2000);
-            return;
-          }
+        const profile = await Promise.race([
+          (async () => {
+            const teacher = await getDoc(doc(db, 'teachers', user.uid));
+            if (teacher.exists()) return mapTeacherDocToCurrentUser(teacher.data(), user);
+            const parent = await getDoc(doc(db, 'parents', user.uid));
+            if (parent.exists()) {
+              const data = parent.data();
+              return { ...data, uid: user.uid, role: data.role || UserRole.PARENT, email: data.email || user.email || '', name: data.name || user.displayName || 'Parent' };
+            }
+            throw new Error('Your account profile is unavailable. Contact the administrator or retry.');
+          })(),
+          new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Restoring your session is taking too long. Check your connection and retry.')), 15000); }),
+        ]);
+        if (isCurrent()) setCurrentUser(profile);
+      } catch (err) {
+        if (isCurrent()) {
           setCurrentUser(null);
+          setSessionError(err.message || 'Could not restore your session. Please retry.');
         }
-      } else {
-        setCurrentUser(null);
+      } finally {
+        clearTimeout(timeout);
+        if (isCurrent()) setLoading(false);
       }
-      setLoading(false);
     });
-
-    return unsubscribe;
-  }, []);
+    return () => { disposed = true; generation++; unsubscribe(); };
+  }, [sessionRetry]);
 
   const signUp = async (
     name,
@@ -316,6 +258,8 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     currentUser,
+    sessionError,
+    retrySession: () => setSessionRetry(value => value + 1),
     firebaseUser,
     loading,
     signUp,

@@ -76,9 +76,12 @@ const isSameDayTimestamp = (timestamp1, timestamp2) => {
 // Grid Component for Image Generation
 const ScheduleGridView = ({ place, schedules, dateStr, isAdmin, onEdit, onDelete }) => {
   const gridRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
   
   const downloadImage = async () => {
-    if (!gridRef.current) return;
+    if (!gridRef.current || exporting) return;
+    setExporting(true); setExportError('');
     try {
       const canvas = await html2canvas(gridRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const dataUrl = canvas.toDataURL('image/png');
@@ -87,33 +90,36 @@ const ScheduleGridView = ({ place, schedules, dateStr, isAdmin, onEdit, onDelete
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      console.error("Failed to generate image", err);
+      setExportError('Could not generate the timetable image. Please try again.');
+    } finally {
+      setExporting(false);
     }
   };
 
-  const serviceTypes = ['FIRST SERVICE', 'SECOND SERVICE'];
+  const serviceTypes = ['FIRST SERVICE', 'SECOND SERVICE', 'THIRD SERVICE'];
   const classTypes = ['PRE - SCHOOL', 'JUNIORS', 'SENIORS'];
 
   return (
     <Box sx={{ mb: 5 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, px: { xs: 1, sm: 2 } }}>
          <Typography variant="h5" sx={{ fontWeight: 'bold' }}>{place}</Typography>
-         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={downloadImage}>Download Image</Button>
+         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={downloadImage} disabled={exporting}>{exporting ? 'Preparing…' : 'Download Image'}</Button>
       </Box>
       
+      {exportError && <Alert severity="error">{exportError}</Alert>}
       <Box sx={{ overflowX: 'auto', p: { xs: 1, sm: 2 } }}>
          <Box ref={gridRef} sx={{ display: 'inline-block', bgcolor: 'white', p: 2 }}>
-           <table style={{ borderCollapse: 'collapse', minWidth: '700px', border: '1.5px solid black', fontFamily: 'serif' }}>
+           <table style={{ borderCollapse: 'collapse', minWidth: '700px', border: '1px solid #c8c3d8', fontFamily: 'serif' }}>
                <thead>
                    <tr>
-                       <th colSpan={4} style={{ border: '1.5px solid black', padding: '8px', textAlign: 'center', fontSize: '18px', fontWeight: 'bold' }}>
+                       <th colSpan={4} style={{ border: '1px solid #c8c3d8', padding: '8px', textAlign: 'center', fontSize: '18px', fontWeight: 'bold' }}>
                           {dateStr}
                        </th>
                    </tr>
                    <tr>
-                       <th style={{ border: '1.5px solid black', padding: '8px', width: '180px' }}></th>
+                       <th style={{ border: '1px solid #c8c3d8', padding: '8px', width: '180px' }}></th>
                        {classTypes.map(c => (
-                           <th key={c} style={{ border: '1.5px solid black', padding: '8px', fontStyle: 'italic', textAlign: 'left', fontSize: '16px', fontWeight: 'bold' }}>
+                           <th key={c} style={{ border: '1px solid #c8c3d8', padding: '8px', fontStyle: 'italic', textAlign: 'left', fontSize: '16px', fontWeight: 'bold' }}>
                                {c}
                            </th>
                        ))}
@@ -122,22 +128,22 @@ const ScheduleGridView = ({ place, schedules, dateStr, isAdmin, onEdit, onDelete
                <tbody>
                    {serviceTypes.map(service => (
                        <tr key={service}>
-                           <td style={{ border: '1.5px solid black', padding: '8px', fontWeight: 'bold', fontStyle: 'italic', fontSize: '16px' }}>
+                           <td style={{ border: '1px solid #c8c3d8', padding: '8px', fontWeight: 'bold', fontStyle: 'italic', fontSize: '16px' }}>
                                {service}
                            </td>
                            {classTypes.map(cType => {
                                 const matched = schedules.filter(s => s.serviceType === service && s.className === cType);
                                 return (
-                                    <td key={cType} style={{ border: '1.5px solid black', padding: '8px', verticalAlign: 'top', fontSize: '16px' }}>
+                                    <td key={cType} style={{ border: '1px solid #c8c3d8', padding: '8px', verticalAlign: 'top', fontSize: '16px' }}>
                                         {matched.map(s => (
                                             <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                 <span>{s.assignedPersonName}</span>
+                                                 <div><strong>{s.assignedPersonName}</strong>{s.assignedWork && <div style={{ fontSize: 14, color: "#656579", marginTop: 4 }}>{s.assignedWork}</div>}</div>
                                                  {isAdmin && (
                                                      <div data-html2canvas-ignore="true" style={{ display: 'flex' }}>
-                                                        <IconButton size="small" onClick={() => onEdit(s)} sx={{ p: 0.5 }}>
+                                                        <IconButton size="small" aria-label={`Edit schedule for ${s.assignedPersonName}`} onClick={() => onEdit(s)} sx={{ p: 0.5 }}>
                                                             <EditIcon sx={{ fontSize: 16 }} />
                                                         </IconButton>
-                                                        <IconButton size="small" color="error" onClick={() => onDelete(s.id)} sx={{ p: 0.5 }}>
+                                                        <IconButton size="small" color="error" aria-label={`Delete schedule for ${s.assignedPersonName}`} onClick={() => onDelete(s.id)} sx={{ p: 0.5 }}>
                                                             <DeleteIcon sx={{ fontSize: 16 }} />
                                                         </IconButton>
                                                      </div>
@@ -181,6 +187,9 @@ const TimetablePage = () => {
   // State declarations
   const [timetables, setTimetables] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [pageError, setPageError] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [editingTimetable, setEditingTimetable] = useState(null);
   const [currentWeekSunday, setCurrentWeekSunday] = useState(getThisSunday());
@@ -212,7 +221,7 @@ const TimetablePage = () => {
         const names = teachersSnapshot.docs.map(doc => doc.data().name).filter(Boolean);
         setTeachersList([...new Set(names)].sort());
       } catch (error) {
-        console.error('Error fetching teachers:', error);
+        setPageError('Could not load the teacher list. Check your connection and reopen this page.');
       }
     };
     fetchTeachers();
@@ -231,7 +240,7 @@ const TimetablePage = () => {
       setTimetables(timetablesData);
       setLoading(false);
     }, (error) => {
-      console.error('Error fetching timetables:', error);
+      setPageError('Could not load schedules. Check your connection and reopen this page.');
       setLoading(false);
     });
 
@@ -266,6 +275,7 @@ const TimetablePage = () => {
   }, {});
 
   const handleOpenDialog = (timetable) => {
+    setSaveError('');
     if (timetable) {
       setEditingTimetable(timetable);
       let dateValue = currentWeekSunday.getTime();
@@ -299,17 +309,22 @@ const TimetablePage = () => {
   };
 
   const handleCloseDialog = () => {
+    if (saving) return;
     setOpenDialog(false);
     setEditingTimetable(null);
   };
 
   const handleSave = async () => {
+    if (saving) return;
+    setSaveError('');
+    if (!Number.isFinite(formData.date)) { setSaveError('Choose a valid schedule date.'); return; }
     try {
       if (!formData.className || !formData.assignedPersonName || !formData.place) {
-        notifyError('Missing fields', 'Please fill in all required fields.');
+        setSaveError('Choose a class, teacher, and location.');
         return;
       }
 
+      setSaving(true);
       const timetableData = {
         className: formData.className,
         serviceType: formData.serviceType || 'FIRST SERVICE',
@@ -318,7 +333,7 @@ const TimetablePage = () => {
         place: formData.place,
         day: 'Sunday',
         date: formData.date,
-        createdAt: editingTimetable ? editingTimetable.createdAt : serverTimestamp()
+        createdAt: editingTimetable?.createdAt || serverTimestamp()
       };
 
       if (editingTimetable) {
@@ -347,10 +362,13 @@ const TimetablePage = () => {
         notifySuccess('Schedule saved', 'Schedule saved successfully.');
       }
 
-      handleCloseDialog();
+      setOpenDialog(false);
+      setEditingTimetable(null);
     } catch (error) {
       console.error('Error saving timetable:', error);
-      notifyError('Save failed', error.message || 'Failed to save schedule.');
+      setSaveError(error.message || 'Failed to save schedule.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -377,7 +395,7 @@ const TimetablePage = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa', pb: 4 }}>
+    <Box className="admin-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa', pb: 4 }}>
       {/* Glass Header (Sticky) */}
       <AppBar
         position="sticky"
@@ -443,6 +461,7 @@ const TimetablePage = () => {
       </AppBar>
 
       <Box sx={{ flex: 1, overflow: 'auto', p: { xs: 1, sm: 2 }, mt: 2 }}>
+        {pageError && <Alert severity="error" sx={{ mb: 2 }}>{pageError}</Alert>}
         {loading ? (
           <Box display="flex" justifyContent="center" py={4}>
             <CircularProgress />
@@ -472,6 +491,7 @@ const TimetablePage = () => {
           {editingTimetable ? 'Edit Schedule' : 'Add Schedule'}
         </DialogTitle>
         <DialogContent>
+          {saveError && <Alert severity="error" sx={{ mb: 2 }}>{saveError}</Alert>}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
             <FormControl fullWidth>
               <InputLabel id="class-name-label">Class Name</InputLabel>
@@ -550,9 +570,9 @@ const TimetablePage = () => {
             <TextField
               label="Date"
               type="date"
-              value={format(new Date(formData.date), 'yyyy-MM-dd')}
+              value={Number.isFinite(formData.date) ? format(new Date(formData.date), 'yyyy-MM-dd') : ''}
               onChange={(e) => {
-                const selectedDate = new Date(e.target.value);
+                const selectedDate = new Date(`${e.target.value}T00:00:00`);
                 selectedDate.setHours(0, 0, 0, 0);
                 setFormData({ ...formData, date: selectedDate.getTime() });
               }}
@@ -562,9 +582,9 @@ const TimetablePage = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained">
-            {editingTimetable ? 'Update' : 'Add'}
+          <Button disabled={saving} onClick={handleCloseDialog}>Cancel</Button>
+          <Button disabled={saving} onClick={handleSave} variant="contained">
+            {saving ? 'Saving…' : editingTimetable ? 'Update' : 'Add'}
           </Button>
         </DialogActions>
       </Dialog>

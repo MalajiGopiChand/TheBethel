@@ -93,6 +93,27 @@ export function updateDoc(reference, update) {
   if (!isStudent(reference)) return firestore.updateDoc(reference, update);
   return commitUpdates([[reference, update]], activePeriod);
 }
+// Read and update one student's projected activity atomically. Concurrent awards
+// must not overwrite each other's reward arrays or administrator corrections.
+export async function mutateStudent(reference, updater) {
+  const period = activePeriod;
+  const targets = period ? [reference, activityDoc(period, reference.id)] : [reference];
+  return withNotifications(targets, () => firestore.runTransaction(db, async transaction => {
+    if (websitePeriodsEnabled) {
+      const settings = await transaction.get(periodSettingsRef());
+      if ((settings.data()?.activePeriod || null) !== period) throw new Error('The website data period changed. Reopen this form before saving.');
+    }
+    const base = await transaction.get(reference);
+    if (!base.exists()) throw new Error('This student no longer exists.');
+    const activity = period ? await transaction.get(activityDoc(period, reference.id)) : null;
+    const update = updater(projectStudent(base.data(), activity?.data(), period));
+    const attribution = { activityUpdatedBy: auth.currentUser?.uid || '', activityUpdatedByName: auth.currentUser?.displayName || 'Staff' };
+    if (!period) { transaction.update(reference, { ...update, ...attribution }); return; }
+    const parts = splitStudentUpdate(update);
+    if (Object.keys(parts.profile).length) transaction.update(reference, parts.profile);
+    if (Object.keys(parts.activity).length) transaction.set(activityDoc(period, reference.id), { ...expandFieldPaths(parts.activity), ...attribution }, { merge: true });
+  }));
+}
 export function writeBatch(database) {
   const period = activePeriod;
   const updates = [];

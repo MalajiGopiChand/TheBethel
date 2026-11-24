@@ -579,7 +579,7 @@ const MessagingPage = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: 0, bgcolor: '#e5ddd5' }}>
+    <Box className="admin-page" sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: 0, bgcolor: '#e5ddd5' }}>
       
       {/* 1. Header */}
       <AppBar position="static" elevation={2} sx={{ backgroundImage: 'none', flexShrink: 0, bgcolor: '#075E54', zIndex: 10 }}>
@@ -603,6 +603,7 @@ const MessagingPage = () => {
       {chatError && <Alert severity="error" onClose={() => setChatError('')} sx={{ borderRadius: 0 }}>{chatError}</Alert>}
       {/* 2. Messages Area */}
       <Box
+        className="admin-chat-messages"
         onScroll={event => { const el = event.currentTarget; nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}
         sx={{
           flex: 1,
@@ -645,7 +646,7 @@ const MessagingPage = () => {
       </Box>
 
       {/* 3. Input Area */}
-      <Box 
+      <Box className="admin-chat-composer"
         sx={{ 
           p: 1.5, 
           bgcolor: '#f0f0f0', 

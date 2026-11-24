@@ -40,7 +40,6 @@ const AdminLogin = () => {
     if (currentUser) {
       const isAdmin = currentUser.role === UserRole.ADMIN || 
         currentUser.email === 'gop1@gmail.com' || 
-        currentUser.email === 'admin@gmail.com' || 
         currentUser.email === 'premkumartenali@gmail.com';
       if (isAdmin) {
         navigate('/admin/dashboard');
@@ -55,7 +54,8 @@ const AdminLogin = () => {
 
     try {
       // Check if email is admin before attempting login
-      const isAdminEmail = email === 'gop1@gmail.com' || email === 'admin@gmail.com' || email === 'premkumartenali@gmail.com';
+      const normalizedEmail = email.trim().toLowerCase();
+      const isAdminEmail = normalizedEmail === 'gop1@gmail.com' || normalizedEmail === 'premkumartenali@gmail.com';
       
       if (!isAdminEmail) {
         setLoading(false);
@@ -63,7 +63,7 @@ const AdminLogin = () => {
         return;
       }
 
-      await login(email, password, UserRole.ADMIN);
+      await login(email.trim().toLowerCase(), password, UserRole.ADMIN);
       // Navigation will happen via useEffect when currentUser updates
     } catch (err) {
       // Error is handled by context
@@ -78,7 +78,7 @@ const AdminLogin = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #FF9800 0%, #FFD200 100%)', // Orange/Gold Gradient for Admin
+        background: 'transparent',
         py: 4
       }}
     >
@@ -99,7 +99,7 @@ const AdminLogin = () => {
             <Avatar
               sx={{
                 m: 1,
-                bgcolor: 'warning.main', // Orange for Admin
+                bgcolor: 'primary.main',
                 width: 60,
                 height: 60,
                 boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
@@ -166,7 +166,7 @@ const AdminLogin = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
-                color="warning" // Matching the Admin theme
+                color="primary"
                 size="large"
                 sx={{
                   mt: 4,
@@ -176,9 +176,9 @@ const AdminLogin = () => {
                   fontWeight: 'bold',
                   textTransform: 'none',
                   fontSize: '1rem',
-                  boxShadow: '0 4px 12px rgba(255, 152, 0, 0.3)',
+                  boxShadow: '0 4px 12px rgba(102, 89, 198, 0.2)',
                   '&:hover': {
-                    bgcolor: 'warning.dark',
+                    bgcolor: 'primary.dark',
                   }
                 }}
                 disabled={loading}

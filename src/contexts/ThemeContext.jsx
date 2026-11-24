@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { useLocation } from 'react-router-dom';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { lightTheme, darkTheme } from '../utils/theme';
+import { useAuth } from './AuthContext';
 
 const ThemeContext = createContext();
 
@@ -19,12 +20,13 @@ export const ThemeContextProvider = ({ children }) => {
   });
 
   const location = useLocation();
-  const forceLightMode = location.pathname.startsWith('/teacher') || location.pathname.startsWith('/parent');
+  const { currentUser } = useAuth();
+  const forceLightMode = currentUser?.role !== 'ADMIN' && (location.pathname.startsWith('/teacher') || location.pathname.startsWith('/parent'));
   
   const effectiveDarkMode = forceLightMode ? false : isDarkMode;
 
   useEffect(() => {
-    localStorage.setItem('themePreference', isDarkMode ? 'dark' : 'light');
+    try { localStorage.setItem('themePreference', isDarkMode ? 'dark' : 'light'); } catch { /* Storage can be unavailable in private browsing. */ }
     if (effectiveDarkMode) {
       document.documentElement.classList.add('dark-mode');
     } else {

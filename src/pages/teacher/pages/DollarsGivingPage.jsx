@@ -46,18 +46,15 @@ import {
   orderBy
 } from '../../../services/studentData';
 import { format } from 'date-fns';
+import { startOfMonth, startOfWeek } from 'date-fns';
+import Chip from '@mui/material/Chip';
+import { mutateStudent } from '../../../services/studentData';
+import { rewardBalance, rewardPeriodTotal } from '../../../utils/rewards';
 import { db } from '../../../config/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { UserRole } from '../../../types';
 import { handleBackNavigation } from '../../../utils/navigation';
 import { notifySuccess, notifyError, requestNotificationPermission } from '../../../services/notificationService';
-
-const ADMIN_EMAILS = [
-  'gop1@gmail.com',
-  'premkumartenali@gmail.com',
-  'admin@example.com',
-  'admin@gmail.com'
-];
 
 const DollarsGivingPage = () => {
   const { currentUser, logout } = useAuth();
@@ -66,8 +63,7 @@ const DollarsGivingPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const isAdmin = currentUser?.role === UserRole.ADMIN || 
-    ADMIN_EMAILS.includes(currentUser?.email);
+  const isAdmin = currentUser?.role === UserRole.ADMIN;
 
   const handleBack = () => {
     handleBackNavigation(navigate, currentUser);
@@ -75,6 +71,9 @@ const DollarsGivingPage = () => {
 
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [retry, setRetry] = useState(0);
+  const [saveError, setSaveError] = useState('');
 
   // Filters
   const [selectedClass, setSelectedClass] = useState('All');
@@ -99,7 +98,8 @@ const DollarsGivingPage = () => {
 
   // Fetch Students
   useEffect(() => {
-    requestNotificationPermission();
+    setLoadError('');
+    setLoading(true);
     const studentsQuery = query(collection(db, 'students'), orderBy('studentId'));
     const unsubscribe = onSnapshot(studentsQuery, (snapshot) => {
       const studentsData = snapshot.docs.map(doc => ({
@@ -108,10 +108,10 @@ const DollarsGivingPage = () => {
       }));
       setStudents(studentsData);
       setLoading(false);
-    });
+    }, () => { setLoadError('Could not load students. Check your connection and retry.'); setLoading(false); });
 
     return () => unsubscribe();
-  }, []);
+  }, [retry]);
 
   // Filter Logic
   const filteredStudents = students.filter(student => {
@@ -123,25 +123,12 @@ const DollarsGivingPage = () => {
       ? !['Kandrika', 'Krishna Lanka', 'Gandhiji Conly'].includes(loc)
       : loc === selectedPlace;
     const searchFilter = searchQuery === '' || 
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.studentId.toLowerCase().includes(searchQuery.toLowerCase());
+      (student.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(student.studentId || '').toLowerCase().includes(searchQuery.toLowerCase());
     return classFilter && placeFilter && searchFilter;
   });
 
-  // Helper function to calculate dollar points from rewards array
-  const calculateDollarPoints = (studentData) => {
-    const rewardsList = studentData.rewards || [];
-    let calculatedPoints = 0;
-    for (const reward of rewardsList) {
-      const points = reward.dollars;
-      if (typeof points === 'number') {
-        calculatedPoints += points;
-      } else if (typeof points === 'string') {
-        calculatedPoints += parseInt(points) || 0;
-      }
-    }
-    return calculatedPoints > 0 ? calculatedPoints : (studentData.dollarPoints || 0);
-  };
+  const calculateDollarPoints = rewardBalance;
 
   // Handle Save Reward
   const handleSave = async () => {
@@ -155,54 +142,30 @@ const DollarsGivingPage = () => {
       return;
     }
 
-    const amount = parseInt(rewardAmount);
-    if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid positive number for the reward amount.');
+    if (saving) return;
+    const amount = Number(rewardAmount);
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      setSaveError('Enter a positive whole number of reward dollars.');
       return;
     }
 
     try {
       setSaving(true);
-      const studentRef = doc(db, 'students', selectedStudent.id);
-      const studentSnap = await getDoc(studentRef);
-
-      if (studentSnap.exists()) {
-        const studentData = studentSnap.data();
-        const rewards = [...(studentData.rewards || [])];
-        
-        // Add new reward
-        const newReward = {
-          date: format(new Date(), 'yyyy-MM-dd'),
-          dollars: amount,
-          reason: rewardReason.trim(),
-          teacher: currentUser?.name || (isAdmin ? 'Admin' : (currentUser?.email || 'Teacher'))
-        };
-        
-        rewards.push(newReward);
-        
-        // Calculate new total
-        const newTotal = rewards.reduce((sum, r) => sum + (Number(r.dollars) || 0), 0);
-        
-        // Update document
-        await updateDoc(studentRef, {
-          rewards: rewards,
-          dollarPoints: newTotal
-        });
-
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
-        notifySuccess('Dollars saved', `Saved $${amount} for ${selectedStudent.name}.`);
-        
-        // Reset form
-        setSelectedStudent(null);
-        setRewardAmount('');
-        setRewardReason('');
-        setShowInput(false);
-      }
+      setSaveError('');
+      await mutateStudent(doc(db, 'students', selectedStudent.id), student => ({
+        rewards: [...(student.rewards || []), { date: format(new Date(), 'yyyy-MM-dd'), dollars: amount, reason: rewardReason.trim(), teacher: currentUser?.name || 'Admin' }],
+        dollarPoints: rewardBalance(student) + amount,
+      }));
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+      setSelectedStudent(null);
+      setRewardAmount('');
+      setRewardReason('');
+      setShowInput(false);
     } catch (error) {
       console.error('Error saving reward:', error);
       notifyError('Dollars failed', error.message || 'Failed to save dollars.');
-      alert('Failed to save reward: ' + error.message);
+      setSaveError('Failed to save reward: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -213,12 +176,13 @@ const DollarsGivingPage = () => {
       alert('Rewards can only be given on Sundays for teachers. Today is ' + todayFormatted + '.');
       return;
     }
+    setSaveError('');
     setSelectedStudent(student);
     setShowInput(true);
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
+    <Box className="admin-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
       
       {/* 1. Glass Header (Sticky) */}
       <AppBar
@@ -245,8 +209,15 @@ const DollarsGivingPage = () => {
       {/* Main Page Content */}
       <Container maxWidth="lg" sx={{ pt: 3, pb: 12 }}>
 
+          <Typography color="text.secondary" sx={{ mb: 2 }}>Give and manage dollar rewards for students</Typography>
+          <Paper className="reward-summary">
+            <div><Typography color="text.secondary">Total Dollars Given</Typography><Typography variant="h4" fontWeight={800}>${students.reduce((sum, student) => sum + rewardBalance(student), 0).toLocaleString()}</Typography></div>
+            <div><Typography color="text.secondary">This Month</Typography><Typography variant="h4" color="success.main" fontWeight={800}>${rewardPeriodTotal(students, startOfMonth(new Date())).toLocaleString()}</Typography></div>
+            <div><Typography color="text.secondary">This Week</Typography><Typography variant="h4" color="success.main" fontWeight={800}>${rewardPeriodTotal(students, startOfWeek(new Date())).toLocaleString()}</Typography></div>
+          </Paper>
+          {loadError && <Alert severity="error" sx={{ mb: 2 }} action={<Button onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{loadError}</Alert>}
           {/* Scrollable Filters */}
-          <Box className="hide-scrollbar" sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 2, mb: 2, '&::-webkit-scrollbar': { display: 'none' } }}>
+          <Box className="reward-filters" sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 2, mb: 2, '&::-webkit-scrollbar': { display: 'none' } }}>
             <FormControl size="small" sx={{ minWidth: 130, flexShrink: 0, bgcolor: 'white', borderRadius: 1 }}>
               <InputLabel>Class</InputLabel>
               <Select value={selectedClass} label="Class" onChange={(e) => setSelectedClass(e.target.value)}>
@@ -283,9 +254,7 @@ const DollarsGivingPage = () => {
           )}
 
       {/* Success Alert */}
-      <Fade in={showSuccess}>
-        <Alert severity="success" sx={{ mx: 2, mt: 2, mb: 0 }}>Reward saved successfully!</Alert>
-      </Fade>
+      {showSuccess && <Alert severity="success" sx={{ mt: 2, mb: 2 }}>Reward saved successfully!</Alert>}
 
       {/* Student List */}
         {loading ? (
@@ -293,7 +262,7 @@ const DollarsGivingPage = () => {
         ) : filteredStudents.length === 0 ? (
           <Alert severity="info">No students match your filters.</Alert>
         ) : (
-          <Paper elevation={1} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+          <Paper className="reward-student-list" elevation={1} sx={{ borderRadius: 2, overflow: 'hidden' }}>
             <List disablePadding>
               {filteredStudents.map((student, index) => {
                 const dollarPoints = calculateDollarPoints(student);
@@ -306,48 +275,52 @@ const DollarsGivingPage = () => {
                         transition: 'background-color 0.3s',
                         '&:hover': { bgcolor: 'action.hover' },
                         display: 'flex',
-                        flexDirection: isMobile ? 'column' : 'row',
-                        alignItems: isMobile ? 'stretch' : 'center',
-                        gap: isMobile ? 2 : 0,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 1,
                         py: 2
                       }}
                     >
-                      <Box display="flex" alignItems="center" flexGrow={1} width={isMobile ? '100%' : 'auto'}>
+                      <Box display="flex" alignItems="center" flexGrow={1} sx={{ minWidth: 0 }}>
                         <Avatar 
                           sx={{ 
                             bgcolor: theme.palette.primary.main,
-                            width: 48, height: 48, mr: 2, fontSize: '1.2rem', fontWeight: 'bold'
+                            width: 36, height: 36, mr: 1.25, fontSize: '1.1rem', fontWeight: 'bold'
                           }}
                         >
-                          {student.name.charAt(0)}
+                          {(student.name || 'S').charAt(0)}
                         </Avatar>
                         
                         <ListItemText 
                           primary={
-                            <Typography variant="subtitle1" fontWeight="bold">
+                            <Typography variant="subtitle1" fontWeight="bold" sx={{ fontSize: { xs: '.9375rem', sm: '1rem' } }}>
                               {student.name}
                             </Typography>
                           }
-                          secondary={`${student.studentId} • ${student.location || student.place || 'No Location'} • Current: $${dollarPoints}`}
+                          secondary={`${student.studentId || 'No ID'} • ${student.classType || ''}`}
+                          secondaryTypographyProps={{ sx: { fontSize: '.8125rem' } }}
                         />
                       </Box>
-                      
+                      <Chip size="small" label={`$${dollarPoints}`} color="success" sx={{ flexShrink: 0, bgcolor: '#dff3e6', color: '#176239' }} />
                       <Button
-                        variant="contained"
+                        variant="outlined"
                         startIcon={<DollarIcon />}
                         onClick={() => handleOpenDialog(student)}
                         disabled={!canGiveDollars}
                         size={isMobile ? "medium" : "small"}
-                        fullWidth={isMobile}
+                        fullWidth={false}
                         sx={{
-                          bgcolor: 'primary.main',
-                          color: 'white',
+                          bgcolor: 'transparent',
+                          color: 'primary.main',
+                          minWidth: 62,
+                          px: 1,
+                          flexShrink: 0,
                           textTransform: 'none',
                           fontWeight: 'bold',
                           borderRadius: 2,
                           py: isMobile ? 1 : undefined,
                           '&:hover': {
-                            bgcolor: 'primary.dark',
+                            bgcolor: 'action.hover',
                           },
                           '&:disabled': {
                             bgcolor: 'action.disabledBackground',
@@ -355,7 +328,7 @@ const DollarsGivingPage = () => {
                           }
                         }}
                       >
-                        {canGiveDollars ? 'Give Reward' : 'Only on Sundays'}
+                        {canGiveDollars ? 'Give' : 'Sunday only'}
                       </Button>
                     </ListItem>
                     {index < filteredStudents.length - 1 && <Divider component="li" />}
@@ -385,10 +358,12 @@ const DollarsGivingPage = () => {
           Give Reward to {selectedStudent?.name || 'Student'}
         </DialogTitle>
         <DialogContent>
+          {saveError && <Alert severity="error" sx={{ mb: 2 }}>{saveError}</Alert>}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
               label="Amount ($)"
               type="number"
+              inputProps={{ min: 1, step: 1 }}
               value={rewardAmount}
               onChange={(e) => setRewardAmount(e.target.value)}
               fullWidth

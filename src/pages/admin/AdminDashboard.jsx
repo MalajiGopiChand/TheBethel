@@ -1,342 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Container,
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  BottomNavigation,
-  BottomNavigationAction,
-  Paper,
-  CircularProgress,
-  Alert,
-  IconButton,
-  Chip,
-  Tooltip,
-  useTheme,
-  useMediaQuery,
-  Fade,
-} from '@mui/material';
-import {
-  Dashboard as DashboardIcon,
-  DashboardOutlined as DashboardOutlinedIcon,
-  FactCheck as AttendanceIcon,
-  FactCheckOutlined as AttendanceOutlinedIcon,
-  ManageAccounts as ManageIcon,
-  ManageAccountsOutlined as ManageOutlinedIcon,
-  School as SchoolIcon,
-  SchoolOutlined as SchoolOutlinedIcon,
-  Settings as SettingsIcon,
-  SettingsOutlined as SettingsOutlinedIcon,
-  Logout as LogoutIcon,
-  NotificationsActiveRounded as NotificationsIcon,
-  BoltRounded as BoltIcon,
-} from '@mui/icons-material';
-
-// Import Contexts and Types
+import React, { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Alert, AppBar, Box, Button, CircularProgress, IconButton, Toolbar, Tooltip, Typography } from '@mui/material';
+import { LogoutRounded, NotificationsActiveRounded } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import { UserRole } from '../../types';
-
-// Import Tab Components
+import { ADMIN_TABS } from '../../utils/adminNavigation';
 import AdminHomeTab from './components/AdminHomeTab';
 import AdminAttendanceTab from './components/AdminAttendanceTab';
 import AdminManageTab from './components/AdminManageTab';
 import AdminTeachersTab from './components/AdminTeachersTab';
 import AdminMoreTab from './components/AdminMoreTab';
-import InstallButton from '../../components/InstallButton';
 
-// Define allowed admin emails here for easier maintenance
-const ADMIN_EMAILS = [
-  'gop1@gmail.com',
-  'premkumartenali@gmail.com'
-];
-
-const AdminDashboard = () => {
+const content = [AdminHomeTab, AdminAttendanceTab, AdminManageTab, AdminTeachersTab, AdminMoreTab];
+export default function AdminDashboard() {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
-  const [currentTab, setCurrentTab] = useState(() => {
-    const savedTab = sessionStorage.getItem('AdminDashboard_currentTab');
-    return savedTab ? parseInt(savedTab, 10) : 0;
-  });
-
-  useEffect(() => {
-    sessionStorage.setItem('AdminDashboard_currentTab', currentTab.toString());
-  }, [currentTab]);
-  const [loading, setLoading] = useState(false); // For actions like logout
-  const [checkingAuth, setCheckingAuth] = useState(true); // For initial role check
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const verifyAdminStatus = () => {
-      if (!currentUser) {
-        navigate('/');
-        return;
-      }
-
-      // Check if user is admin via Role OR specific Email allowlist
-      const isRoleAdmin = currentUser.role === UserRole.ADMIN;
-      const isEmailAdmin = ADMIN_EMAILS.includes(currentUser.email);
-
-      if (!isRoleAdmin && !isEmailAdmin) {
-        console.warn('Access Denied: User is not an admin.');
-        navigate('/');
-      } else {
-        setCheckingAuth(false);
-      }
-    };
-
-    verifyAdminStatus();
-  }, [currentUser, navigate]);
-
+  const [params] = useSearchParams();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const index = Math.max(0, ADMIN_TABS.indexOf(params.get('tab') || 'home'));
+  const Tab = content[index];
   const handleLogout = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await logout();
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-      setError('Failed to log out. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    setBusy(true);
+    try { await logout(); navigate('/auth/admin/login', { replace: true }); }
+    catch { setError('Could not log out. Please try again.'); }
+    finally { setBusy(false); }
   };
-
-  const renderTabContent = () => {
-    const content = (() => {
-      switch (currentTab) {
-        case 0: return <AdminHomeTab />;
-        case 1: return <AdminAttendanceTab />;
-        case 2: return <AdminManageTab />;
-        case 3: return <AdminTeachersTab />;
-        case 4: return <AdminMoreTab />;
-        default: return <AdminHomeTab />;
-      }
-    })();
-
-    return (
-      <Fade in timeout={350}>
-        <Box className="page-section-enter">
-          {content}
-        </Box>
-      </Fade>
-    );
-  };
-
-  // Show a full-screen loader while verifying admin privileges
-  if (checkingAuth) {
-    return (
-      <Box
-        className="page-shell page-glow-background"
-        sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  return (
-    <Box
-      className="page-shell page-glow-background"
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100vh',
-      }}
-    >
-      {/* Top App Bar with quick actions */}
-      <AppBar
-        position="sticky"
-        elevation={0}
-        sx={{
-          bgcolor: 'transparent',
-          backgroundImage: 'none',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          backdropFilter: 'blur(22px)',
-        }}
-      >
-        <Toolbar sx={{ py: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 3,
-                overflow: 'hidden',
-                bgcolor: 'rgba(15,23,42,0.95)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 14px 30px rgba(15,23,42,0.55)',
-              }}
-            >
-              <Box
-                component="img"
-                src="/image.png"
-                alt="Bethel AMS"
-                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </Box>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: '-0.03em', color: '#000' }}>
-                Admin Dashboard
-              </Typography>
-              <Typography variant="caption" sx={{ fontWeight: 800, color: '#000' }}>
-                {currentUser?.name || currentUser?.email}
-              </Typography>
-            </Box>
-          </Box>
-
-          {!isMobile && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Chip
-                size="small"
-                color="success"
-                variant="outlined"
-                label="Live • Today's overview"
-                sx={{ borderRadius: 999 }}
-              />
-              <Tooltip title="Notifications">
-                <IconButton
-                  sx={{
-                    bgcolor: 'rgba(15,23,42,0.9)',
-                    color: 'primary.contrastText',
-                    '&:hover': { bgcolor: 'rgba(15,23,42,1)' },
-                  }}
-                >
-                  <NotificationsIcon />
-                </IconButton>
-              </Tooltip>
-              <InstallButton size="small" />
-              <Button
-                color="inherit"
-                onClick={handleLogout}
-                disabled={loading}
-                startIcon={!loading && <LogoutIcon />}
-                sx={{ borderRadius: 999, px: 2.5, color: '#000', fontWeight: 'bold' }}
-              >
-                {loading ? <CircularProgress size={18} color="inherit" /> : 'Logout'}
-              </Button>
-            </Box>
-          )}
-
-          {isMobile && (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <InstallButton size="small" />
-              <Tooltip title={`Logout (${currentUser?.name || 'Admin'})`}>
-                <Button
-                  onClick={handleLogout}
-                  disabled={loading}
-                  sx={{
-                    minWidth: 'auto',
-                    p: '6px 12px',
-                    color: '#d32f2f',
-                    borderRadius: 2,
-                    bgcolor: 'rgba(211,47,47,0.08)',
-                    fontWeight: 'bold',
-                    fontSize: '0.8rem'
-                  }}
-                  startIcon={!loading && <LogoutIcon sx={{ width: 18, height: 18 }} />}
-                >
-                  {loading ? <CircularProgress size={16} color="inherit" /> : 'Logout'}
-                </Button>
-              </Tooltip>
-            </Box>
-          )}
-        </Toolbar>
-      </AppBar>
-
-      {/* Main Content Area */}
-      <Box sx={{ flexGrow: 1, overflow: 'auto', pb: 12 }}>
-        <Container maxWidth="lg" sx={{ py: 3 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
-
-
-          {/* Render the selected tab with animation */}
-          {renderTabContent()}
-        </Container>
-      </Box>
-
-      {/* Bottom Navigation – new glass floating dock feel */}
-      <Paper
-        className="page-card-enter"
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 1000,
-          borderRadius: 999,
-          bgcolor: 'rgba(15,23,42,0.96)',
-          backdropFilter: 'blur(24px)',
-          px: 1,
-          boxShadow: '0 22px 60px rgba(15,23,42,0.9)',
-          width: '92%',
-          maxWidth: 620,
-        }}
-        elevation={0}
-      >
-        <BottomNavigation
-          value={currentTab}
-          onChange={(event, newValue) => setCurrentTab(newValue)}
-          showLabels
-          sx={{
-            bgcolor: 'transparent',
-            '& .MuiBottomNavigationAction-root': {
-              minWidth: 'auto',
-              padding: '8px 6px',
-              color: 'rgba(148,163,184,0.75)',
-              '&.Mui-selected': {
-                color: theme.palette.primary.main,
-              },
-              '& .MuiSvgIcon-root': {
-                transition: 'all 0.25s ease',
-              },
-              '&.Mui-selected .MuiSvgIcon-root': {
-                transform: 'translateY(-3px) scale(1.15)',
-              },
-              '& .MuiBottomNavigationAction-label': {
-                fontSize: 11,
-                fontWeight: 600,
-              },
-            },
-          }}
-        >
-          <BottomNavigationAction
-            label="Home"
-            icon={currentTab === 0 ? <DashboardIcon /> : <DashboardOutlinedIcon />}
-          />
-          <BottomNavigationAction
-            label="Attendance"
-            icon={currentTab === 1 ? <AttendanceIcon /> : <AttendanceOutlinedIcon />}
-          />
-          <BottomNavigationAction
-            label="Manage"
-            icon={currentTab === 2 ? <ManageIcon /> : <ManageOutlinedIcon />}
-          />
-          <BottomNavigationAction
-            label="Staff"
-            icon={currentTab === 3 ? <SchoolIcon /> : <SchoolOutlinedIcon />}
-          />
-          <BottomNavigationAction
-            label="More"
-            icon={currentTab === 4 ? <SettingsIcon /> : <SettingsOutlinedIcon />}
-          />
-        </BottomNavigation>
-      </Paper>
-
-      {/* PWA Install Prompt - Cross Platform */}
-    </Box>
-  );
-};
-
-export default AdminDashboard;
+  return <Box className="admin-page">
+    <AppBar position="sticky" elevation={0}>
+      <Toolbar className="admin-header" sx={{ width: '100%', py: { xs: 2, sm: 3 }, gap: 1 }}>
+        <div className="admin-brand">
+          <img src="/image.png" alt="Bethel Attendance App" />
+          <div className="admin-brand-title">
+            <Typography component="h1" variant="h5" sx={{ fontSize: { xs: '1.05rem', sm: '1.8rem' }, lineHeight: 1.2, letterSpacing: '-.025em' }}>Admin Dashboard</Typography>
+            <Typography color="text.secondary" sx={{ mt: .5 }}>{currentUser?.name || 'Admin'}</Typography>
+          </div>
+        </div>
+        <Tooltip title="Notification center"><IconButton aria-label="Open notification center" onClick={() => navigate('/admin/notifications')} sx={{ display: { xs: 'none', sm: 'inline-flex' }, color: 'primary.main' }}><NotificationsActiveRounded /></IconButton></Tooltip>
+        <Button color="error" onClick={handleLogout} disabled={busy} startIcon={busy ? <CircularProgress size={16} /> : <LogoutRounded />} sx={{ bgcolor: '#fce7ed', px: { xs: 1.5, sm: 2.5 } }}>Logout</Button>
+      </Toolbar>
+    </AppBar>
+    <main className="admin-page-content">
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Box key={index} className="page-section-enter"><Tab /></Box>
+    </main>
+  </Box>;
+}

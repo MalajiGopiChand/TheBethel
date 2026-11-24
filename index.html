@@ -51,13 +51,13 @@
               regs.filter((r) => !r.scope.includes('firebase-cloud-messaging-push-scope')).forEach((r) => r.unregister());
             });
             if (window.caches) {
-              caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+              caches.keys().then((keys) => keys.filter(k => k.startsWith('bethel-ams-')).forEach((k) => caches.delete(k)));
             }
             return;
           }
 
           navigator.serviceWorker
-            .register('/sw.js', { scope: '/' })
+            .register('/sw.js', { scope: '/', updateViaCache: 'none' })
             .then((registration) => {
               // Proactively check for updates
               if (registration.update) registration.update();
@@ -66,10 +66,8 @@
                 const newWorker = registration.installing;
                 if (!newWorker) return;
                 newWorker.addEventListener('statechange', () => {
-                  // When a new SW is installed, trigger it immediately and reload once
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  }
+                  // Do not replace the running app while attendance or other forms
+                  // contain unsaved changes. The update activates after tabs close.
                 });
               });
             })

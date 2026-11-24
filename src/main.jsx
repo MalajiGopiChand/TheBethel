@@ -7,12 +7,16 @@ import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeContextProvider } from './contexts/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import AdminExperience from './components/AdminExperience';
 import './styles/animations.css';
 import { registerPushTokenForUser, listenForForegroundPushMessages } from './services/notificationService';
 import { useAuth } from './contexts/AuthContext';
 import { retryNotifications } from './services/notificationRelay';
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+// Reuse the root during Vite hot updates rather than mounting a second app.
+const root = import.meta.hot?.data.root || ReactDOM.createRoot(document.getElementById('root'));
+if (import.meta.hot) import.meta.hot.data.root = root;
+root.render(
 <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter future={{ v7_startTransition: true }}>
@@ -20,7 +24,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <ThemeContextProvider>
             <CssBaseline />
             <PushBootstrap />
-            <ActivityPeriodProvider><App /></ActivityPeriodProvider>
+            <ActivityPeriodProvider><AdminExperience><App /></AdminExperience></ActivityPeriodProvider>
           </ThemeContextProvider>
         </AuthProvider>
       </BrowserRouter>

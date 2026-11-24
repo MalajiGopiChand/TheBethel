@@ -32,13 +32,16 @@ import {
   updateDoc, 
   getDoc 
 } from '../../../services/studentData';
-import { db, auth } from '../../../config/firebase'; // Ensure path is correct
+import { db } from '../../../config/firebase';
+import { mutateStudent } from '../../../services/studentData';
+import { useAuth } from '../../../contexts/AuthContext';
+import { changeReward, rewardBalance } from '../../../utils/rewards';
 import { handleBackNavigation } from '../../../utils/navigation';
 
-const adminEmails = ["gop1@gmail.com", "premkumartenali@gmail.com", "admin@gmail.com"];
 
 const DollarHistoryPage = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
@@ -67,8 +70,7 @@ const DollarHistoryPage = () => {
   const [editingStudent, setEditingStudent] = useState(null);
   const [newTotalBalance, setNewTotalBalance] = useState('');
 
-  const userEmail = auth.currentUser?.email || "";
-  const isAdmin = adminEmails.includes(userEmail);
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   // 1. Fetch Students
   useEffect(() => {
@@ -84,7 +86,7 @@ const DollarHistoryPage = () => {
           classType: data.classType || "Beginner",
           location: data.place || data.location || "Kandrika", 
           rewards: Array.isArray(data.rewards) ? data.rewards : [],
-          dollarPoints: data.dollarPoints || 0
+          dollarPoints: rewardBalance(data)
         };
       });
       setStudents(loaded.sort((a, b) => a.name.localeCompare(b.name)));
@@ -107,6 +109,7 @@ const DollarHistoryPage = () => {
             uniqueId: `${student.id}_${index}`,
             studentDocId: student.id,
             rewardIndex: index,
+            originalReward: reward,
             studentName: student.name,
             classType: student.classType,
             location: student.location,
@@ -141,41 +144,26 @@ const DollarHistoryPage = () => {
     if (!selectedReward || !editAmount) return;
     try {
       const studentRef = doc(db, 'students', selectedReward.studentDocId);
-      const snap = await getDoc(studentRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        const rewards = [...(data.rewards || [])];
-        if (rewards[selectedReward.rewardIndex]) {
-          rewards[selectedReward.rewardIndex].dollars = Number(editAmount);
-          const newTotal = rewards.reduce((sum, r) => sum + (Number(r.dollars) || 0), 0);
-          await updateDoc(studentRef, { rewards, dollarPoints: newTotal });
-          setEditDialogOpen(false);
-          setAnchorEl(null);
-        }
-      }
+      await mutateStudent(studentRef, student => changeReward(student, selectedReward.rewardIndex, selectedReward.originalReward, Number(editAmount)));
+      setEditDialogOpen(false);
+      setAnchorEl(null);
     } catch (e) { alert("Error: " + e.message); }
   };
 
   const handleHistoryDelete = async () => {
+    if (!selectedReward) return;
     if (!window.confirm("Delete this entry?")) return;
     try {
       const studentRef = doc(db, 'students', selectedReward.studentDocId);
-      const snap = await getDoc(studentRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        const rewards = [...(data.rewards || [])];
-        rewards.splice(selectedReward.rewardIndex, 1);
-        const newTotal = rewards.reduce((sum, r) => sum + (Number(r.dollars) || 0), 0);
-        await updateDoc(studentRef, { rewards, dollarPoints: newTotal });
-        setAnchorEl(null);
-      }
+      await mutateStudent(studentRef, student => changeReward(student, selectedReward.rewardIndex, selectedReward.originalReward, null));
+      setAnchorEl(null);
     } catch (e) { alert("Error: " + e.message); }
   };
 
   const handleForceBalanceUpdate = async () => {
     if (!editingStudent) return;
-    const amount = parseInt(newTotalBalance);
-    if (isNaN(amount)) return alert("Please enter a valid number");
+    const amount = Number(newTotalBalance);
+    if (newTotalBalance === '' || !Number.isSafeInteger(amount) || amount < 0) return alert("Enter a non-negative whole number");
 
     try {
       await updateDoc(doc(db, 'students', editingStudent.id), {

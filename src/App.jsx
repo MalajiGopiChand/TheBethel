@@ -1,54 +1,54 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { UserRole } from './types';
-import RoleSelection from './pages/auth/RoleSelection';
-import TeacherLogin from './pages/auth/TeacherLogin';
-import TeacherSignUp from './pages/auth/TeacherSignUp';
-import AdminLogin from './pages/auth/AdminLogin';
-import ParentLogin from './pages/auth/ParentLogin';
-import ParentSignUp from './pages/auth/ParentSignUp';
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
+const RoleSelection = lazy(() => import('./pages/auth/RoleSelection'));
+const TeacherLogin = lazy(() => import('./pages/auth/TeacherLogin'));
+const TeacherSignUp = lazy(() => import('./pages/auth/TeacherSignUp'));
+const AdminLogin = lazy(() => import('./pages/auth/AdminLogin'));
+const ParentLogin = lazy(() => import('./pages/auth/ParentLogin'));
+const ParentSignUp = lazy(() => import('./pages/auth/ParentSignUp'));
+const TeacherDashboard = lazy(() => import('./pages/teacher/TeacherDashboard'));
 import ParentDashboard, { ParentHome } from './pages/parent/ParentDashboard';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import HomeworkPage from './pages/teacher/pages/HomeworkPage';
-import MessagingPage from './pages/teacher/pages/MessagingPage';
-import AttendancePage from './pages/teacher/pages/AttendancePage';
-import AttendanceSummaryPage from './pages/teacher/pages/AttendanceSummaryPage';
-import DollarsGivingPage from './pages/teacher/pages/DollarsGivingPage';
-import AdminVerifyTeachersPage from './pages/admin/pages/AdminVerifyTeachersPage';
-import AdminRegisteredParentsPage from './pages/admin/pages/AdminRegisteredParentsPage';
-import AdminSendNotificationPage from './pages/admin/pages/AdminSendNotificationPage';
-import FinanceManagementPage from './pages/admin/pages/FinanceManagementPage';
-import AddStudentPage from './pages/admin/pages/AddStudentPage';
-import DeleteStudentPage from './pages/admin/pages/DeleteStudentPage';
-import TimetablePage from './pages/admin/pages/TimetablePage';
-import SettingsPage from './pages/admin/pages/SettingsPage';
-import LeaderboardPage from './pages/teacher/pages/LeaderboardPage';
-import AbsentStudentsPage from './pages/teacher/pages/AbsentStudentsPage';
-import StudentDetailsPage from './pages/teacher/pages/StudentDetailsPage';
-import DownloadRecordsPage from './pages/teacher/pages/DownloadRecordsPage';
-import TeacherSchedulePage from './pages/teacher/pages/TeacherSchedulePage';
-import OfferingsPage from './pages/teacher/pages/OfferingsPage';
-import ParentNotificationPage from './pages/parent/pages/ParentNotificationPage';
-import ParentComplaintsPage from './pages/parent/pages/ParentComplaintsPage';
-import DollarHistoryPage from './pages/teacher/pages/DollarHistoryPage';
-import ViewStudentsPage from './pages/teacher/pages/ViewStudentsPage';
-import TeacherProgressPage from './pages/teacher/pages/TeacherProgressPage';
-import TeacherLeaderboardPage from './pages/teacher/pages/TeacherLeaderboardPage';
-import TeacherAttendancePage from './pages/teacher/pages/TeacherAttendancePage';
-import TeacherProfilePage from './pages/teacher/pages/TeacherProfilePage';
-import PendingApprovalPage from './pages/auth/PendingApprovalPage';
-import AdminComplaintsPage from './pages/admin/pages/AdminComplaintsPage';
-import AdminDownloadStudentsPage from './pages/admin/pages/AdminDownloadStudentsPage';
-import { Box, CircularProgress } from '@mui/material';
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const HomeworkPage = lazy(() => import('./pages/teacher/pages/HomeworkPage'));
+const MessagingPage = lazy(() => import('./pages/teacher/pages/MessagingPage'));
+const AttendancePage = lazy(() => import('./pages/teacher/pages/AttendancePage'));
+const AttendanceSummaryPage = lazy(() => import('./pages/teacher/pages/AttendanceSummaryPage'));
+const DollarsGivingPage = lazy(() => import('./pages/teacher/pages/DollarsGivingPage'));
+const AdminVerifyTeachersPage = lazy(() => import('./pages/admin/pages/AdminVerifyTeachersPage'));
+const AdminRegisteredParentsPage = lazy(() => import('./pages/admin/pages/AdminRegisteredParentsPage'));
+const AdminSendNotificationPage = lazy(() => import('./pages/admin/pages/AdminSendNotificationPage'));
+const FinanceManagementPage = lazy(() => import('./pages/admin/pages/FinanceManagementPage'));
+const AddStudentPage = lazy(() => import('./pages/admin/pages/AddStudentPage'));
+const DeleteStudentPage = lazy(() => import('./pages/admin/pages/DeleteStudentPage'));
+const TimetablePage = lazy(() => import('./pages/admin/pages/TimetablePage'));
+const SettingsPage = lazy(() => import('./pages/admin/pages/SettingsPage'));
+const LeaderboardPage = lazy(() => import('./pages/teacher/pages/LeaderboardPage'));
+const AbsentStudentsPage = lazy(() => import('./pages/teacher/pages/AbsentStudentsPage'));
+const StudentDetailsPage = lazy(() => import('./pages/teacher/pages/StudentDetailsPage'));
+const DownloadRecordsPage = lazy(() => import('./pages/teacher/pages/DownloadRecordsPage'));
+const TeacherSchedulePage = lazy(() => import('./pages/teacher/pages/TeacherSchedulePage'));
+const OfferingsPage = lazy(() => import('./pages/teacher/pages/OfferingsPage'));
+const ParentNotificationPage = lazy(() => import('./pages/parent/pages/ParentNotificationPage'));
+const ParentComplaintsPage = lazy(() => import('./pages/parent/pages/ParentComplaintsPage'));
+const DollarHistoryPage = lazy(() => import('./pages/teacher/pages/DollarHistoryPage'));
+const ViewStudentsPage = lazy(() => import('./pages/teacher/pages/ViewStudentsPage'));
+const TeacherProgressPage = lazy(() => import('./pages/teacher/pages/TeacherProgressPage'));
+const TeacherLeaderboardPage = lazy(() => import('./pages/teacher/pages/TeacherLeaderboardPage'));
+const TeacherAttendancePage = lazy(() => import('./pages/teacher/pages/TeacherAttendancePage'));
+const TeacherProfilePage = lazy(() => import('./pages/teacher/pages/TeacherProfilePage'));
+const PendingApprovalPage = lazy(() => import('./pages/auth/PendingApprovalPage'));
+const AdminComplaintsPage = lazy(() => import('./pages/admin/pages/AdminComplaintsPage'));
+const AdminDownloadStudentsPage = lazy(() => import('./pages/admin/pages/AdminDownloadStudentsPage'));
+import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material';
 
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { isTeacherPendingAccess } from './utils/teacherVerification';
 
 function App() {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, sessionError, retrySession, logout } = useAuth();
   const location = useLocation();
 
   // Add error boundary for routing issues in PWA mode
@@ -78,6 +78,8 @@ function App() {
     );
   }
 
+  if (sessionError) return <Box className="page-shell page-glow-background" sx={{ display: 'grid', placeItems: 'center', p: 3 }}><Box sx={{ maxWidth: 480 }}><Typography variant="h5" sx={{ mb: 2 }}>Reconnect to your account</Typography><Alert severity="warning">{sessionError}</Alert><Button variant="contained" onClick={retrySession} sx={{ mt: 2 }}>Retry connection</Button><Button onClick={() => logout()} sx={{ mt: 2 }}>Sign out</Button></Box></Box>;
+
   // Guard every teacher URL, including direct links and bookmarked pages.
   if (isTeacherPendingAccess(currentUser) &&
       location.pathname.startsWith('/teacher/') &&
@@ -89,7 +91,7 @@ function App() {
     <Box className="page-shell page-glow-background">
 
       <PWAInstallPrompt />
-      <Routes>
+      <Suspense fallback={<Box sx={{ display: "grid", placeItems: "center", minHeight: "55vh" }}><CircularProgress aria-label="Loading page" /></Box>}><Routes>
       <Route
         path="/"
         element={
@@ -546,7 +548,7 @@ function App() {
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    </Routes></Suspense>
     <SpeedInsights />
     </Box>
   );

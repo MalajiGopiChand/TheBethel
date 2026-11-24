@@ -66,6 +66,14 @@ const AdminTeachersTab = () => {
       onClick: () => navigate('/admin/finance')
     },
     {
+      title: 'Teacher Directory',
+      subtitle: 'Profiles & progress',
+      icon: <ParentsIcon />,
+      colorStart: '#9475d8',
+      colorEnd: '#d8c8f2',
+      onClick: () => navigate('/teacher/teacher-progress')
+    },
+    {
       title: 'Parents',
       subtitle: 'Registered',
       icon: <ParentsIcon />,

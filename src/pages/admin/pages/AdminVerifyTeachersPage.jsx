@@ -52,6 +52,8 @@ const AdminVerifyTeachersPage = () => {
   };
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState('');
   const [loadError, setLoadError] = useState(null);
   const [selectedTab, setSelectedTab] = useState(0);
   const [verifyDialog, setVerifyDialog] = useState({ open: false, teacher: null, verify: true });
@@ -90,6 +92,9 @@ const AdminVerifyTeachersPage = () => {
   const verifiedTeachers = teachers.filter(t => !isPending(t));
 
   const handleVerify = async (teacher, verify) => {
+    if (saving) return;
+    setSaving(true);
+    setActionError('');
     try {
       await updateDoc(doc(db, 'teachers', teacher.uid), {
         isVerified: verify,
@@ -99,14 +104,16 @@ const AdminVerifyTeachersPage = () => {
       setVerifyDialog({ open: false, teacher: null, verify: true });
     } catch (error) {
       console.error('Error updating teacher:', error);
-      alert('Failed to update teacher: ' + error.message);
+      setActionError('Failed to update teacher: ' + error.message);
+    } finally {
+      setSaving(false);
     }
   };
 
   const displayTeachers = selectedTab === 0 ? pendingTeachers : selectedTab === 1 ? verifiedTeachers : teachers;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box className="admin-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <Button startIcon={<BackIcon />} onClick={handleBack}>
@@ -115,7 +122,7 @@ const AdminVerifyTeachersPage = () => {
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
             Verify Teachers
           </Typography>
-          <Box sx={{ width: 100 }} />
+          <Box sx={{ width: { xs: 0, sm: 100 } }} />
         </Box>
 
         <Tabs value={selectedTab} onChange={(e, newValue) => setSelectedTab(newValue)}>
@@ -189,12 +196,13 @@ const AdminVerifyTeachersPage = () => {
 
       <Dialog
         open={verifyDialog.open}
-        onClose={() => setVerifyDialog({ open: false, teacher: null, verify: true })}
+        onClose={() => { if (!saving) setVerifyDialog({ open: false, teacher: null, verify: true }); }}
       >
         <DialogTitle>
           {verifyDialog.verify ? 'Verify Teacher' : 'Unverify Teacher'}
         </DialogTitle>
         <DialogContent>
+          {actionError && <Alert severity="error" sx={{ mb: 2 }}>{actionError}</Alert>}
           <DialogContentText>
             {verifyDialog.verify
               ? `Are you sure you want to verify ${verifyDialog.teacher?.name}?`
@@ -202,15 +210,16 @@ const AdminVerifyTeachersPage = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setVerifyDialog({ open: false, teacher: null, verify: true })}>
+          <Button disabled={saving} onClick={() => setVerifyDialog({ open: false, teacher: null, verify: true })}>
             Cancel
           </Button>
           <Button
             onClick={() => handleVerify(verifyDialog.teacher, verifyDialog.verify)}
+            disabled={saving}
             variant="contained"
             color={verifyDialog.verify ? 'success' : 'error'}
           >
-            {verifyDialog.verify ? 'Verify' : 'Unverify'}
+            {saving ? 'Saving…' : verifyDialog.verify ? 'Verify' : 'Unverify'}
           </Button>
         </DialogActions>
       </Dialog>

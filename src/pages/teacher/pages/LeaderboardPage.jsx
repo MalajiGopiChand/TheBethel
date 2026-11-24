@@ -12,6 +12,7 @@ import {
   Place as PlaceIcon
 } from '@mui/icons-material';
 import { collection, query, onSnapshot } from '../../../services/studentData';
+import { rewardBalance } from '../../../utils/rewards';
 import { db } from '../../../config/firebase';
 import { handleBackNavigation } from '../../../utils/navigation';
 
@@ -32,10 +33,6 @@ const LeaderboardPage = () => {
   const classOptions = ['All', 'Beginner', 'Primary', 'Secondary'];
   const placeOptions = ['All', 'Kandrika', 'Krishna Lanka', 'Gandhiji Conly', 'Other'];
 
-  const calculateTotalDollars = (rewardsList) => {
-    if (!rewardsList || !Array.isArray(rewardsList)) return 0;
-    return rewardsList.reduce((sum, reward) => sum + (Number(reward.dollars) || 0), 0);
-  };
 
   useEffect(() => {
     const q = query(collection(db, 'students'));
@@ -48,7 +45,7 @@ const LeaderboardPage = () => {
           name: data.name || "Unknown",
           classType: data.classType || "Beginner",
           place: data.place || "Kandrika", 
-          dollarPoints: calculateTotalDollars(data.rewards)
+          dollarPoints: rewardBalance(data)
         };
       });
 

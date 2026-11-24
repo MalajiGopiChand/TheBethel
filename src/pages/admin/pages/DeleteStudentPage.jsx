@@ -103,7 +103,7 @@ const DeleteStudentPage = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box className="admin-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <Button startIcon={<BackIcon />} onClick={handleBack}>
@@ -112,7 +112,7 @@ const DeleteStudentPage = () => {
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
             Delete Student
           </Typography>
-          <Box sx={{ width: 100 }} />
+          <Box sx={{ width: { xs: 0, sm: 100 } }} />
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>

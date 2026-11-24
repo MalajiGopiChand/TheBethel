@@ -46,7 +46,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box className="admin-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <Button startIcon={<BackIcon />} onClick={handleBack}>
@@ -55,7 +55,7 @@ const SettingsPage = () => {
           <Typography variant="h5" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 'bold' }}>
             Settings
           </Typography>
-          <Box sx={{ width: 100 }} />
+          <Box sx={{ width: { xs: 0, sm: 100 } }} />
         </Box>
       </Paper>
 

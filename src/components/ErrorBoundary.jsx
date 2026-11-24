@@ -25,8 +25,11 @@ class ErrorBoundary extends React.Component {
     window.location.href = '/';
   };
 
+  handleReload = () => window.location.reload();
+
   render() {
     if (this.state.hasError) {
+      const isUpdate = /Failed to fetch dynamically imported module|Loading chunk|Importing a module script failed|error loading dynamically imported module/i.test(this.state.error?.message || '');
       return (
         <Box
           sx={{
@@ -48,17 +51,17 @@ class ErrorBoundary extends React.Component {
           >
             <ErrorIcon sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
             <Typography variant="h5" gutterBottom>
-              Something went wrong
+              {isUpdate ? 'An updated version is available' : 'Something went wrong'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {this.state.error?.message || 'An unexpected error occurred'}
+              {isUpdate ? 'Reload this page to get the latest version. Your saved school records are safe.' : this.state.error?.message || 'An unexpected error occurred'}
             </Typography>
             <Button
               variant="contained"
-              onClick={this.handleReset}
+              onClick={isUpdate ? this.handleReload : this.handleReset}
               sx={{ mt: 2 }}
             >
-              Go to Home
+              {isUpdate ? 'Reload this page' : 'Go to Home'}
             </Button>
             {import.meta.env.DEV && this.state.errorInfo && (
               <Box sx={{ mt: 3, textAlign: 'left' }}>

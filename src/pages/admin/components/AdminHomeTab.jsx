@@ -1,269 +1,61 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Grid,
-  CircularProgress,
-  Button
-} from '@mui/material';
-import {
-  Campaign as BroadcastIcon,
-  VerifiedUser as VerifyIcon,
-  WhatsApp as ChatIcon,
-  CalendarToday as ScheduleIcon,
-  AttachMoney as DollarIcon,
-  Feedback as FeedbackIcon
-} from '@mui/icons-material';
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot
-} from '../../../services/studentData';
-// --- UPDATED IMPORTS (Fixed Paths) ---
+import { Alert, Box, Button, Chip, Paper, Skeleton, Typography } from '@mui/material';
+import { CampaignRounded, VerifiedUserRounded, WhatsApp, CalendarTodayRounded, AttachMoneyRounded, FeedbackRounded, PeopleRounded, BarChartRounded, TollRounded, EmojiEventsOutlined } from '@mui/icons-material';
+import { collection, query, orderBy, onSnapshot } from '../../../services/studentData';
 import { db } from '../../../config/firebase';
-import AttendanceCard from '../../../components/AttendanceCard';
 import { getDashboardAttendanceStats } from '../../../utils/dashboardAttendance';
-import PodiumSection from '../../../components/PodiumSection';
+import { rewardBalance } from '../../../utils/rewards';
 import ActionGrid from '../../../components/ActionGrid';
-import InstallBanner from '../../../components/InstallBanner';
-// -------------------------------------
 
-const AdminHomeTab = () => {
+export default function AdminHomeTab() {
   const navigate = useNavigate();
-  const [overview, setOverview] = useState({
-    totalStudents: 0,
-    attendancePercentage: 0,
-    totalDollarsGiven: 0,
-    todayPresentCount: 0,
-    todayAbsentCount: 0,
-    topStudents: []
-  });
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
-    setLoading(true);
-    // Real-time listener for students collection
-    const studentsQuery = query(collection(db, 'students'), orderBy('studentId'));
-    
-    const unsubscribe = onSnapshot(studentsQuery, (snapshot) => {
-      const students = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      calculateOverview(students);
-    }, (error) => {
-      console.error('Error fetching students:', error);
+    setError(''); setLoading(true);
+    return onSnapshot(query(collection(db, 'students'), orderBy('studentId')), snapshot => {
+      setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
-    });
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
-  }, []);
-
-  // Helper: Calculate total dollar points from rewards array
-  const calculateDollarPoints = (studentData) => {
-    const rewardsList = studentData.rewards || [];
-    let calculatedPoints = 0;
-    
-    // Sum up dollars from rewards array
-    for (const reward of rewardsList) {
-      const points = reward.dollars;
-      // Handle both number and string types safely
-      if (typeof points === 'number') {
-        calculatedPoints += points;
-      } else if (typeof points === 'string') {
-        calculatedPoints += parseInt(points, 10) || 0;
-      }
-    }
-    
-    // Use calculated points if available, otherwise fallback to legacy field
-    return calculatedPoints > 0 ? calculatedPoints : (parseInt(studentData.dollarPoints, 10) || 0);
-  };
-
-  const calculateOverview = (students) => {
-    try {
-      // 1. Process each student to get their current point total
-      const studentsWithPoints = students.map(student => ({
-        ...student,
-        calculatedTotal: calculateDollarPoints(student)
-      }));
-
-      const totalStudents = studentsWithPoints.length || 0;
-      const attendanceStats = getDashboardAttendanceStats(studentsWithPoints);
-
-      // 3. Calculate Global Dollar Stats
-      const totalDollarsGiven = studentsWithPoints.reduce((sum, student) => 
-        sum + (student.calculatedTotal || 0), 0
-      );
-
-      // 4. Calculate Top 3 Students (Leaderboard)
-      const topStudents = studentsWithPoints
-        .sort((a, b) => b.calculatedTotal - a.calculatedTotal)
-        .slice(0, 3)
-        .map(student => ({
-          name: student.name || 'Unknown',
-          dollars: student.calculatedTotal
-        }));
-
-      setOverview({
-        totalStudents,
-        attendancePercentage: attendanceStats.attendancePercentage,
-        attendanceDateLabel: attendanceStats.dateLabel,
-        totalDollarsGiven,
-        todayPresentCount: attendanceStats.todayPresentCount,
-        todayAbsentCount: attendanceStats.todayAbsentCount,
-        topStudents: topStudents
-      });
-
-    } catch (error) {
-      console.error('Error calculating overview:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const quickActions = [
-    {
-      title: 'Broadcast',
-      subtitle: 'Send Alerts',
-      icon: <BroadcastIcon />,
-      colorStart: '#A18CD1',
-      colorEnd: '#FBC2EB',
-      isEnabled: true,
-      onClick: () => navigate('/admin/notifications')
-    },
-    {
-      title: 'Complaints',
-      subtitle: 'Parents',
-      icon: <FeedbackIcon />,
-      colorStart: '#7F7FD5',
-      colorEnd: '#86A8E7',
-      isEnabled: true,
-      onClick: () => navigate('/admin/complaints')
-    },
-    {
-      title: 'Verify Teachers',
-      subtitle: 'Approval',
-      icon: <VerifyIcon />,
-      colorStart: '#4FACFE',
-      colorEnd: '#00F2FE',
-      isEnabled: true,
-      onClick: () => navigate('/admin/verify-teachers')
-    },
-    {
-      title: 'Live Chat',
-      subtitle: 'Chating',
-      icon: <ChatIcon />,
-      colorStart: '#43E97B',
-      colorEnd: '#38F9D7',
-      isEnabled: true,
-      onClick: () => navigate('/teacher/messaging')
-    },
-    {
-      title: 'Timetable',
-      subtitle: 'Schedule',
-      icon: <ScheduleIcon />,
-      colorStart: '#FA709A',
-      colorEnd: '#FEE140',
-      isEnabled: true,
-      onClick: () => navigate('/admin/timetable')
-    },
-    {
-      title: 'Give Dollars',
-      subtitle: 'Rewards',
-      icon: <DollarIcon />,
-      colorStart: '#FF5858',
-      colorEnd: '#F09819',
-      isEnabled: true,
-      onClick: () => navigate('/teacher/dollars-giving')
-    }
-  ];
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  return (
-    <Box>
-      {/* Install Banner */}
-      <InstallBanner />
-      
-      {/* Attendance Progress Card */}
-      {overview && (
-        <AttendanceCard data={overview} canEdit={true} />
-      )}
-
-      {/* Top 3 Leaderboard Podium */}
-      {overview?.topStudents && overview.topStudents.length > 0 && (
-        <PodiumSection topStudents={overview.topStudents} />
-      )}
-
-      {/* Quick Actions Grid */}
-      <Box sx={{ mt: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, mb: 1.5 }}>
-          <Typography variant="h6" fontWeight="bold">
-            Quick Actions
-          </Typography>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => navigate('/teacher/leaderboard')}
-          >
-            View Full Leaderboard
-          </Button>
-        </Box>
-        <ActionGrid actions={quickActions} />
-      </Box>
-
-      {/* Stats Summary Cards */}
-      <Grid container spacing={2} sx={{ mt: 2, px: 2, mb: 4 }}>
-        <Grid item xs={6} sm={4}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                Total Students
-              </Typography>
-              <Typography variant="h5" fontWeight="bold">
-                {overview.totalStudents}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={4}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                Attendance Rate
-              </Typography>
-              <Typography variant="h5" fontWeight="bold">
-                {overview.attendancePercentage}%
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                Total Dollars Given
-              </Typography>
-              <Typography variant="h5" fontWeight="bold">
-                ${overview.totalDollarsGiven}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
-  );
-};
-
-export default AdminHomeTab;
+    }, () => { setError('Could not load the dashboard. Check your connection and try again.'); setLoading(false); });
+  }, [retry]);
+  const overview = useMemo(() => {
+    const ranked = students.map(student => ({ ...student, dollars: rewardBalance(student) })).sort((a, b) => b.dollars - a.dollars);
+    return { ...getDashboardAttendanceStats(students), totalStudents: students.length, totalDollars: ranked.reduce((sum, student) => sum + student.dollars, 0), top: ranked.slice(0, 3) };
+  }, [students]);
+  const actions = [
+    ['Broadcast', 'Send announcements', <CampaignRounded />, '#A18CD1', '#e9dcff', '/admin/notifications'],
+    ['Complaints', 'Parent issues', <FeedbackRounded />, '#7F7FD5', '#dce6ff', '/admin/complaints'],
+    ['Verify Teachers', 'Manage approvals', <VerifiedUserRounded />, '#419be9', '#d4f0ff', '/admin/verify-teachers'],
+    ['Live Chat', 'Staff conversation', <WhatsApp />, '#4bae73', '#dff4e8', '/teacher/messaging'],
+    ['Timetable', 'Sunday schedules', <CalendarTodayRounded />, '#d0785c', '#ffecd5', '/admin/timetable'],
+    ['Give Dollars', 'Student rewards', <AttachMoneyRounded />, '#dc726e', '#ffdddd', '/teacher/dollars-giving'],
+  ].map(([title, subtitle, icon, colorStart, colorEnd, path]) => ({ title, subtitle, icon, colorStart, colorEnd, onClick: () => navigate(path) }));
+  if (error) return <Alert severity="error" action={<Button onClick={() => setRetry(value => value + 1)}>Retry</Button>}>{error}</Alert>;
+  if (loading) return <Box aria-label="Loading dashboard"><Skeleton variant="rounded" height={140} sx={{ mb: 3 }} /><Skeleton variant="rounded" height={340} /></Box>;
+  const podium = [overview.top[1], overview.top[0], overview.top[2]];
+  return <section className="admin-home" aria-label="School overview">
+    {overview.top.length > 0 ? <div className="admin-podium">
+      {podium.map((student, index) => student && <Paper key={student.id} className="admin-podium-item" data-rank={[2, 1, 3][index]}>
+        <div className="admin-podium-medal" aria-label={`Rank ${[2, 1, 3][index]}`}>{['🥈', '🥇', '🥉'][index]}</div>
+        <Typography fontWeight={750} sx={{ fontSize: { xs: '.875rem', sm: '1.2rem' } }}>{student.name || 'Student'}</Typography>
+        <Typography fontWeight={800} sx={{ mt: .5, fontSize: { xs: '1.4rem', sm: '1.8rem' } }}>${student.dollars.toLocaleString()}</Typography>
+      </Paper>)}
+    </div> : <Alert severity="info" sx={{ mb: 3 }}>Add your first student to start tracking attendance and rewards.</Alert>}
+    <div className="admin-quick-heading">
+      <Typography component="h2" variant="h5">Quick Actions</Typography>
+      <Button variant="outlined" startIcon={<EmojiEventsOutlined />} onClick={() => navigate('/teacher/leaderboard')}>View Full Leaderboard</Button>
+    </div>
+    <ActionGrid actions={actions} />
+    <div className="admin-stats">
+      {[
+        ['Total Students', overview.totalStudents.toLocaleString(), <PeopleRounded />],
+        ['Attendance Rate', `${overview.attendancePercentage}%`, <BarChartRounded />],
+        ['Total Dollars Given', `$${overview.totalDollars.toLocaleString()}`, <TollRounded />],
+      ].map(([label, value, icon]) => <Paper key={label} className="admin-stat"><div className="admin-stat-icon">{icon}</div><div><Typography color="text.secondary" sx={{ fontSize: '.875rem' }}>{label}</Typography><Typography sx={{ fontSize: { xs: '1.9rem', sm: '2.3rem' }, lineHeight: 1.25, fontWeight: 800 }}>{value}</Typography></div></Paper>)}
+    </div>
+    <div className="admin-attendance-line"><span>{overview.dateLabel || 'Sunday attendance'}</span><Chip size="small" color="success" variant="outlined" label={`${overview.todayPresentCount} Present`} /><Chip size="small" variant="outlined" label={`${overview.todayAbsentCount} Absent`} /><Button size="small" onClick={() => navigate('/teacher/attendance-summary')}>View summary</Button></div>
+  </section>;
+}
